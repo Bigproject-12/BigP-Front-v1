@@ -103,7 +103,7 @@ function LoginForm({ onSwitchTab }) {
       </div>
       <div className="ui-card" style={{ marginTop: 4 }}>
         <span className="text-caption-md">
-          테스트 계정: dev@GuardrAil.io / dev12345 (일반) · admin@GuardrAil.io / admin1234 (관리자)
+          테스트 계정: dev@GuardrAil.io / dev12345 (일반) · admin@GuardrAil.io / 12345678 (관리자)
         </span>
       </div>
     </form>
