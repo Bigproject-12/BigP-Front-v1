@@ -1,0 +1,109 @@
+.login-shell {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+}
+
+.login-intro {
+  background: var(--ps-primary);
+  color: var(--ps-on-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: 96px 64px;
+}
+.login-intro__mark {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+}
+.login-intro h1 {
+  color: #fff;
+  font-size: var(--fs-display-lg);
+  font-weight: 300;
+  line-height: 1.25;
+  max-width: 480px;
+}
+.login-intro p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: var(--fs-body-md);
+  line-height: 1.6;
+  max-width: 440px;
+}
+.login-intro__features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+.login-intro__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.login-intro__feature-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.login-intro__feature-text strong {
+  display: block;
+  font-size: var(--fs-body-strong);
+  font-weight: 600;
+}
+.login-intro__feature-text span {
+  font-size: var(--fs-body-sm);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.login-panel {
+  background: var(--surface-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+.login-card {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+.login-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.login-card__footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-body-sm);
+}
+.login-card__eye {
+  background: none;
+  border: none;
+}
+
+@media (max-width: 860px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+  .login-intro {
+    padding: 48px 32px;
+  }
+  .login-intro__features {
+    display: none;
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node smoke.mjs)",
+      "Bash(node debug-repo.mjs)",
+      "Bash(node smoke2.mjs)",
+      "Bash(curl *)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"json-server\")"
+    ]
+  }
+}

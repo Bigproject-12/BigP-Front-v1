@@ -1,0 +1,43 @@
+.mypage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.mypage-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 112, 209, 0.16);
+  color: var(--ps-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.mypage-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 520px;
+}
+.mypage-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+}
+.mypage-row > div:first-child {
+  flex: 1;
+}
+.mypage-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-hairline);
+}
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}

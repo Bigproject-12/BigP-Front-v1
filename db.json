@@ -1,0 +1,512 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "admin@GuardrAil.io",
+      "password": "admin1234",
+      "name": "김관리",
+      "company": "GuardrAil Inc.",
+      "gitId": "GuardrAil-admin",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "email": "dev@GuardrAil.io",
+      "password": "dev12345",
+      "name": "이개발",
+      "company": "GuardrAil Inc.",
+      "gitId": "dev-lee",
+      "role": "user"
+    }
+  ],
+  "repos": [
+    {
+      "id": 1,
+      "userId": 2,
+      "name": "GuardrAil-core-api",
+      "private": true,
+      "description": "정적 분석 엔진과 룰 엔진을 담당하는 코어 백엔드 서비스",
+      "language": "Python",
+      "updatedAt": "2026-07-08T09:12:00+09:00"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "name": "GuardrAil-web",
+      "private": false,
+      "description": "GuardrAil 대시보드 및 사용자 웹 클라이언트",
+      "language": "TypeScript",
+      "updatedAt": "2026-07-07T15:41:00+09:00"
+    },
+    {
+      "id": 3,
+      "userId": 2,
+      "name": "payment-gateway-service",
+      "private": true,
+      "description": "결제 트랜잭션 처리 및 정산 배치 서비스",
+      "language": "Java",
+      "updatedAt": "2026-07-05T11:03:00+09:00"
+    },
+    {
+      "id": 4,
+      "userId": 2,
+      "name": "infra-terraform",
+      "private": true,
+      "description": "클라우드 인프라 프로비저닝 IaC 모듈 모음",
+      "language": "HCL",
+      "updatedAt": "2026-06-30T18:20:00+09:00"
+    },
+    {
+      "id": 5,
+      "userId": 2,
+      "name": "notification-worker",
+      "private": false,
+      "description": "알림 발송 큐 워커 및 재시도 로직",
+      "language": "Go",
+      "updatedAt": "2026-06-28T08:55:00+09:00"
+    },
+    {
+      "id": 6,
+      "userId": 2,
+      "name": "legacy-auth-service",
+      "private": true,
+      "description": "레거시 사용자 인증/세션 관리 모듈 (마이그레이션 예정)",
+      "language": "JavaScript",
+      "updatedAt": "2026-06-20T13:10:00+09:00"
+    }
+  ],
+  "repoFiles": [
+    {
+      "id": 1,
+      "repoId": 1,
+      "path": "src/analyzer/engine.py"
+    },
+    {
+      "id": 2,
+      "repoId": 1,
+      "path": "src/analyzer/rules/sql_rules.py"
+    },
+    {
+      "id": 3,
+      "repoId": 1,
+      "path": "src/api/routes.py"
+    },
+    {
+      "id": 4,
+      "repoId": 2,
+      "path": "src/pages/Dashboard.tsx"
+    },
+    {
+      "id": 5,
+      "repoId": 2,
+      "path": "src/hooks/useAuth.ts"
+    },
+    {
+      "id": 6,
+      "repoId": 3,
+      "path": "src/main/java/pay/TransactionService.java"
+    },
+    {
+      "id": 7,
+      "repoId": 5,
+      "path": "worker/retry.go"
+    },
+    {
+      "id": 8,
+      "repoId": 6,
+      "path": "src/auth/session.js"
+    }
+  ],
+  "analyses": [
+    {
+      "id": 1,
+      "repoId": 1,
+      "repoName": "GuardrAil-core-api",
+      "userId": 2,
+      "fileName": "sql_rules.py",
+      "filePath": "src/analyzer/rules/sql_rules.py",
+      "analyzedAt": "2026-07-08T09:12:00+09:00",
+      "issueCount": 4,
+      "improvementRate": 38,
+      "status": "done",
+      "originalCode": "def get_user(conn, user_id):\n    query = \"SELECT * FROM users WHERE id = \" + user_id\n    cursor = conn.cursor()\n    cursor.execute(query)\n    return cursor.fetchone()\n\ndef list_active_sessions(conn):\n    cursor = conn.cursor()\n    cursor.execute(\"SELECT * FROM sessions\")\n    rows = cursor.fetchall()\n    result = []\n    for row in rows:\n        if row[3] == 1:\n            result.append(row)\n    return result\n",
+      "improvedCode": "def get_user(conn, user_id: int):\n    query = \"SELECT id, name, email FROM users WHERE id = %s\"\n    with conn.cursor() as cursor:\n        cursor.execute(query, (user_id,))\n        return cursor.fetchone()\n\ndef list_active_sessions(conn):\n    query = \"SELECT id, user_id, created_at FROM sessions WHERE is_active = %s\"\n    with conn.cursor() as cursor:\n        cursor.execute(query, (True,))\n        return cursor.fetchall()\n",
+      "issues": [
+        {
+          "type": "보안",
+          "severity": "high",
+          "description": "문자열 결합으로 SQL 쿼리를 생성해 SQL Injection에 취약합니다.",
+          "reason": "파라미터 바인딩(%s)을 사용해 사용자 입력값이 쿼리 구조에 직접 개입하지 못하도록 수정했습니다."
+        },
+        {
+          "type": "보안",
+          "severity": "medium",
+          "description": "SELECT * 로 전체 컬럼을 조회해 비밀번호 해시 등 민감 컬럼까지 노출될 수 있습니다.",
+          "reason": "필요한 컬럼만 명시적으로 조회하도록 축소했습니다."
+        },
+        {
+          "type": "비효율",
+          "severity": "medium",
+          "description": "애플리케이션 레벨에서 전체 세션을 가져온 뒤 파이썬 반복문으로 필터링하여 불필요한 I/O가 발생합니다.",
+          "reason": "WHERE 절로 필터 조건을 DB에 위임해 전송 데이터량과 연산량을 줄였습니다."
+        },
+        {
+          "type": "이슈",
+          "severity": "low",
+          "description": "커넥션/커서 자원이 명시적으로 해제되지 않아 커넥션 누수 가능성이 있습니다.",
+          "reason": "with 컨텍스트 매니저로 커서를 감싸 예외 발생 시에도 자원이 반환되도록 했습니다."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "repoId": 1,
+      "repoName": "GuardrAil-core-api",
+      "userId": 2,
+      "fileName": "engine.py",
+      "filePath": "src/analyzer/engine.py",
+      "analyzedAt": "2026-07-06T14:30:00+09:00",
+      "issueCount": 2,
+      "improvementRate": 22,
+      "status": "done",
+      "originalCode": "def run_rules(rules, code):\n    results = []\n    for rule in rules:\n        for line in code.split(\"\\n\"):\n            if rule.match(line):\n                results.append((rule.name, line))\n    return results\n",
+      "improvedCode": "def run_rules(rules, code):\n    results = []\n    lines = code.split(\"\\n\")\n    compiled = [(rule.name, rule) for rule in rules]\n    for line in lines:\n        for name, rule in compiled:\n            if rule.match(line):\n                results.append((name, line))\n    return results\n",
+      "issues": [
+        {
+          "type": "비효율",
+          "severity": "medium",
+          "description": "규칙마다 code.split을 반복 호출해 동일한 문자열 분할 연산이 중복 실행됩니다.",
+          "reason": "분할 결과를 루프 밖에서 한 번만 계산하도록 캐싱했습니다."
+        },
+        {
+          "type": "이슈",
+          "severity": "low",
+          "description": "rule.name 접근이 매 반복마다 발생해 속성 조회 비용이 누적됩니다.",
+          "reason": "이름을 미리 튜플로 묶어 반복 중 속성 접근을 줄였습니다."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "repoId": 2,
+      "repoName": "GuardrAil-web",
+      "userId": 2,
+      "fileName": "useAuth.ts",
+      "filePath": "src/hooks/useAuth.ts",
+      "analyzedAt": "2026-07-07T15:41:00+09:00",
+      "issueCount": 3,
+      "improvementRate": 45,
+      "status": "done",
+      "originalCode": "export function useAuth() {\n  const [user, setUser] = useState(null)\n\n  useEffect(() => {\n    fetch('/api/me').then(res => res.json()).then(setUser)\n  })\n\n  const login = async (email, password) => {\n    localStorage.setItem('token', btoa(email + ':' + password))\n    const res = await fetch('/api/login', { method: 'POST', body: JSON.stringify({ email, password }) })\n    return res.json()\n  }\n\n  return { user, login }\n}\n",
+      "improvedCode": "export function useAuth() {\n  const [user, setUser] = useState(null)\n\n  useEffect(() => {\n    let cancelled = false\n    fetch('/api/me')\n      .then(res => res.json())\n      .then(data => { if (!cancelled) setUser(data) })\n    return () => { cancelled = true }\n  }, [])\n\n  const login = async (email, password) => {\n    const res = await fetch('/api/login', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({ email, password }),\n    })\n    if (!res.ok) throw new Error('로그인에 실패했습니다')\n    return res.json()\n  }\n\n  return { user, login }\n}\n",
+      "issues": [
+        {
+          "type": "이슈",
+          "severity": "high",
+          "description": "useEffect에 의존성 배열이 없어 렌더링마다 무한히 재요청됩니다.",
+          "reason": "빈 의존성 배열과 언마운트 시 취소 플래그를 추가해 불필요한 재요청과 경쟁 상태를 제거했습니다."
+        },
+        {
+          "type": "보안",
+          "severity": "high",
+          "description": "자격 증명을 base64(btoa)로 인코딩해 로컬 스토리지에 저장, 사실상 평문 노출과 동일합니다.",
+          "reason": "토큰 저장 로직을 제거하고 서버 응답의 세션 토큰만 사용하도록 위임했습니다."
+        },
+        {
+          "type": "비효율",
+          "severity": "low",
+          "description": "Content-Type 헤더 누락으로 서버가 body를 파싱하지 못할 수 있어 재시도가 유발됩니다.",
+          "reason": "명시적으로 JSON 헤더를 지정하고 실패 응답을 즉시 에러로 처리했습니다."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "repoId": 3,
+      "repoName": "payment-gateway-service",
+      "userId": 2,
+      "fileName": "TransactionService.java",
+      "filePath": "src/main/java/pay/TransactionService.java",
+      "analyzedAt": "2026-07-05T11:03:00+09:00",
+      "issueCount": 5,
+      "improvementRate": 30,
+      "status": "in_progress",
+      "originalCode": "public class TransactionService {\n    public boolean charge(String cardNumber, double amount) {\n        System.out.println(\"Charging card: \" + cardNumber);\n        if (amount > 0) {\n            legacyGateway.charge(cardNumber, amount);\n            return true;\n        }\n        return false;\n    }\n}\n",
+      "improvedCode": "public class TransactionService {\n    private static final Logger log = LoggerFactory.getLogger(TransactionService.class);\n\n    public boolean charge(String maskedCardToken, double amount) {\n        log.info(\"Charging token: {}\", maskedCardToken);\n        if (amount <= 0) {\n            return false;\n        }\n        return legacyGateway.charge(maskedCardToken, amount);\n    }\n}\n",
+      "issues": [
+        {
+          "type": "보안",
+          "severity": "high",
+          "description": "카드번호 원문을 표준 출력(System.out)으로 로깅해 로그 유출 시 카드 정보가 그대로 노출됩니다.",
+          "reason": "카드번호 대신 토큰만 로깅하고 표준 출력 대신 구조화 로거를 사용하도록 변경했습니다."
+        },
+        {
+          "type": "이슈",
+          "severity": "medium",
+          "description": "조기 반환 없이 중첩된 조건문으로 가독성과 유지보수성이 떨어집니다.",
+          "reason": "가드 절(guard clause)로 전환해 분기를 단순화했습니다."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "repoId": 5,
+      "repoName": "notification-worker",
+      "userId": 2,
+      "fileName": "retry.go",
+      "filePath": "worker/retry.go",
+      "analyzedAt": "2026-06-28T08:55:00+09:00",
+      "issueCount": 2,
+      "improvementRate": 18,
+      "status": "done",
+      "originalCode": "func Retry(fn func() error) error {\n\tfor {\n\t\terr := fn()\n\t\tif err == nil {\n\t\t\treturn nil\n\t\t}\n\t\ttime.Sleep(1 * time.Second)\n\t}\n}\n",
+      "improvedCode": "func Retry(fn func() error, maxAttempts int) error {\n\tvar err error\n\tfor attempt := 0; attempt < maxAttempts; attempt++ {\n\t\tif err = fn(); err == nil {\n\t\t\treturn nil\n\t\t}\n\t\tbackoff := time.Duration(attempt+1) * time.Second\n\t\ttime.Sleep(backoff)\n\t}\n\treturn fmt.Errorf(\"retry exhausted: %w\", err)\n}\n",
+      "issues": [
+        {
+          "type": "이슈",
+          "severity": "high",
+          "description": "재시도 횟수 제한이 없어 실패가 지속되면 무한 루프에 빠집니다.",
+          "reason": "최대 시도 횟수를 파라미터로 받아 상한을 두고, 초과 시 에러를 반환하도록 수정했습니다."
+        },
+        {
+          "type": "비효율",
+          "severity": "low",
+          "description": "고정 1초 간격 재시도로 장애 상황에서 불필요하게 많은 재시도가 몰립니다.",
+          "reason": "지수적으로 증가하는 백오프를 적용해 부하를 분산했습니다."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "repoId": 6,
+      "repoName": "legacy-auth-service",
+      "userId": 2,
+      "fileName": "session.js",
+      "filePath": "src/auth/session.js",
+      "analyzedAt": "2026-06-20T13:10:00+09:00",
+      "issueCount": 3,
+      "improvementRate": 27,
+      "status": "in_progress",
+      "originalCode": "function createSession(userId) {\n  var id = Math.random().toString(36).substring(2)\n  sessions[id] = { userId: userId, createdAt: Date.now() }\n  return id\n}\n",
+      "improvedCode": "const crypto = require('crypto')\n\nfunction createSession(userId) {\n  const id = crypto.randomBytes(24).toString('hex')\n  sessions[id] = { userId, createdAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 }\n  return id\n}\n",
+      "issues": [
+        {
+          "type": "보안",
+          "severity": "high",
+          "description": "Math.random()은 암호학적으로 안전하지 않아 세션 ID가 예측될 수 있습니다.",
+          "reason": "crypto.randomBytes 기반의 안전한 난수 생성기로 교체했습니다."
+        },
+        {
+          "type": "보안",
+          "severity": "medium",
+          "description": "세션 만료 시간이 설정되지 않아 탈취된 세션이 영구적으로 유효합니다.",
+          "reason": "expiresAt 필드를 추가해 세션 수명을 제한했습니다."
+        },
+        {
+          "type": "이슈",
+          "severity": "low",
+          "description": "var 및 구식 객체 리터럴 문법으로 코드 일관성이 떨어집니다.",
+          "reason": "const와 축약 속성 문법으로 최신 문법에 맞게 정리했습니다."
+        }
+      ]
+    }
+  ],
+  "notifications": [
+    {
+      "id": 1,
+      "userId": 2,
+      "message": "GuardrAil-web 레포의 useAuth.ts 분석이 완료되었습니다.",
+      "read": false,
+      "createdAt": "2026-07-07T15:42:00+09:00"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "message": "payment-gateway-service 분석에서 높은 심각도 보안 이슈가 발견되었습니다.",
+      "read": false,
+      "createdAt": "2026-07-05T11:05:00+09:00"
+    },
+    {
+      "id": 3,
+      "userId": 2,
+      "message": "자동 생성 PR #128 이 GuardrAil-core-api 레포에 열렸습니다.",
+      "read": true,
+      "createdAt": "2026-07-04T09:00:00+09:00"
+    },
+    {
+      "id": 4,
+      "userId": 1,
+      "message": "새 게시글이 게시판에 등록되었습니다: 7월 정적분석 룰 업데이트 안내",
+      "read": true,
+      "createdAt": "2026-07-06T10:00:00+09:00"
+    }
+  ],
+  "dashboard": {
+    "stats": {
+      "monthlyAnalyses": 128,
+      "vulnerabilitiesFound": 342,
+      "avgImprovementRate": 34,
+      "autoGeneratedPRs": 47
+    },
+    "qualityTrend": [
+      {
+        "label": "1월",
+        "value": 58
+      },
+      {
+        "label": "2월",
+        "value": 61
+      },
+      {
+        "label": "3월",
+        "value": 65
+      },
+      {
+        "label": "4월",
+        "value": 64
+      },
+      {
+        "label": "5월",
+        "value": 70
+      },
+      {
+        "label": "6월",
+        "value": 75
+      },
+      {
+        "label": "7월",
+        "value": 79
+      }
+    ],
+    "issueDistribution": [
+      {
+        "type": "보안",
+        "count": 142
+      },
+      {
+        "type": "비효율",
+        "count": 96
+      },
+      {
+        "type": "이슈",
+        "count": 78
+      },
+      {
+        "type": "스타일",
+        "count": 26
+      }
+    ]
+  },
+  "myspace": [
+    {
+      "userId": 2,
+      "stats": {
+        "monthlyPRs": 14,
+        "vulnerabilitiesFixed": 21,
+        "avgImprovementRate": 41,
+        "autoGeneratedPRs": 9
+      },
+      "qualityTrend": [
+        {
+          "label": "1월",
+          "value": 52
+        },
+        {
+          "label": "2월",
+          "value": 55
+        },
+        {
+          "label": "3월",
+          "value": 60
+        },
+        {
+          "label": "4월",
+          "value": 66
+        },
+        {
+          "label": "5월",
+          "value": 68
+        },
+        {
+          "label": "6월",
+          "value": 74
+        },
+        {
+          "label": "7월",
+          "value": 81
+        }
+      ],
+      "issueDistribution": [
+        {
+          "type": "보안",
+          "count": 12
+        },
+        {
+          "type": "비효율",
+          "count": 18
+        },
+        {
+          "type": "이슈",
+          "count": 9
+        },
+        {
+          "type": "스타일",
+          "count": 5
+        }
+      ],
+      "styleSummary": "이개발 님은 방어적 코딩보다 짧은 함수 분리를 선호하는 경향이 뚜렷합니다. 최근 30건의 PR에서 SQL 파라미터 바인딩 누락이 반복적으로 지적되었고, 비동기 함수의 예외 처리를 try/catch보다 상위 핸들러에 위임하는 패턴을 자주 사용합니다. 변수명은 카멜케이스를 일관되게 지키고 있으며, 커밋 단위가 작아 리뷰 효율이 높다는 점이 강점으로 분석되었습니다."
+    }
+  ],
+  "posts": [
+    {
+      "id": 1,
+      "title": "7월 정적분석 룰 업데이트 안내",
+      "author": "김관리",
+      "authorId": 1,
+      "createdAt": "2026-07-06T10:00:00+09:00",
+      "views": 233,
+      "commentsCount": 6,
+      "content": "안녕하세요, GuardrAil 운영팀입니다.\n\n7월 정기 업데이트를 통해 SQL Injection 탐지 룰과 시크릿 하드코딩 탐지 룰이 강화되었습니다. 자세한 변경 사항은 아래와 같습니다.\n\n1. 파라미터 바인딩 미사용 패턴 탐지 정확도 개선\n2. AWS/GCP 자격증명 패턴 추가 탐지\n3. 오탐(false positive) 약 12% 감소\n\n적용은 별도 작업 없이 자동으로 이루어지며, 기존 분석 이력에는 영향을 주지 않습니다. 문의사항은 게시판 댓글로 남겨주세요."
+    },
+    {
+      "id": 2,
+      "title": "코드 분석 결과 PR 자동 생성 기능 베타 오픈",
+      "author": "김관리",
+      "authorId": 1,
+      "createdAt": "2026-06-28T14:20:00+09:00",
+      "views": 415,
+      "commentsCount": 11,
+      "content": "코드 분석 결과를 바탕으로 개선 코드를 자동으로 PR까지 생성해주는 기능이 베타로 오픈되었습니다.\n\nRepository 목록에서 연동 저장소를 선택한 뒤, 분석 완료 후 '자동 PR 생성' 옵션을 활성화하면 개선된 코드가 별도 브랜치로 커밋되고 PR이 자동으로 열립니다. 베타 기간 동안 피드백을 자유롭게 남겨주세요."
+    },
+    {
+      "id": 3,
+      "title": "대시보드 차트 로딩 지연 이슈 공지",
+      "author": "이개발",
+      "authorId": 2,
+      "createdAt": "2026-06-25T09:30:00+09:00",
+      "views": 99,
+      "commentsCount": 2,
+      "content": "일부 사용자분들께서 대시보드의 코드 품질 추이 차트가 늦게 로딩되는 현상을 겪고 계신 것으로 확인되었습니다. 현재 원인을 파악 중이며, 임시로 새로고침 시 정상 노출되는 점 참고 부탁드립니다."
+    },
+    {
+      "id": 4,
+      "title": "My Space 스타일 요약 기능에 대한 의견 부탁드립니다",
+      "author": "이개발",
+      "authorId": 2,
+      "createdAt": "2026-06-18T17:05:00+09:00",
+      "views": 153,
+      "commentsCount": 8,
+      "content": "My Space에 추가된 AI 코딩 스타일 요약 기능, 다들 유용하게 쓰고 계신가요?\n\n개인적으로는 반복되는 지적 패턴을 한눈에 볼 수 있어 좋았는데, 요약 문장이 너무 길다는 의견도 있어서 다른 분들 생각도 듣고 싶습니다."
+    },
+    {
+      "id": 5,
+      "title": "GuardrAil 서비스 정기 점검 안내 (7/12 새벽 2시~4시)",
+      "author": "김관리",
+      "authorId": 1,
+      "createdAt": "2026-07-09T08:00:00+09:00",
+      "views": 41,
+      "commentsCount": 0,
+      "content": "안정적인 서비스 운영을 위해 아래와 같이 정기 점검을 진행합니다.\n\n일시: 2026년 7월 12일 새벽 2시 ~ 4시\n영향: 점검 시간 동안 로그인 및 코드 분석 요청이 일시적으로 제한됩니다.\n\n이용에 불편을 드려 죄송합니다."
+    }
+  ]
+}

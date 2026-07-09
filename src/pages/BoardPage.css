@@ -1,0 +1,114 @@
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.board-toolbar__search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.board-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  cursor: pointer;
+}
+.board-card:hover {
+  border-color: var(--ps-primary);
+}
+.board-card__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-card__title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--fs-body-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-card__meta {
+  display: flex;
+  gap: var(--space-md);
+  color: var(--text-muted);
+  font-size: var(--fs-caption-md);
+}
+.board-card__stats {
+  display: flex;
+  gap: var(--space-lg);
+  flex: none;
+}
+.board-card__stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-caption-md);
+}
+
+.board-write-cta {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-sm);
+}
+
+.board-detail__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.board-detail__meta {
+  display: flex;
+  gap: var(--space-lg);
+  color: var(--text-muted);
+  font-size: var(--fs-caption-md);
+}
+.board-detail__body {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  color: var(--text-body);
+  min-height: 160px;
+}
+.board-detail__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.board-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.board-editor__textarea {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  background: var(--surface-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  line-height: 1.7;
+}
+.board-editor__textarea:focus {
+  border-color: var(--ps-primary);
+  outline: none;
+}
