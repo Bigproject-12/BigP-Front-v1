@@ -63,6 +63,7 @@
   border: none;
   background: none;
   width: 100%;
+  min-width: 0;
   text-align: left;
 }
 .gr-nav-item:hover {
@@ -78,6 +79,98 @@
 .gr-nav-item__icon {
   display: flex;
   flex: none;
+}
+
+.gr-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-md);
+}
+.gr-nav-row--dragging {
+  opacity: 0.45;
+}
+.gr-nav-row .gr-nav-item {
+  flex: 1;
+  min-width: 0;
+}
+.gr-nav-row__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex: none;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.gr-nav-row:hover .gr-nav-row__handle {
+  opacity: 1;
+}
+.gr-nav-row__handle:active {
+  cursor: grabbing;
+}
+.gr-nav-row__chevron-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  margin-right: 6px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+.gr-nav-row__chevron-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.gr-nav-item__chevron {
+  transition: transform 0.15s ease;
+}
+.gr-nav-item__chevron--open {
+  transform: rotate(180deg);
+}
+
+.gr-fav-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 8px 6px 38px;
+}
+.gr-fav-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-body);
+  font-size: var(--fs-body-sm);
+  text-align: left;
+  overflow: hidden;
+}
+.gr-fav-dropdown__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gr-fav-dropdown__item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.gr-fav-dropdown__item--active {
+  color: var(--ps-primary);
+  font-weight: 700;
+}
+.gr-fav-dropdown__empty {
+  padding: 8px 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .gr-sidebar__footer {
@@ -193,6 +286,10 @@
   .gr-sidebar__logo-text,
   .gr-nav-item span:not(.gr-nav-item__icon),
   .gr-sidebar__footer span:not(.gr-nav-item__icon) {
+    display: none;
+  }
+  .gr-nav-row__handle,
+  .gr-nav-row__chevron-btn {
     display: none;
   }
   .gr-page {

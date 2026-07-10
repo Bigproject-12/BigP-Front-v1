@@ -38,6 +38,31 @@
   gap: 8px;
   min-width: 0;
 }
+.repo-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.repo-card__fav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  flex: none;
+}
+.repo-card__fav:hover {
+  background: var(--surface-hover);
+  color: var(--ps-warning);
+}
+.repo-card__fav--active {
+  color: var(--ps-warning);
+}
 .repo-card__name {
   font-weight: 700;
   color: var(--text-primary);
