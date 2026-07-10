@@ -26,9 +26,11 @@ const PATHS = {
   bug: 'M9 4v2M15 4v2M8 8h8a4 4 0 0 1 4 4v2a6 6 0 0 1-12 0v-2a4 4 0 0 1 4-4ZM4 12h2M18 12h2M5.5 7.5 7 9M18.5 7.5 17 9M5.5 17l1.7-1.5M18.5 17l-1.7-1.5',
   upload: 'M12 16V6M7 10l5-5 5 5M4 19h16',
   compare: 'M8 3v18M16 3v18M4 8l4-4M12 8l4-4M4 19l4-4M12 19l4-4',
+  star: 'M12 3.5 14.6 9.2 20.8 9.9 16.2 14.1 17.5 20.3 12 17.1 6.5 20.3 7.8 14.1 3.2 9.9 9.4 9.2Z',
+  grip: 'M8 5h.01M8 12h.01M8 19h.01M16 5h.01M16 12h.01M16 19h.01',
 };
 
-export default function Icon({ name, size = 18, strokeWidth = 1.7, className, ...rest }) {
+export default function Icon({ name, size = 18, strokeWidth = 1.7, className, filled = false, ...rest }) {
   const d = PATHS[name];
   if (!d) return null;
   return (
@@ -36,7 +38,7 @@ export default function Icon({ name, size = 18, strokeWidth = 1.7, className, ..
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth={strokeWidth}
       strokeLinecap="round"

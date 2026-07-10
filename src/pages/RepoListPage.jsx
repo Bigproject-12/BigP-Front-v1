@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { api } from '../lib/api';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
@@ -11,6 +12,7 @@ import './RepoListPage.css';
 
 export default function RepoListPage() {
   const { navigate } = useRouter();
+  const { toggleFavorite } = useFavorites();
   const [repos, setRepos] = useState([]);
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState('all');
@@ -40,6 +42,12 @@ export default function RepoListPage() {
     });
     return list;
   }, [repos, query, visibility, language, sort]);
+
+  const handleToggleFavorite = async (e, repo) => {
+    e.stopPropagation();
+    const updated = await toggleFavorite(repo);
+    setRepos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  };
 
   return (
     <>
@@ -96,7 +104,17 @@ export default function RepoListPage() {
                   <Icon name="repo" size={16} />
                   <span className="repo-card__name">{repo.name}</span>
                 </div>
-                <Badge variant={repo.private ? 'neutral' : 'info'}>{repo.private ? '비공개' : '공개'}</Badge>
+                <div className="repo-card__actions">
+                  <button
+                    type="button"
+                    className={`repo-card__fav ${repo.favorite ? 'repo-card__fav--active' : ''}`}
+                    onClick={(e) => handleToggleFavorite(e, repo)}
+                    aria-label={repo.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                  >
+                    <Icon name="star" size={16} filled={repo.favorite} />
+                  </button>
+                  <Badge variant={repo.private ? 'neutral' : 'info'}>{repo.private ? '비공개' : '공개'}</Badge>
+                </div>
               </div>
               <p className="repo-card__desc text-body-sm">{repo.description}</p>
               <div className="repo-card__meta">
