@@ -1,45 +1,37 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api } from '../lib/api';
-import { useAuth } from './AuthContext';
+import { createContext, useCallback, useContext, useState } from 'react';
+
+const STORAGE_KEY = 'bigp-favorites';
+
+function load() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+function save(repos) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
+}
 
 const FavoritesContext = createContext(null);
 
-/**
- * Holds the current user's favorited repos so the sidebar dropdown and the
- * repo list page stay in sync without either one re-fetching on the other's
- * toggle — the source of truth is json-server's `favorite` field per repo.
- */
 export function FavoritesProvider({ children }) {
-  const { user } = useAuth();
-  const [favorites, setFavorites] = useState([]);
-
-  const refresh = useCallback(() => {
-    if (!user) {
-      setFavorites([]);
-      return;
-    }
-    api
-      .get(`/repos?favorite=true&userId=${user.id}&_sort=updatedAt&_order=desc`)
-      .then(setFavorites)
-      .catch(() => setFavorites([]));
-  }, [user]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const toggleFavorite = useCallback(async (repo) => {
-    const updated = await api.patch(`/repos/${repo.id}`, { favorite: !repo.favorite });
-    setFavorites((prev) =>
-      updated.favorite ? [updated, ...prev.filter((r) => r.id !== updated.id)] : prev.filter((r) => r.id !== updated.id),
-    );
-    return updated;
-  }, []);
+  const [favorites, setFavorites] = useState(load);
 
   const isFavorite = useCallback((repoId) => favorites.some((r) => r.id === repoId), [favorites]);
 
+  const toggleFavorite = useCallback((repo) => {
+    setFavorites((prev) => {
+      const exists = prev.some((r) => r.id === repo.id);
+      const next = exists ? prev.filter((r) => r.id !== repo.id) : [repo, ...prev];
+      save(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite, refresh }}>
+    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite }}>
       {children}
     </FavoritesContext.Provider>
   );

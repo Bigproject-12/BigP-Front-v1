@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -73,6 +74,20 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
+  const [org, setOrg] = useState(() => localStorage.getItem(GITHUB_ORG_KEY) ?? '');
+  const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) ?? '');
+  const [showToken, setShowToken] = useState(false);
+  const [tokenBanner, setTokenBanner] = useState(null);
+
+  const handleSaveToken = () => {
+    const trimmedOrg = org.trim();
+    const trimmedToken = token.trim();
+    trimmedOrg ? localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg) : localStorage.removeItem(GITHUB_ORG_KEY);
+    trimmedToken ? localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken) : localStorage.removeItem(GITHUB_TOKEN_KEY);
+    setTokenBanner({ type: 'success', text: '저장되었습니다.' });
+    setTimeout(() => setTokenBanner(null), 3000);
+  };
+
   useEffect(() => {
     setName(user?.name || '');
     setGitId(user?.gitId || '');
@@ -133,6 +148,38 @@ export default function MyPage() {
             </Button>
             <Button variant="primary" onClick={handleSave} disabled={!isDirty || saving}>
               {saving ? '저장 중…' : '저장'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="mypage-form">
+          <h2 className="text-body-md" style={{ fontWeight: 600 }}>GitHub 연동</h2>
+          <Input
+            label="GitHub 조직명 (Organization)"
+            value={org}
+            onChange={(e) => setOrg(e.target.value)}
+            placeholder="ex) Bigproject-12"
+            hint="팀원 모두 동일한 조직명을 입력하면 같은 대시보드를 공유합니다."
+          />
+          <div className="mypage-row">
+            <Input
+              label="Personal Access Token"
+              type={showToken ? 'text' : 'password'}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              hint="repo 스코프 이상의 PAT을 입력하세요. 브라우저 로컬에만 저장됩니다."
+            />
+            <Button variant="secondary" onClick={() => setShowToken((v) => !v)}>
+              {showToken ? '숨기기' : '보기'}
+            </Button>
+          </div>
+          {tokenBanner && <div className={`ui-banner ui-banner--${tokenBanner.type}`}>{tokenBanner.text}</div>}
+          <div className="mypage-actions">
+            <Button variant="primary" onClick={handleSaveToken}>
+              토큰 저장
             </Button>
           </div>
         </div>

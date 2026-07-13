@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { api } from '../lib/api';
+import { fetchOrgRepos } from '../lib/github';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -12,7 +12,7 @@ import './RepoListPage.css';
 
 export default function RepoListPage() {
   const { navigate } = useRouter();
-  const { toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [repos, setRepos] = useState([]);
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState('all');
@@ -20,7 +20,7 @@ export default function RepoListPage() {
   const [sort, setSort] = useState('recent');
 
   useEffect(() => {
-    api.get('/repos').then(setRepos).catch(() => setRepos([]));
+    fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
   }, []);
 
   const languages = useMemo(() => [...new Set(repos.map((r) => r.language))], [repos]);
@@ -43,10 +43,9 @@ export default function RepoListPage() {
     return list;
   }, [repos, query, visibility, language, sort]);
 
-  const handleToggleFavorite = async (e, repo) => {
+  const handleToggleFavorite = (e, repo) => {
     e.stopPropagation();
-    const updated = await toggleFavorite(repo);
-    setRepos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    toggleFavorite(repo);
   };
 
   return (
@@ -107,11 +106,11 @@ export default function RepoListPage() {
                 <div className="repo-card__actions">
                   <button
                     type="button"
-                    className={`repo-card__fav ${repo.favorite ? 'repo-card__fav--active' : ''}`}
+                    className={`repo-card__fav ${isFavorite(repo.id) ? 'repo-card__fav--active' : ''}`}
                     onClick={(e) => handleToggleFavorite(e, repo)}
-                    aria-label={repo.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    aria-label={isFavorite(repo.id) ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                   >
-                    <Icon name="star" size={16} filled={repo.favorite} />
+                    <Icon name="star" size={16} filled={isFavorite(repo.id)} />
                   </button>
                   <Badge variant={repo.private ? 'neutral' : 'info'}>{repo.private ? '비공개' : '공개'}</Badge>
                 </div>

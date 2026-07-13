@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../lib/api';
+import { fetchOrgRepos, fetchRepoTree, fetchFileContent } from '../lib/github';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
@@ -36,7 +36,7 @@ export default function AnalyzePage() {
   const [repos, setRepos] = useState([]);
   const [files, setFiles] = useState([]);
   const [repoId, setRepoId] = useState('');
-  const [fileId, setFileId] = useState('');
+  const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
 
   const [originalCode, setOriginalCode] = useState('');
@@ -50,47 +50,33 @@ export default function AnalyzePage() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    api.get('/repos').then(setRepos).catch(() => setRepos([]));
+    fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
   }, []);
 
-  useEffect(() => {
-    if (!repoId) {
-      setFiles([]);
-      return;
-    }
-    api
-      .get(`/repoFiles?repoId=${repoId}`)
-      .then(setFiles)
-      .catch(() => setFiles([]));
-  }, [repoId]);
+  const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
-  // Bootstrap from query params: ?analysisId=X (compare view) or ?repoId=X (jump from repo history)
   useEffect(() => {
-    const analysisId = params.get('analysisId');
+    if (!selectedRepo) { setFiles([]); return; }
+    fetchRepoTree(selectedRepo.fullName).then(setFiles).catch(() => setFiles([]));
+  }, [repoId, selectedRepo?.fullName]);
+
+  useEffect(() => {
     const initialRepoId = params.get('repoId');
-
-    if (analysisId) {
-      api.get(`/analyses/${analysisId}`).then((a) => {
-        setRepoId(String(a.repoId));
-        setFileNameOverride(a.fileName);
-        setOriginalCode(a.originalCode);
-        setImprovedCode(a.improvedCode);
-        setIssues(a.issues);
-        setIssueCount(a.issueCount);
-        setImprovementRate(a.improvementRate);
-        setAnalyzed(true);
-        setCompareMode(true);
-      });
-    } else if (initialRepoId) {
-      setRepoId(initialRepoId);
-    }
+    if (initialRepoId) setRepoId(initialRepoId);
   }, [params]);
 
-  const selectedFile = useMemo(
-    () => files.find((f) => String(f.id) === fileId),
-    [files, fileId],
-  );
-  const activeFileName = fileNameOverride || (selectedFile ? selectedFile.path.split('/').pop() : '');
+  // 파일 선택 시 GitHub에서 내용 로드
+  useEffect(() => {
+    if (!filePath || !selectedRepo) return;
+    setFileNameOverride('');
+    setAnalyzed(false);
+    setCompareMode(false);
+    fetchFileContent(selectedRepo.fullName, filePath)
+      .then((content) => { setOriginalCode(content); })
+      .catch(() => {});
+  }, [filePath, selectedRepo?.fullName]);
+
+  const activeFileName = fileNameOverride || (filePath ? filePath.split('/').pop() : '');
 
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -111,26 +97,12 @@ export default function AnalyzePage() {
     setAnalyzing(true);
     setCompareMode(false);
     try {
-      let result = null;
-      if (repoId && activeFileName) {
-        const matches = await api.get(
-          `/analyses?repoId=${repoId}&fileName=${encodeURIComponent(activeFileName)}`,
-        );
-        if (matches && matches.length > 0) result = matches[0];
-      }
       await new Promise((resolve) => setTimeout(resolve, 700));
-      if (result) {
-        setImprovedCode(result.improvedCode);
-        setIssues(result.issues);
-        setIssueCount(result.issueCount);
-        setImprovementRate(result.improvementRate);
-      } else {
-        const mocked = genericMockAnalyze(originalCode);
-        setImprovedCode(mocked.improvedCode);
-        setIssues(mocked.issues);
-        setIssueCount(mocked.issues.length);
-        setImprovementRate(12);
-      }
+      const mocked = genericMockAnalyze(originalCode);
+      setImprovedCode(mocked.improvedCode);
+      setIssues(mocked.issues);
+      setIssueCount(mocked.issues.length);
+      setImprovementRate(12);
       setAnalyzed(true);
     } finally {
       setAnalyzing(false);
@@ -179,9 +151,9 @@ export default function AnalyzePage() {
           <div className="analyze-toolbar__field">
             <label>폴더 / 파일</label>
             <Select
-              value={fileId || (fileNameOverride ? 'custom' : '')}
+              value={filePath || (fileNameOverride ? 'custom' : '')}
               onChange={(e) => {
-                setFileId(e.target.value);
+                setFilePath(e.target.value);
                 setFileNameOverride('');
                 setCompareMode(false);
                 setAnalyzed(false);
@@ -194,9 +166,9 @@ export default function AnalyzePage() {
                   {fileNameOverride}
                 </option>
               )}
-              {files.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.path}
+              {files.map((path) => (
+                <option key={path} value={path}>
+                  {path}
                 </option>
               ))}
             </Select>
