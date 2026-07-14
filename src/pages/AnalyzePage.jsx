@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 import { fetchOrgRepos, fetchRepoTree, fetchFileContent } from '../lib/github';
+import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
@@ -48,6 +49,21 @@ export default function AnalyzePage() {
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const fileInputRef = useRef(null);
+
+  // AI 감지 & 프롬프트 추천 상태
+  const [aiDetection, setAiDetection] = useState(null); // {isAiGenerated, confidence, reasons}
+  const [detecting, setDetecting] = useState(false);
+  const [detectError, setDetectError] = useState('');
+  const [userPrompt, setUserPrompt] = useState('');
+  const [promptResult, setPromptResult] = useState(null); // { improve: {prompt, explanation}, generate: {prompt, explanation} }
+  const [promptTab, setPromptTab] = useState('improve'); // 'improve' | 'generate'
+  const [recommending, setRecommending] = useState(false);
+  const [promptError, setPromptError] = useState('');
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  // 소요 시간
+  const [detectElapsed, setDetectElapsed] = useState(null); // ms
+  const [promptElapsed, setPromptElapsed] = useState(null); // ms
 
   useEffect(() => {
     fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
@@ -107,6 +123,52 @@ export default function AnalyzePage() {
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const handleDetectAi = async () => {
+    if (!originalCode.trim()) return;
+    setDetecting(true);
+    setDetectError('');
+    setAiDetection(null);
+    setPromptResult(null);
+    setPromptTab('improve');
+    setUserPrompt('');
+    setDetectElapsed(null);
+    try {
+      const { result, elapsedMs } = await detectAiGeneratedCode(originalCode);
+      setAiDetection(result);
+      setDetectElapsed(elapsedMs);
+    } catch (e) {
+      setDetectError(e.message || 'AI 감지 중 오류가 발생했습니다.');
+    } finally {
+      setDetecting(false);
+    }
+  };
+
+  const handleRecommendPrompt = async () => {
+    if (!originalCode.trim()) return;
+    setRecommending(true);
+    setPromptError('');
+    setPromptResult(null);
+    setPromptCopied(false);
+    setPromptElapsed(null);
+    try {
+      const { result, elapsedMs } = await recommendPrompt(originalCode, userPrompt);
+      setPromptResult(result);
+      setPromptElapsed(elapsedMs);
+    } catch (e) {
+      setPromptError(e.message || '프롬프트 추천 중 오류가 발생했습니다.');
+    } finally {
+      setRecommending(false);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    const text = promptResult?.[promptTab]?.prompt ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
+    });
   };
 
   return (
@@ -228,7 +290,109 @@ export default function AnalyzePage() {
         <Button variant="primary" onClick={handleAnalyze} disabled={analyzing || !originalCode.trim()}>
           {analyzing ? '분석 중…' : '분석하기'}
         </Button>
+        <Button variant="secondary" onClick={handleDetectAi} disabled={detecting || !originalCode.trim()}>
+          {detecting ? 'AI 감지 중…' : 'AI 생성 코드 감지'}
+        </Button>
       </div>
+
+      {detectError && (
+        <div className="ui-banner ui-banner--error">
+          <Icon name="close" size={16} /> {detectError}
+        </div>
+      )}
+
+      {aiDetection && (
+        <Card className="ai-detect-card">
+          <div className="ai-detect-card__header">
+            <div className="ai-detect-card__title">
+              <Icon name={aiDetection.isAiGenerated ? 'spark' : 'check'} size={18} />
+              <h2 className="text-heading-lg">
+                {aiDetection.isAiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
+              </h2>
+              <Badge variant={aiDetection.isAiGenerated ? 'warning' : 'success'}>
+                확신도 {aiDetection.confidence}%
+              </Badge>
+              {detectElapsed !== null && (
+                <span className="ai-elapsed text-caption-md">
+                  <Icon name="spark" size={12} /> {detectElapsed >= 1000 ? `${(detectElapsed / 1000).toFixed(2)}s` : `${detectElapsed}ms`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <ul className="ai-detect-card__reasons">
+            {aiDetection.reasons.map((r, i) => (
+              <li key={i} className="text-body-sm">{r}</li>
+            ))}
+          </ul>
+
+          {aiDetection.isAiGenerated && (
+            <div className="prompt-section">
+              <div className="prompt-section__header">
+                <Icon name="edit" size={16} />
+                <h3 className="text-heading-md">더 나은 프롬프트 추천</h3>
+              </div>
+              <p className="text-body-sm prompt-section__desc">
+                원하는 방향을 입력하면 맞춤 프롬프트를 추천해드립니다. 비워두면 AI가 코드를 보고 자동으로 작성합니다.
+              </p>
+              <div className="prompt-section__input-row">
+                <textarea
+                  className="prompt-section__textarea"
+                  placeholder="예: 성능 최적화에 집중해줘 / 보안 취약점을 제거해줘 / 가독성을 높여줘"
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                  rows={2}
+                />
+                <Button variant="primary" onClick={handleRecommendPrompt} disabled={recommending}>
+                  {recommending ? '추천 중…' : '프롬프트 추천받기'}
+                </Button>
+              </div>
+
+              {promptError && (
+                <div className="ui-banner ui-banner--error">{promptError}</div>
+              )}
+
+              {promptResult && (
+                <div className="prompt-result">
+                  <div className="prompt-result__tabs">
+                    <button
+                      className={`prompt-result__tab ${promptTab === 'improve' ? 'prompt-result__tab--active' : ''}`}
+                      onClick={() => { setPromptTab('improve'); setPromptCopied(false); }}
+                    >
+                      <Icon name="edit" size={14} /> 코드 개선 프롬프트
+                    </button>
+                    <button
+                      className={`prompt-result__tab ${promptTab === 'generate' ? 'prompt-result__tab--active' : ''}`}
+                      onClick={() => { setPromptTab('generate'); setPromptCopied(false); }}
+                    >
+                      <Icon name="spark" size={14} /> 신규 생성 프롬프트
+                    </button>
+                    {promptElapsed !== null && (
+                      <span className="ai-elapsed ai-elapsed--right text-caption-md">
+                        <Icon name="spark" size={12} /> {promptElapsed >= 1000 ? `${(promptElapsed / 1000).toFixed(2)}s` : `${promptElapsed}ms`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="prompt-result__body">
+                    <div className="prompt-result__header">
+                      <span className="text-caption-md prompt-result__label">
+                        {promptTab === 'improve' ? '기존 코드를 AI에게 개선 요청할 때 사용하세요.' : '같은 기능을 AI에게 처음부터 생성 요청할 때 사용하세요.'}
+                      </span>
+                      <Button variant="ghost" size="sm" icon={<Icon name={promptCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyPrompt}>
+                        {promptCopied ? '복사됨' : '복사'}
+                      </Button>
+                    </div>
+                    <pre className="prompt-result__text">{promptResult[promptTab].prompt}</pre>
+                    <p className="text-caption-md prompt-result__explanation">
+                      <strong>추천 이유</strong><br />{promptResult[promptTab].explanation}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       {analyzed && (
         <div className="result-section">
