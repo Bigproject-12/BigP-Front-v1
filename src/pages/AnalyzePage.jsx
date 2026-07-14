@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
 // fetchBranches 함수 추가 
 import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
  GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
  } from '../lib/github';
+<<<<<<< HEAD
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 
+=======
+import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
+>>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
@@ -62,8 +69,11 @@ export default function AnalyzePage() {
   const [compareMode, setCompareMode] = useState(false);
   const fileInputRef = useRef(null);
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
   // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null); // {isAiGenerated, confidence, reasons}
   const [detecting, setDetecting] = useState(false);
@@ -78,7 +88,10 @@ export default function AnalyzePage() {
   // 소요 시간
   const [detectElapsed, setDetectElapsed] = useState(null); // ms
   const [promptElapsed, setPromptElapsed] = useState(null); // ms
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
   //1. 초기 레포지토리 목록 로드 
   useEffect(() => {
     if (isGithubLinked){
@@ -164,7 +177,10 @@ export default function AnalyzePage() {
     }
   };
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
   const handleDetectAi = async () => {
     if (!originalCode.trim()) return;
     setDetecting(true);
