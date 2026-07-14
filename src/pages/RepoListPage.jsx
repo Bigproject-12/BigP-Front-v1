@@ -1,27 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { api } from '../lib/api';
+import { fetchOrgRepos, GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
+import Button from '../components/ui/Button';
 import './RepoListPage.css';
 
 export default function RepoListPage() {
   const { navigate } = useRouter();
-  const { toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [repos, setRepos] = useState([]);
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState('all');
   const [language, setLanguage] = useState('all');
   const [sort, setSort] = useState('recent');
 
+  const isGithubLinked = Boolean(
+    localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
+  );
+
   useEffect(() => {
-    api.get('/repos').then(setRepos).catch(() => setRepos([]));
-  }, []);
+    if(isGithubLinked){
+    fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
+    }
+  }, [isGithubLinked]);
 
   const languages = useMemo(() => [...new Set(repos.map((r) => r.language))], [repos]);
 
@@ -43,10 +50,17 @@ export default function RepoListPage() {
     return list;
   }, [repos, query, visibility, language, sort]);
 
-  const handleToggleFavorite = async (e, repo) => {
+  const handleToggleFavorite = (e, repo) => {
     e.stopPropagation();
-    const updated = await toggleFavorite(repo);
-    setRepos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    toggleFavorite(repo);
+  };
+
+  const goToMyPage=()=>{
+    if(navigate){
+      navigate('?page=mypage#github-section');
+    }else{
+      window.location.hash='#/mypage#github-section';
+    }
   };
 
   return (
@@ -54,7 +68,10 @@ export default function RepoListPage() {
       <div className="gr-page__header">
         <div className="gr-page__header-text">
           <h1 className="text-display-md">Repository 목록</h1>
-          <span className="text-body-sm">연동된 GitHub 저장소 {repos.length}개</span>
+          <span className="text-body-sm">
+            {isGithubLinked ? 
+            `연동된 GitHub 저장소 ${repos.length}개` : 'GitHub 연동이 필요합니다.'}
+            </span>
         </div>
       </div>
 
@@ -65,14 +82,17 @@ export default function RepoListPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Icon name="search" size={16} />}
+            disabled={!isGithubLinked}
           />
         </div>
-        <Select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+        <Select value={visibility} onChange={(e) => setVisibility(e.target.value)}
+          disabled={!isGithubLinked}>
           <option value="all">전체 유형</option>
           <option value="public">공개</option>
           <option value="private">비공개</option>
         </Select>
-        <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+        <Select value={language} onChange={(e) => setLanguage(e.target.value)}
+          disabled={!isGithubLinked}>
           <option value="all">전체 언어</option>
           {languages.map((lang) => (
             <option key={lang} value={lang}>
@@ -80,16 +100,33 @@ export default function RepoListPage() {
             </option>
           ))}
         </Select>
-        <Select value={sort} onChange={(e) => setSort(e.target.value)}>
+        <Select value={sort} onChange={(e) => setSort(e.target.value)}
+          disabled={!isGithubLinked}>
           <option value="recent">최근 업데이트순</option>
           <option value="name">이름순</option>
         </Select>
       </div>
 
       {visible.length === 0 ? (
-        <div className="ui-empty">
+        <div className="ui-empty" style = {{
+          display:'flex', flexDirection:'column',
+          alignItems:'center', gap:'16px', padding:'60px 0'
+        }}>
+          {!isGithubLinked ? (
+          <>
+          <span style={{color:'var(--text-muted)'}}>
+          GitHub가 아직 연동되지 않았습니다. 저장소를 불러오려면 연동을 진행해 주세요.
+          </span>
+          <Button variant="primary" onClick={goToMyPage}>
+          GitHub 연동하러 가기 
+          </Button>
+          </>
+          ):(
+          <>
           <Icon name="repo" size={28} />
-          <span>조건에 맞는 레포지토리가 없습니다.</span>
+          <span style={{color:'var(--text-muted)'}}>조건에 맞는 레포지토리가 없습니다.</span>
+          </>
+          )}
         </div>
       ) : (
         <div className="repo-grid">
@@ -107,11 +144,11 @@ export default function RepoListPage() {
                 <div className="repo-card__actions">
                   <button
                     type="button"
-                    className={`repo-card__fav ${repo.favorite ? 'repo-card__fav--active' : ''}`}
+                    className={`repo-card__fav ${isFavorite(repo.id) ? 'repo-card__fav--active' : ''}`}
                     onClick={(e) => handleToggleFavorite(e, repo)}
-                    aria-label={repo.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    aria-label={isFavorite(repo.id) ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                   >
-                    <Icon name="star" size={16} filled={repo.favorite} />
+                    <Icon name="star" size={16} filled={isFavorite(repo.id)} />
                   </button>
                   <Badge variant={repo.private ? 'neutral' : 'info'}>{repo.private ? '비공개' : '공개'}</Badge>
                 </div>

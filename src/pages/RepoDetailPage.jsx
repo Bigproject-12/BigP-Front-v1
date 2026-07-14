@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
-import { api } from '../lib/api';
+import { fetchRepo } from '../lib/github';
 import { formatDateTime, languageColor } from '../lib/format';
 import { Tabs, Segment } from '../components/ui/Tabs';
 import Card from '../components/ui/Card';
@@ -32,11 +32,7 @@ export default function RepoDetailPage() {
 
   useEffect(() => {
     if (!repoId) return;
-    api.get(`/repos/${repoId}`).then(setRepo).catch(() => setRepo(null));
-    api
-      .get(`/analyses?repoId=${repoId}&_sort=analyzedAt&_order=desc`)
-      .then(setAnalyses)
-      .catch(() => setAnalyses([]));
+    fetchRepo(repoId).then(setRepo).catch(() => setRepo(null));
   }, [repoId]);
 
   const visibleAnalyses = useMemo(() => {
