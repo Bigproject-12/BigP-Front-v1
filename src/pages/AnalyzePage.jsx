@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-import { fetchOrgRepos, fetchRepoTree, fetchFileContent } from '../lib/github';
+// fetchBranches 함수 추가 
+import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
+ GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
+ } from '../lib/github';
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
@@ -31,12 +34,18 @@ function genericMockAnalyze(code) {
 }
 
 export default function AnalyzePage() {
-  const { params } = useRouter();
+  const { params, navigate } = useRouter();
   const { user } = useAuth();
 
+  const isGithubLinked=Boolean(localStorage.getItem(GITHUB_TOKEN_KEY)
+  &&localStorage.getItem(GITHUB_ORG_KEY));
+
   const [repos, setRepos] = useState([]);
+  const [branches, setBranches] = useState([]);// [추가] 브랜치 목록 상태
   const [files, setFiles] = useState([]);
+
   const [repoId, setRepoId] = useState('');
+  const [branch, setBranch] = useState('');// [추가] 선택된 브랜치 상태
   const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
 
@@ -64,33 +73,49 @@ export default function AnalyzePage() {
   // 소요 시간
   const [detectElapsed, setDetectElapsed] = useState(null); // ms
   const [promptElapsed, setPromptElapsed] = useState(null); // ms
-
+  //1. 초기 레포지토리 목록 로드 
   useEffect(() => {
+    if (isGithubLinked){
     fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
-  }, []);
+    }
+  }, [isGithubLinked]);
 
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
+  // 2. [수정] 레포지토리가 선택되면 브랜치 목록 로드
   useEffect(() => {
-    if (!selectedRepo) { setFiles([]); return; }
-    fetchRepoTree(selectedRepo.fullName).then(setFiles).catch(() => setFiles([]));
+    if (!selectedRepo) { 
+      setBranches([]); 
+      return; 
+    }
+    fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
+
+  // 3. [추가] 브랜치가 선택되면 해당 브랜치의 파일 트리 로드
+  useEffect(()=>{
+    if (!selectedRepo || !branch){
+      setFiles([]);
+      return;
+    }
+    // fetchRepoTree에 선택된 브랜치 이름을 함께 전달합니다.
+    fetchRepoTree(selectedRepo.fullName,branch).then(setFiles).catch(()=>setFiles([]));
+  }, [branch, selectedRepo?.fullName]);
 
   useEffect(() => {
     const initialRepoId = params.get('repoId');
     if (initialRepoId) setRepoId(initialRepoId);
   }, [params]);
 
-  // 파일 선택 시 GitHub에서 내용 로드
+  // 파일 선택 시 GitHub에서 내용 로드(branch 파라미터 추가)
   useEffect(() => {
-    if (!filePath || !selectedRepo) return;
+    if (!filePath || !selectedRepo|| !branch) return;
     setFileNameOverride('');
     setAnalyzed(false);
     setCompareMode(false);
-    fetchFileContent(selectedRepo.fullName, filePath)
+    fetchFileContent(selectedRepo.fullName, filePath, branch)
       .then((content) => { setOriginalCode(content); })
       .catch(() => {});
-  }, [filePath, selectedRepo?.fullName]);
+  }, [filePath, branch, selectedRepo?.fullName]);
 
   const activeFileName = fileNameOverride || (filePath ? filePath.split('/').pop() : '');
 
@@ -101,7 +126,7 @@ export default function AnalyzePage() {
     reader.onload = () => {
       setOriginalCode(String(reader.result || ''));
       setFileNameOverride(file.name);
-      setFileId('');
+      setFilePath('');
       setCompareMode(false);
       setAnalyzed(false);
     };
@@ -122,6 +147,14 @@ export default function AnalyzePage() {
       setAnalyzed(true);
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const goToMyPage = () =>{
+    if (navigate){
+      navigate('?page=mypage#github-section');
+    }else{
+      window.location.hash='#/mypage#gihub-section';
     }
   };
 
@@ -190,13 +223,30 @@ export default function AnalyzePage() {
 
       <Card>
         <div className="analyze-toolbar">
+
+          {/*0. 깃허브 연동되지 않았을 경우*/}
+
+          {!isGithubLinked ? (
+            <div style={{display: 'flex', alighitems: 'center', gap:'12px', flex:1}}>
+            <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
+              GitHub가 아직 연동되지 않았습니다. 코드를 불러오려면 연동을 진행해 주세요.
+            </span>
+            <Button variant="primary" size="sm" onClick={goToMyPage}>
+              GitHub 연동하러 가기
+            </Button>
+            </div>
+          ):(
+          <>
+
+          {/*1. 레포지토리 선택*/}
           <div className="analyze-toolbar__field">
             <label>Repository</label>
             <Select
               value={repoId}
               onChange={(e) => {
                 setRepoId(e.target.value);
-                setFileId('');
+                setBranch(''); //레포지토리가 바뀌면 브랜치 초기화
+                setFilePath('');
                 setFileNameOverride('');
                 setCompareMode(false);
                 setAnalyzed(false);
@@ -210,6 +260,32 @@ export default function AnalyzePage() {
               ))}
             </Select>
           </div>
+
+          {/* 2. [추가] 브랜치 선택 */}
+          <div className="analyze-toolbar__field">
+            <label>Branch</label>
+            <Select
+              value={branch}
+              onChange={(e)=>{
+                setBranch(e.target.value);
+                setFilePath(''); //브랜치 변경 시 파일 선택 초기화 
+                setFileNameOverride('');
+                setCompareMode(false);
+                setAnalyzed(false);
+              }}
+              disabled={!repoId}
+              >
+                <option value="">브랜치 선택</option>
+                {branches.map((b)=>(
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </Select>
+          </div>
+          
+          {/*폴더/파일 선택*/}
+
           <div className="analyze-toolbar__field">
             <label>폴더 / 파일</label>
             <Select
@@ -220,7 +296,7 @@ export default function AnalyzePage() {
                 setCompareMode(false);
                 setAnalyzed(false);
               }}
-              disabled={!repoId}
+              disabled={!branch}
             >
               <option value="">파일 선택</option>
               {fileNameOverride && (
@@ -235,6 +311,9 @@ export default function AnalyzePage() {
               ))}
             </Select>
           </div>
+          </>
+          )}
+
           <div className="analyze-toolbar__spacer" />
           <input
             ref={fileInputRef}

@@ -93,6 +93,17 @@ export default function MyPage() {
     setGitId(user?.gitId || '');
   }, [user]);
 
+  //깃허브 등록 부분까지 스크롤되는 기능 추가 
+  useEffect(() => {
+  if (window.location.hash.includes('github-section')) {
+    const el = document.getElementById('github-section');
+    if (el) {
+      // 부드럽게 스크롤 되도록 smooth 옵션 적용
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+}, []);
+
   if (!user) return null;
 
   const isDirty = name !== user.name || gitId !== user.gitId;
@@ -153,7 +164,7 @@ export default function MyPage() {
         </div>
       </Card>
 
-      <Card>
+      <Card id="github-section">
         <div className="mypage-form">
           <h2 className="text-body-md" style={{ fontWeight: 600 }}>GitHub 연동</h2>
           <Input
