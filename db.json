@@ -322,14 +322,14 @@
       "id": 1,
       "userId": 2,
       "message": "GuardrAil-web 레포의 useAuth.ts 분석이 완료되었습니다.",
-      "read": false,
+      "read": true,
       "createdAt": "2026-07-07T15:42:00+09:00"
     },
     {
       "id": 2,
       "userId": 2,
       "message": "payment-gateway-service 분석에서 높은 심각도 보안 이슈가 발견되었습니다.",
-      "read": false,
+      "read": true,
       "createdAt": "2026-07-05T11:05:00+09:00"
     },
     {
