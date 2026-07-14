@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 // fetchBranches 함수 추가 
-import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
+import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
+ GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
+ } from '../lib/github';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
@@ -31,8 +33,11 @@ function genericMockAnalyze(code) {
 }
 
 export default function AnalyzePage() {
-  const { params } = useRouter();
+  const { params, navigate } = useRouter();
   const { user } = useAuth();
+
+  const isGithubLinked=Boolean(localStorage.getItem(GITHUB_TOKEN_KEY)
+  &&localStorage.getItem(GITHUB_ORG_KEY));
 
   const [repos, setRepos] = useState([]);
   const [branches, setBranches] = useState([]);// [추가] 브랜치 목록 상태
@@ -55,20 +60,25 @@ export default function AnalyzePage() {
 
   //1. 초기 레포지토리 목록 로드 
   useEffect(() => {
+    if (isGithubLinked){
     fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
-  }, []);
+    }
+  }, [isGithubLinked]);
 
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
   // 2. [수정] 레포지토리가 선택되면 브랜치 목록 로드
   useEffect(() => {
-    if (!selectedRepo) { setBranches([]); return; }
-    fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setFiles([]));
+    if (!selectedRepo) { 
+      setBranches([]); 
+      return; 
+    }
+    fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
 
   // 3. [추가] 브랜치가 선택되면 해당 브랜치의 파일 트리 로드
   useEffect(()=>{
-    if (!selectedRepo||!branch){
+    if (!selectedRepo || !branch){
       setFiles([]);
       return;
     }
@@ -83,7 +93,7 @@ export default function AnalyzePage() {
 
   // 파일 선택 시 GitHub에서 내용 로드(branch 파라미터 추가)
   useEffect(() => {
-    if (!filePath || !selectedRepo) return;
+    if (!filePath || !selectedRepo|| !branch) return;
     setFileNameOverride('');
     setAnalyzed(false);
     setCompareMode(false);
@@ -125,6 +135,14 @@ export default function AnalyzePage() {
     }
   };
 
+  const goToMyPage = () =>{
+    if (navigate){
+      navigate('?page=mypage#github-section');
+    }else{
+      window.location.hash='#/mypage#gihub-section';
+    }
+  };
+
   return (
     <>
       <div className="gr-page__header">
@@ -144,6 +162,20 @@ export default function AnalyzePage() {
 
       <Card>
         <div className="analyze-toolbar">
+
+          {/*0. 깃허브 연동되지 않았을 경우*/}
+
+          {!isGithubLinked ? (
+            <div style={{display: 'flex', alighitems: 'center', gap:'12px', flex:1}}>
+            <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
+              GitHub가 아직 연동되지 않았습니다. 코드를 불러오려면 연동을 진행해 주세요.
+            </span>
+            <Button variant="primary" size="sm" onClick={goToMyPage}>
+              GitHub 연동하러 가기
+            </Button>
+            </div>
+          ):(
+          <>
 
           {/*1. 레포지토리 선택*/}
           <div className="analyze-toolbar__field">
@@ -167,6 +199,7 @@ export default function AnalyzePage() {
               ))}
             </Select>
           </div>
+
           {/* 2. [추가] 브랜치 선택 */}
           <div className="analyze-toolbar__field">
             <label>Branch</label>
@@ -217,6 +250,8 @@ export default function AnalyzePage() {
               ))}
             </Select>
           </div>
+          </>
+          )}
 
           <div className="analyze-toolbar__spacer" />
           <input
