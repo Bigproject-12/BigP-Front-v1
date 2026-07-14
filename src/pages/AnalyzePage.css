@@ -8,6 +8,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 180px;
+  flex: 1 1 0px;
 }
 .analyze-toolbar__field label {
   font-size: var(--fs-caption-md);
