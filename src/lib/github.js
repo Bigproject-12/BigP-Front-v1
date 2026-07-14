@@ -4,7 +4,7 @@ export const GITHUB_TOKEN_KEY = 'bigp-github-token';
 export const GITHUB_ORG_KEY = 'bigp-github-org';
 
 function getToken() {
-  return localStorage.getItem(GITHUB_TOKEN_KEY) || import.meta.env.VITE_GITHUB_TOKEN || '';
+  return localStorage.getItem(GITHUB_TOKEN_KEY) || '';
 }
 
 export function getOrg() {
