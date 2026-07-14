@@ -89,6 +89,126 @@
   font-family: var(--font-body);
 }
 
+/* 분리/비교 토글 */
+.analyze-view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-input);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  width: fit-content;
+  align-self: flex-end;
+}
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-caption-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.view-toggle-btn:hover {
+  color: var(--text-primary);
+}
+.view-toggle-btn--active {
+  background: var(--ps-primary);
+  color: #fff;
+}
+
+/* diff 카드 */
+.diff-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* diff 뷰어 */
+.diff-viewer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 340px;
+  overflow: auto;
+}
+.diff-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.diff-pane--left {
+  border-right: 1px solid var(--border-hairline);
+}
+.diff-pane__label {
+  padding: 8px 12px;
+  font-size: var(--fs-caption-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--surface-input);
+}
+.diff-pane__code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+
+/* diff 줄 */
+.diff-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  white-space: pre;
+  min-height: 21px;
+}
+.diff-line--removed {
+  background: rgba(239, 68, 68, 0.15);
+}
+.diff-line--added {
+  background: rgba(34, 197, 94, 0.15);
+}
+.diff-line--empty {
+  background: var(--surface-input);
+  opacity: 0.4;
+}
+.diff-line__num {
+  min-width: 40px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  border-right: 1px solid var(--border-hairline);
+  font-size: 11px;
+}
+.diff-line__marker {
+  width: 20px;
+  text-align: center;
+  user-select: none;
+  font-weight: 700;
+}
+.diff-line--removed .diff-line__marker { color: #ef4444; }
+.diff-line--added   .diff-line__marker { color: #22c55e; }
+.diff-line__text {
+  padding-right: 16px;
+  flex: 1;
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .diff-viewer {
+    grid-template-columns: 1fr;
+  }
+  .diff-pane--left {
+    border-right: none;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+}
+
 .analyze-actions {
   display: flex;
   align-items: center;
@@ -137,6 +257,19 @@
 }
 .result-card__reason strong {
   color: var(--text-body);
+}
+
+/* AI 탭 빈 상태 */
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  min-height: 200px;
+  width: 100%;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* AI 감지 결과 카드 */
