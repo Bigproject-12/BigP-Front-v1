@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-import { Tabs } from '../components/ui/Tabs';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
@@ -9,12 +8,6 @@ import './LoginPage.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const TABS = [
-  { key: 'login', label: '로그인' },
-  { key: 'signup', label: '회원가입' },
-  { key: 'find-password', label: '비밀번호 찾기' },
-  { key: 'reset-password', label: '비밀번호 재설정' },
-];
 
 function FeatureRow({ icon, title, desc }) {
   return (
@@ -114,11 +107,11 @@ function LoginForm({ onSwitchTab }) {
         Dev 로그인
       </Button>
       <div className="login-card__footer">
-        <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
-          비밀번호 찾기
-        </button>
         <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('signup')}>
           회원가입
+        </button>
+        <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
+          비밀번호 찾기
         </button>
       </div>
       <div className="ui-card" style={{ marginTop: 4 }}>
@@ -171,6 +164,9 @@ function SignupForm({ onSwitchTab }) {
 
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
+      <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('login')} aria-label="로그인으로 돌아가기">
+        <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+      </button>
       <Input label="이름" value={form.name} onChange={set('name')} placeholder="홍길동" />
       <Input label="기업명" value={form.companyName} onChange={set('companyName')} placeholder="AIVLE" />
       <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
@@ -185,7 +181,7 @@ function SignupForm({ onSwitchTab }) {
   );
 }
 
-function FindPasswordForm() {
+function FindPasswordForm({ onSwitchTab }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
@@ -202,6 +198,9 @@ function FindPasswordForm() {
 
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
+      <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('login')} aria-label="로그인으로 돌아가기">
+        <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+      </button>
       <p className="text-body-sm">가입한 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
       <Input label="이메일" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
@@ -243,7 +242,8 @@ function ResetPasswordForm() {
 
 export default function LoginPage() {
   const { params, navigate } = useRouter();
-  const activeTab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'login';
+  const tab = params.get('tab');
+  const activeTab = ['login', 'signup', 'find-password'].includes(tab) ? tab : 'login';
 
   const switchTab = (key) => navigate(`?page=login&tab=${key}`);
 
@@ -267,11 +267,9 @@ export default function LoginPage() {
 
       <div className="login-panel">
         <div className="login-card">
-          <Tabs items={TABS} active={activeTab} onChange={switchTab} />
           {activeTab === 'login' && <LoginForm onSwitchTab={switchTab} />}
           {activeTab === 'signup' && <SignupForm onSwitchTab={switchTab} />}
-          {activeTab === 'find-password' && <FindPasswordForm />}
-          {activeTab === 'reset-password' && <ResetPasswordForm />}
+          {activeTab === 'find-password' && <FindPasswordForm onSwitchTab={switchTab} />}
         </div>
       </div>
     </div>
