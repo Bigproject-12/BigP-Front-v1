@@ -46,20 +46,15 @@ export function AuthProvider({ children }) {
     return publicUser;
   }, []);
 
-  const signup = useCallback(async ({ email, password, name, company, gitId }) => {
-    const existing = await api.get(`/users?email=${encodeURIComponent(email)}`);
-    if (existing && existing.length > 0) {
-      throw new Error('이미 가입된 이메일입니다.');
-    }
-    const created = await api.post('/users', {
-      email,
-      password,
-      name,
-      company: company || '',
-      gitId: gitId || '',
-      role: 'user',
+  const signup = useCallback(async ({ loginId, password, confirm, name, companyName, gitId }) => {
+    const res = await fetch('http://localhost:8081/api/users/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName, gitId }),
     });
-    return toPublicUser(created);
+    if (res.status === 404) throw new Error('등록된 회사를 찾을 수 없습니다.');
+    if (!res.ok) throw new Error('회원가입에 실패했습니다.');
+    return res.json();
   }, []);
 
   const logout = useCallback(() => {

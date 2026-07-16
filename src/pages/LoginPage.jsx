@@ -112,7 +112,7 @@ function LoginForm({ onSwitchTab }) {
 
 function SignupForm({ onSwitchTab }) {
   const { signup } = useAuth();
-  const [form, setForm] = useState({ name: '', company: '', gitId: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', companyName: '', gitId: '', loginId: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -123,7 +123,7 @@ function SignupForm({ onSwitchTab }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) return setError('이름을 입력해주세요.');
-    if (!EMAIL_RE.test(form.email)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
+    if (!EMAIL_RE.test(form.loginId)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
     if (form.password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.');
     if (form.password !== form.confirm) return setError('비밀번호가 일치하지 않습니다.');
 
@@ -152,9 +152,9 @@ function SignupForm({ onSwitchTab }) {
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
       <Input label="이름" value={form.name} onChange={set('name')} placeholder="홍길동" />
-      <Input label="기업명" value={form.company} onChange={set('company')} placeholder="GuardrAil Inc." />
+      <Input label="기업명" value={form.companyName} onChange={set('companyName')} placeholder="AIVLE" />
       <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
-      <Input label="이메일" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" />
+      <Input label="이메일" type="email" value={form.loginId} onChange={set('loginId')} placeholder="you@company.com" />
       <Input label="비밀번호" type="password" value={form.password} onChange={set('password')} placeholder="8자 이상" />
       <Input label="비밀번호 확인" type="password" value={form.confirm} onChange={set('confirm')} />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
