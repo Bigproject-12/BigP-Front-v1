@@ -9,7 +9,7 @@
  *   POST /api/ai/prompt   — 프롬프트 추천
  */
 
-const USE_MOCK = true; // 백엔드 연결 시 false로 변경
+const USE_MOCK = false;
 
 // 서버가 2개인 경우 각각 URL을 지정하세요.
 // 같은 서버라면 BACKEND_BASE만 사용하고 AI_BASE를 동일하게 맞추면 됩니다.
@@ -103,15 +103,21 @@ export async function detectAiGeneratedCode(code) {
       return code.length > 100 ? MOCK_DETECT_AI : MOCK_DETECT_HUMAN;
     }
 
-    // ── 백엔드 연결 시 아래 코드를 활성화 ──
-    // AI 판별은 AI 모델 서버로 요청합니다.
-    // const res = await fetch(`${AI_BASE}/detect`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ code }),
-    // });
-    // if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
-    // return res.json(); // { isAiGenerated, confidence, reasons }
+    const res = await fetch(`${AI_BASE}/api/ai/detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code_content: code }),
+    });
+    if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+    const data = await res.json();
+    const aiProb = Math.round(data.ai_probability);
+    return {
+      isAiGenerated: data.is_ai_generated,
+      confidence: data.is_ai_generated ? aiProb : 100 - aiProb,
+      reasons: [],
+      hasVulnerability: data.has_vulnerability,
+      vulnerabilities: data.vulnerabilities ?? [],
+    };
   });
 }
 

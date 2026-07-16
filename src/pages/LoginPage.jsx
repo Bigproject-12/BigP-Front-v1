@@ -93,6 +93,26 @@ function LoginForm({ onSwitchTab }) {
       <Button type="submit" variant="primary" block disabled={submitting}>
         {submitting ? '로그인 중…' : '로그인'}
       </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        block
+        disabled={submitting}
+        onClick={async () => {
+          setError('');
+          setSubmitting(true);
+          try {
+            await login('dev@GuardrAil.io', 'dev12345');
+            navigate('?page=dashboard', { replace: true });
+          } catch (err) {
+            setError(err.message);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      >
+        Dev 로그인
+      </Button>
       <div className="login-card__footer">
         <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
           비밀번호 찾기
@@ -114,7 +134,7 @@ function LoginForm({ onSwitchTab }) {
 
 function SignupForm({ onSwitchTab }) {
   const { signup } = useAuth();
-  const [form, setForm] = useState({ name: '', company: '', gitId: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', companyName: '', gitId: '', loginId: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -130,7 +150,7 @@ function SignupForm({ onSwitchTab }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) return setError('이름을 입력해주세요.');
-    if (!EMAIL_RE.test(form.email)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
+    if (!EMAIL_RE.test(form.loginId)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
     if (form.password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.');
     if (form.password !== form.confirm) return setError('비밀번호가 일치하지 않습니다.');
 

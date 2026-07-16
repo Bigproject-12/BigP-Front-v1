@@ -122,6 +122,9 @@ export default function AnalyzePage() {
     setFileNameOverride('');
     setAnalyzed(false);
     setCompareMode(false);
+    setAiDetection(null);
+    setDetectError('');
+    setPromptResult(null);
     fetchFileContent(selectedRepo.fullName, filePath, branch)
       .then((content) => { setOriginalCode(content); })
       .catch(() => {});
@@ -139,6 +142,9 @@ export default function AnalyzePage() {
       setFilePath('');
       setCompareMode(false);
       setAnalyzed(false);
+      setAiDetection(null);
+      setDetectError('');
+      setPromptResult(null);
     };
     reader.readAsText(file);
   };
@@ -151,12 +157,15 @@ export default function AnalyzePage() {
     setDetectError('');
     setPromptResult(null);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      const mocked = genericMockAnalyze(originalCode);
+      const [mocked, detection] = await Promise.all([
+        new Promise((resolve) => setTimeout(() => resolve(genericMockAnalyze(originalCode)), 700)),
+        detectAiGeneratedCode(originalCode).then((r) => r.result).catch(() => null),
+      ]);
       setImprovedCode(mocked.improvedCode);
       setIssues(mocked.issues);
       setIssueCount(mocked.issues.length);
       setImprovementRate(12);
+      setAiDetection(detection);
       setAnalyzed(true);
     } finally {
       setAnalyzing(false);
@@ -432,6 +441,27 @@ export default function AnalyzePage() {
                     </p>
                   </Card>
                 ))}
+                {aiDetection && (
+                  <Card className="result-card">
+                    <div className="result-card__head">
+                      <Icon name="bug" size={15} />
+                      <Badge variant={aiDetection.hasVulnerability ? 'warning' : 'success'}>
+                        {aiDetection.hasVulnerability ? `취약점 ${aiDetection.vulnerabilities.length}건` : '취약점 없음'}
+                      </Badge>
+                    </div>
+                    {aiDetection.vulnerabilities.length > 0 ? (
+                      aiDetection.vulnerabilities.map((v, i) => (
+                        <p key={i} className="text-body-sm" style={{ marginTop: 4 }}>
+                          <strong>{v.line}번째 줄</strong> — {v.message}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-caption-md" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
+                        semgrep 분석 결과 취약점이 발견되지 않았습니다.
+                      </p>
+                    )}
+                  </Card>
+                )}
               </div>
             </div>
           )}
