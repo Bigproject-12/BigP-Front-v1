@@ -93,6 +93,26 @@ function LoginForm({ onSwitchTab }) {
       <Button type="submit" variant="primary" block disabled={submitting}>
         {submitting ? '로그인 중…' : '로그인'}
       </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        block
+        disabled={submitting}
+        onClick={async () => {
+          setError('');
+          setSubmitting(true);
+          try {
+            await login('dev@GuardrAil.io', 'dev12345');
+            navigate('?page=dashboard', { replace: true });
+          } catch (err) {
+            setError(err.message);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      >
+        Dev 로그인
+      </Button>
       <div className="login-card__footer">
         <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
           비밀번호 찾기
