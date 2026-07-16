@@ -3,11 +3,10 @@
   min-height: 100svh;
 }
 
-/* ---- Sidebar ---- */
+/* ---- Sidebar Base ---- */
 .gr-sidebar {
   width: var(--sidebar-width);
   flex: none;
-  min-height: 100svh;
   background: var(--surface-elevated);
   border-right: 1px solid var(--border-hairline);
   display: flex;
@@ -15,15 +14,55 @@
   position: sticky;
   top: 0;
   height: 100svh;
+  transition: width 0.2s ease;
+}
+
+.gr-sidebar--collapsed {
+  width: 72px;
+}
+
+/* 로고 레이아웃 고정 */
+.gr-sidebar__header {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
 }
 
 .gr-sidebar__logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 20px;
-  color: var(--text-primary);
+  gap: 12px;
 }
+
+/* 숨김 로직 (일관되게 처리) */
+.gr-sidebar--collapsed .gr-sidebar__logo-text,
+.gr-sidebar--collapsed .gr-nav-item span:not(.gr-nav-item__icon),
+.gr-sidebar--collapsed .gr-sidebar__footer span:not(.gr-nav-item__icon),
+.gr-sidebar--collapsed .gr-nav-row__handle,
+.gr-sidebar--collapsed .gr-nav-row__chevron-btn {
+  display: none !important;
+}
+
+/* 버튼 스타일 및 시인성 강화 */
+.gr-sidebar__toggle-btn {
+  margin: 0 0 10px 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.gr-sidebar--collapsed .gr-sidebar__toggle-btn {
+  margin-left: 20px; /* 접혔을 때 정렬 */
+}
+
 .gr-sidebar__logo-mark {
   width: 32px;
   height: 32px;
@@ -65,6 +104,8 @@
   width: 100%;
   min-width: 0;
   text-align: left;
+  justify-content: flex-start;
+  box-sizing: border-box;
 }
 .gr-nav-item:hover {
   background: var(--surface-hover);
@@ -280,9 +321,8 @@
 }
 
 @media (max-width: 960px) {
-  .gr-sidebar {
-    width: 72px;
-  }
+  .gr-sidebar { width: 72px; }
+  .gr-sidebar__toggle-btn { display: none !important; }
   .gr-sidebar__logo-text,
   .gr-nav-item span:not(.gr-nav-item__icon),
   .gr-sidebar__footer span:not(.gr-nav-item__icon) {
@@ -295,4 +335,9 @@
   .gr-page {
     padding: var(--space-lg);
   }
+  
+  .gr-sidebar__nav > .gr-nav-row:first-child {
+    display: none !important;
+  }
+
 }
