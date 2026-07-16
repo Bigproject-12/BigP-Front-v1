@@ -98,13 +98,6 @@ export default function Sidebar() {
 
   return (
     <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
-      <div className="gr-sidebar__header">
-        <div className="gr-sidebar__logo">
-          <span className="gr-sidebar__logo-mark"><Icon name="spark" size={18} /></span>
-          <span className="gr-sidebar__logo-text">GuardrAil</span>
-        </div>
-      </div>
-
       <nav className="gr-sidebar__nav">
         <div className="gr-nav-row">
             {/* 아래 메뉴들과 가로 길이를 완벽히 맞추기 위한 투명한 빈 공간 (드래그 기능은 없음) */}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from '../../router/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
@@ -17,6 +18,7 @@ function timeAgo(iso) {
 }
 
 export default function Topbar() {
+  const { navigate } = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
@@ -50,6 +52,11 @@ export default function Topbar() {
 
   return (
     <header className="gr-topbar">
+      <button className="gr-topbar__logo" onClick={() => navigate('?page=dashboard')}>
+        <span className="gr-sidebar__logo-mark"><Icon name="spark" size={18} /></span>
+        <span className="gr-sidebar__logo-text">GuardrAil</span>
+      </button>
+
       <div className="gr-topbar__bell-wrap" ref={panelRef}>
         <Button
           variant="icon"

@@ -21,22 +21,7 @@
   width: 72px;
 }
 
-/* 로고 레이아웃 고정 */
-.gr-sidebar__header {
-  height: 72px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-}
-
-.gr-sidebar__logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 /* 숨김 로직 (일관되게 처리) */
-.gr-sidebar--collapsed .gr-sidebar__logo-text,
 .gr-sidebar--collapsed .gr-nav-item span:not(.gr-nav-item__icon),
 .gr-sidebar--collapsed .gr-sidebar__footer span:not(.gr-nav-item__icon),
 .gr-sidebar--collapsed .gr-nav-row__handle,
@@ -236,6 +221,17 @@
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.gr-topbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-right: auto;
 }
 
 .gr-topbar__bell-wrap {
