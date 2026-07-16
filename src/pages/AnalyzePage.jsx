@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+
 // fetchBranches 함수 추가 
 import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
  GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
  } from '../lib/github';
+
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
@@ -62,6 +64,7 @@ export default function AnalyzePage() {
   const [diffMode, setDiffMode] = useState(false);
   const fileInputRef = useRef(null);
 
+
   // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null); // {isAiGenerated, confidence, reasons}
   const [detecting, setDetecting] = useState(false);
@@ -76,6 +79,7 @@ export default function AnalyzePage() {
   // 소요 시간
   const [detectElapsed, setDetectElapsed] = useState(null); // ms
   const [promptElapsed, setPromptElapsed] = useState(null); // ms
+
 
   // 페이지 탭
   const [activeTab, setActiveTab] = useState('analyze');
@@ -175,6 +179,7 @@ export default function AnalyzePage() {
       window.location.hash='#/mypage#gihub-section';
     }
   };
+
 
   const handleDetectAi = async () => {
     if (!originalCode.trim()) return;
