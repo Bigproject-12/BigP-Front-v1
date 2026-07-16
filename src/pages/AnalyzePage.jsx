@@ -118,6 +118,9 @@ export default function AnalyzePage() {
     setFileNameOverride('');
     setAnalyzed(false);
     setCompareMode(false);
+    setAiDetection(null);
+    setDetectError('');
+    setPromptResult(null);
     fetchFileContent(selectedRepo.fullName, filePath, branch)
       .then((content) => { setOriginalCode(content); })
       .catch(() => {});
@@ -135,6 +138,9 @@ export default function AnalyzePage() {
       setFilePath('');
       setCompareMode(false);
       setAnalyzed(false);
+      setAiDetection(null);
+      setDetectError('');
+      setPromptResult(null);
     };
     reader.readAsText(file);
   };
@@ -487,6 +493,27 @@ export default function AnalyzePage() {
                   <li key={i} className="text-body-sm">{r}</li>
                 ))}
               </ul>
+
+              <div className="vuln-section">
+                <div className="ai-detect-card__title" style={{ marginBottom: 8 }}>
+                  <Icon name="bug" size={16} />
+                  <h3 className="text-heading-md">취약점 분석</h3>
+                  <Badge variant={aiDetection.hasVulnerability ? 'warning' : 'success'}>
+                    {aiDetection.hasVulnerability ? `${aiDetection.vulnerabilities.length}건 발견` : '취약점 없음'}
+                  </Badge>
+                </div>
+                {aiDetection.vulnerabilities.length > 0 ? (
+                  <ul className="ai-detect-card__reasons">
+                    {aiDetection.vulnerabilities.map((v, i) => (
+                      <li key={i} className="text-body-sm">{typeof v === 'string' ? v : JSON.stringify(v)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-caption-md" style={{ color: 'var(--text-muted)' }}>
+                    semgrep 분석 결과 취약점이 발견되지 않았습니다.
+                  </p>
+                )}
+              </div>
 
               {aiDetection.isAiGenerated && (
                 <div className="prompt-section">
