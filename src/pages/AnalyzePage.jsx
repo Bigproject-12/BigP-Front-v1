@@ -1,21 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
 
-=======
->>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
 // fetchBranches 함수 추가 
 import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
  GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
  } from '../lib/github';
-<<<<<<< HEAD
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
-
-=======
-import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
->>>>>>> 0b02dad2d7c4d21c96191ee3fd8271f36caf999b
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
