@@ -95,7 +95,7 @@ function LoginForm({ onSwitchTab }) {
           setError('');
           setSubmitting(true);
           try {
-            await login('dev@GuardrAil.io', 'dev12345');
+            await login('dev@GuardrAil.io', 'Dev12345!');
             navigate('?page=dashboard', { replace: true });
           } catch (err) {
             setError(err.message);
