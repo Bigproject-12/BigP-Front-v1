@@ -92,7 +92,7 @@ export default function MyPage() {
         await fetch('http://localhost:8081/api/repos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('GuardrAil-token')}` },
-          body: JSON.stringify({ githubToken: trimmedToken }),
+          body: JSON.stringify({ githubToken: trimmedToken, orgName: trimmedOrg }),
         });
       } catch {}
     }
