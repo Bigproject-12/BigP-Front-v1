@@ -21,7 +21,7 @@ function ChangePasswordModal({ onClose }) {
   const handleSave = async () => {
     setError('');
     if (next.length < 8) {
-      setError('새 비밀번호는 8자 이상이어야 합니다.');
+      setError('비밀번호는 8자 이상 18자 이하여야 하며 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
       return;
     }
     if (next !== confirm) {
