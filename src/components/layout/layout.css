@@ -54,7 +54,8 @@
 .gr-sidebar--collapsed .gr-nav-item span:not(.gr-nav-item__icon),
 .gr-sidebar--collapsed .gr-sidebar__footer span:not(.gr-nav-item__icon),
 .gr-sidebar--collapsed .gr-nav-row__handle,
-.gr-sidebar--collapsed .gr-nav-row__chevron-btn {
+.gr-sidebar--collapsed .gr-nav-row__chevron-btn,
+.gr-sidebar--collapsed .gr-fav-dropdown {
   display: none !important;
 }
 
