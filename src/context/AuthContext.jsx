@@ -66,7 +66,14 @@ export function AuthProvider({ children }) {
     return res.json();
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      await fetch('http://localhost:8081/api/users/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);
