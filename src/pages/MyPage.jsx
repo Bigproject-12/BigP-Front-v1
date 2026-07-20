@@ -89,9 +89,12 @@ export default function MyPage() {
     localStorage.removeItem(GITHUB_TOKEN_KEY);
     //여기까지 제거
     if (trimmedToken) {
-      //백엔드 연결 시 try에서 await 구문 꺼내주고 catch 구문 제거
       try {
-        await api.post('/api/repos', { githubToken: trimmedToken });
+        await fetch('http://localhost:8081/api/repos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('GuardrAil-token')}` },
+          body: JSON.stringify({ githubToken: trimmedToken }),
+        });
       } catch {}
     }
     setTokenBanner({ type: 'success', text: '저장되었습니다.' });
