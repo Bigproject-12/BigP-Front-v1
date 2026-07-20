@@ -19,7 +19,7 @@ function ChangePasswordModal({ onClose }) {
 
   const handleSave = async () => {
     setError('');
-    if (next.length < 8) {
+    if (next.length < 8 || next.length > 18) {
       setError('비밀번호는 8자 이상 18자 이하여야 하며 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
       return;
     }
@@ -87,7 +87,6 @@ export default function MyPage() {
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
-    
     if (trimmedToken) {
       try {
         await fetch('http://localhost:8081/api/repos', {
