@@ -36,8 +36,11 @@ function ChangePasswordModal({ onClose }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword: current, newPassword: next, newPasswordConfirm: confirm }),
       });
-      if (res.status === 401) { setError('현재 비밀번호가 올바르지 않습니다.'); return; }
-      if (!res.ok) throw new Error('비밀번호 변경에 실패했습니다.');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setError(err.message || '비밀번호 변경에 실패했습니다.');
+        return;
+      }
       onClose(true);
     } finally {
       setSaving(false);
