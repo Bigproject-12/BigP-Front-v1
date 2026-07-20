@@ -74,16 +74,26 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
-  const [org, setOrg] = useState(() => localStorage.getItem(GITHUB_ORG_KEY) ?? '');
-  const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) ?? '');
+  const [org, setOrg] = useState(() => localStorage.getItem(GITHUB_ORG_KEY) ?? ''); // 백엔드 연결되면 const [org, setOrg] = useState('') 으로 변경, 뒤에 다 날림
+  const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) ?? ''); // 백엔드 연결되면 const [token, setToken] = useState('') 으로 변경
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
 
-  const handleSaveToken = () => {
+  const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
-    trimmedOrg ? localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg) : localStorage.removeItem(GITHUB_ORG_KEY);
-    trimmedToken ? localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken) : localStorage.removeItem(GITHUB_TOKEN_KEY);
+    //백엔드 연결 시 아래 구문 제거
+    trimmedOrg ? localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg) : 
+    localStorage.removeItem(GITHUB_ORG_KEY);
+    trimmedToken ? localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken) : 
+    localStorage.removeItem(GITHUB_TOKEN_KEY);
+    //여기까지 제거
+    if (trimmedToken) {
+      //백엔드 연결 시 try에서 await 구문 꺼내주고 catch 구문 제거
+      try {
+        await api.post('/api/repos', { githubToken: trimmedToken });
+      } catch {}
+    }
     setTokenBanner({ type: 'success', text: '저장되었습니다.' });
     setTimeout(() => setTokenBanner(null), 3000);
   };
@@ -181,7 +191,7 @@ export default function MyPage() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              hint="repo 스코프 이상의 PAT을 입력하세요. 브라우저 로컬에만 저장됩니다."
+              hint="GitHub Personal Access Token을 입력하세요. (repo 권한 필요)"
             />
             <Button variant="secondary" onClick={() => setShowToken((v) => !v)}>
               {showToken ? '숨기기' : '보기'}
