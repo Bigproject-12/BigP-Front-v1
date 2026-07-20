@@ -98,18 +98,25 @@ export default function Sidebar() {
 
   return (
     <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
+      <div className="gr-sidebar__header">
+        <div className="gr-sidebar__logo">
+          <span className="gr-sidebar__logo-mark"><Icon name="spark" size={18} /></span>
+          <span className="gr-sidebar__logo-text">GuardrAil</span>
+        </div>
+
+        {/* 네비게이션 안에서 헤더 영역으로 옮겨진 토글 버튼 */}
+        <button 
+          className="gr-sidebar__toggle-btn" 
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-label="사이드바 토글"
+        >
+          <Icon name={isExpanded ? 'chevronLeft' : 'chevronRight'} size={16} />
+        </button>
+
+      </div>
+
       <nav className="gr-sidebar__nav">
-        <div className="gr-nav-row">
-            {/* 아래 메뉴들과 가로 길이를 완벽히 맞추기 위한 투명한 빈 공간 (드래그 기능은 없음) */}
-            <span className="gr-nav-row__handle" style={{ cursor: 'default' }}></span>
-            
-            <button className="gr-nav-item" onClick={() => setIsExpanded(!isExpanded)}>
-              <span className="gr-nav-item__icon">
-                <Icon name={isExpanded ? 'chevronLeft' : 'chevronRight'} size={18} />
-              </span>
-              {isExpanded && <span>접기</span>}
-            </button>
-          </div>
+   
         
         {order.map((key) => {
           const item = NAV_ITEM_MAP[key];
