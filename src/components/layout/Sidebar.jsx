@@ -99,11 +99,6 @@ export default function Sidebar() {
   return (
     <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
       <div className="gr-sidebar__header">
-        <div className="gr-sidebar__logo">
-          <span className="gr-sidebar__logo-mark"><Icon name="spark" size={18} /></span>
-          <span className="gr-sidebar__logo-text">GuardrAil</span>
-        </div>
-
         {/* 네비게이션 안에서 헤더 영역으로 옮겨진 토글 버튼 */}
         <button 
           className="gr-sidebar__toggle-btn" 

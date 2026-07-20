@@ -31,10 +31,23 @@
   position: relative; /* 이 속성을 추가합니다 */
 }
 
-.gr-sidebar__logo {
+/* Topbar 로고에서도 재사용하는 스타일 */
+.gr-sidebar__logo-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--ps-primary);
+  color: #fff;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  flex: none;
+}
+.gr-sidebar__logo-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.2px;
 }
 
 /* 숨김 로직 (일관되게 처리) */
@@ -72,24 +85,6 @@
 
 .gr-sidebar--collapsed .gr-sidebar__toggle-btn {
   margin-left: 0; /* 접혔을 때 정렬 */
-}
-
-.gr-sidebar__logo-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: var(--ps-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
-.gr-sidebar__logo-text {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: 0.2px;
 }
 
 .gr-sidebar__nav {

@@ -7,6 +7,7 @@ import Icon from '../components/icons/Icon';
 import './LoginPage.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 
 function FeatureRow({ icon, title, desc }) {
@@ -143,8 +144,12 @@ function SignupForm({ onSwitchTab }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) return setError('이름을 입력해주세요.');
+    if (!form.gitId.trim()) return setError('Git ID를 입력해주세요.');
     if (!EMAIL_RE.test(form.loginId)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
     if (form.password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.');
+    if (!PASSWORD_RE.test(form.password)) {
+      return setError('비밀번호는 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
+    }
     if (form.password !== form.confirm) return setError('비밀번호가 일치하지 않습니다.');
 
     // 유효성 검사 통과 시 팝업 띄우기
