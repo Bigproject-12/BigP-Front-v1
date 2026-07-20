@@ -151,7 +151,7 @@ export default function MyPage() {
 
       <Card>
         <div className="mypage-form">
-          <Input label="기업명" value={user.companyId ?? ''} readOnly disabled />
+          <Input label="기업명" value={user.companyName ?? ''} readOnly disabled />
           <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
           <Input label="아이디" value={user.loginId ?? ''} readOnly disabled hint="로그인 ID는 변경할 수 없습니다." />
 
