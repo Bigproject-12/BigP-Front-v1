@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -19,7 +20,7 @@ function ChangePasswordModal({ onClose }) {
 
   const handleSave = async () => {
     setError('');
-    if (next.length < 8) {
+    if (next.length < 8 || next.length > 18) {
       setError('비밀번호는 8자 이상 18자 이하여야 하며 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
       return;
     }
@@ -79,15 +80,20 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
-  const [org, setOrg] = useState('');
-  const [token, setToken] = useState('');
+  const [org, setOrg] = useState(() => localStorage.getItem(GITHUB_ORG_KEY) ?? ''); // 백엔드 연결되면 const [org, setOrg] = useState('') 으로 변경, 뒤에 다 날림
+  const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) ?? ''); // 백엔드 연결되면 const [token, setToken] = useState('') 으로 변경
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
 
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
-    
+    //백엔드 연결 시 아래 구문 제거
+    trimmedOrg ? localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg) : 
+    localStorage.removeItem(GITHUB_ORG_KEY);
+    trimmedToken ? localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken) : 
+    localStorage.removeItem(GITHUB_TOKEN_KEY);
+    //여기까지 제거
     if (trimmedToken) {
       try {
         await fetch('http://localhost:8081/api/repos', {
@@ -151,9 +157,9 @@ export default function MyPage() {
 
       <Card>
         <div className="mypage-form">
-          <Input label="기업명" value={user.companyId ?? ''} readOnly disabled />
+          <Input label="기업명" value={user.company} readOnly disabled />
           <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="아이디" value={user.loginId ?? ''} readOnly disabled hint="로그인 ID는 변경할 수 없습니다." />
+          <Input label="아이디" value={user.email} readOnly disabled hint="로그인 ID는 변경할 수 없습니다." />
 
           <div className="mypage-row">
             <Input label="비밀번호" value="••••••••••" readOnly disabled type="password" />
