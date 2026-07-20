@@ -17,6 +17,15 @@
       "company": "GuardrAil Inc.",
       "gitId": "dev-lee",
       "role": "user"
+    },
+    {
+      "email": "user3@example.coom",
+      "password": "94958237",
+      "name": "전우치",
+      "company": "AIVLE",
+      "gitId": "zenuchi",
+      "role": "user",
+      "id": 3
     }
   ],
   "repos": [
