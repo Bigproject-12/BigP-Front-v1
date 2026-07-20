@@ -1,12 +1,19 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080';
 
+export const TOKEN_KEY = 'GuardrAil-token';
+
 async function request(path, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
   let res;
   try {
     res = await fetch(`${API_BASE}${path}`, {
       credentials: 'include',
       ...options,
-      headers: { 'Content-Type': 'application/json', ...options.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
     });
   } catch {
     throw new Error(`API 서버(${API_BASE})에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.`);

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-import { Tabs } from '../components/ui/Tabs';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
@@ -9,12 +8,6 @@ import './LoginPage.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const TABS = [
-  { key: 'login', label: '로그인' },
-  { key: 'signup', label: '회원가입' },
-  { key: 'find-password', label: '비밀번호 찾기' },
-  { key: 'reset-password', label: '비밀번호 재설정' },
-];
 
 function FeatureRow({ icon, title, desc }) {
   return (
@@ -102,7 +95,7 @@ function LoginForm({ onSwitchTab }) {
           setError('');
           setSubmitting(true);
           try {
-            await login('dev@GuardrAil.io', 'dev12345');
+            await login('dev@GuardrAil.io', 'Dev12345!');
             navigate('?page=dashboard', { replace: true });
           } catch (err) {
             setError(err.message);
@@ -114,11 +107,11 @@ function LoginForm({ onSwitchTab }) {
         Dev 로그인
       </Button>
       <div className="login-card__footer">
-        <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
-          비밀번호 찾기
-        </button>
         <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('signup')}>
           회원가입
+        </button>
+        <button type="button" className="ui-btn ui-btn--ghost" onClick={() => onSwitchTab('find-password')}>
+          비밀번호 찾기
         </button>
       </div>
       <div className="ui-card" style={{ marginTop: 4 }}>
@@ -187,55 +180,40 @@ function SignupForm({ onSwitchTab }) {
 
   return (
     <>
-      {/* onSubmit을 handleInitialSubmit으로 변경 */}
       <form className="login-card__form" onSubmit={handleInitialSubmit}>
+        <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('login')} aria-label="로그인으로 돌아가기">
+          <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+        </button>
         <Input label="이름" value={form.name} onChange={set('name')} placeholder="홍길동" />
-        <Input label="기업명" value={form.company} onChange={set('company')} placeholder="GuardrAil Inc." />
+        <Input label="기업명" value={form.companyName} onChange={set('companyName')} placeholder="AIVLE" />
         <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
-        <Input label="이메일" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" />
+        <Input label="이메일" type="email" value={form.loginId} onChange={set('loginId')} placeholder="you@company.com" />
         <Input label="비밀번호" type="password" value={form.password} onChange={set('password')} placeholder="8자 이상" />
         <Input label="비밀번호 확인" type="password" value={form.confirm} onChange={set('confirm')} />
-        
         {error && <div className="ui-banner ui-banner--error">{error}</div>}
-        
         <Button type="submit" variant="primary" block disabled={submitting}>
           {submitting ? '가입 처리 중…' : '회원가입'}
         </Button>
       </form>
 
-      {/* 개인정보 처리방침 모달 팝업 */}
       {showPolicyModal && (
         <div className="privacy-modal-overlay">
           <div className="privacy-modal">
             <h3>개인정보 처리방침 동의 (예시)</h3>
             <div className="privacy-modal-content">
-              {/* 실제 운영하시는 처리방침 텍스트를 이곳에 넣으시면 됩니다 */}
               <p>GuardrAil은 서비스 제공을 위해 다음과 같이 개인정보를 수집 및 이용합니다.</p>
               <br/>
               <p>1. 수집 항목: 이름, 기업명, Git ID, 이메일, 비밀번호</p>
               <p>2. 수집 목적: 회원 식별 및 서비스 제공, 보안 취약점 분석 등</p>
               <p>3. 보유 기간: 회원 탈퇴 시까지 (또는 관련 법령에 따름)</p>
             </div>
-            
             <label className="privacy-modal-agree">
-              <input 
-                type="checkbox" 
-                checked={policyAgreed} 
-                onChange={(e) => setPolicyAgreed(e.target.checked)} 
-              />
+              <input type="checkbox" checked={policyAgreed} onChange={(e) => setPolicyAgreed(e.target.checked)} />
               <span>개인정보 수집 및 이용에 동의합니다. (필수)</span>
             </label>
-
             <div className="privacy-modal-actions">
-              <Button type="button" variant="ghost" onClick={() => setShowPolicyModal(false)}>
-                취소
-              </Button>
-              <Button 
-                type="button" 
-                variant="primary" 
-                onClick={handleFinalSubmit} 
-                disabled={!policyAgreed}
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowPolicyModal(false)}>취소</Button>
+              <Button type="button" variant="primary" onClick={handleFinalSubmit} disabled={!policyAgreed}>
                 동의하고 가입하기
               </Button>
             </div>
@@ -246,9 +224,7 @@ function SignupForm({ onSwitchTab }) {
   );
 }
 
-// ... 나머지 컴포넌트 유지 ...
-
-function FindPasswordForm() {
+function FindPasswordForm({ onSwitchTab }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
@@ -265,6 +241,9 @@ function FindPasswordForm() {
 
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
+      <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('login')} aria-label="로그인으로 돌아가기">
+        <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+      </button>
       <p className="text-body-sm">가입한 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
       <Input label="이메일" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
@@ -306,7 +285,8 @@ function ResetPasswordForm() {
 
 export default function LoginPage() {
   const { params, navigate } = useRouter();
-  const activeTab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'login';
+  const tab = params.get('tab');
+  const activeTab = ['login', 'signup', 'find-password'].includes(tab) ? tab : 'login';
 
   const switchTab = (key) => navigate(`?page=login&tab=${key}`);
 
@@ -330,11 +310,9 @@ export default function LoginPage() {
 
       <div className="login-panel">
         <div className="login-card">
-          <Tabs items={TABS} active={activeTab} onChange={switchTab} />
           {activeTab === 'login' && <LoginForm onSwitchTab={switchTab} />}
           {activeTab === 'signup' && <SignupForm onSwitchTab={switchTab} />}
-          {activeTab === 'find-password' && <FindPasswordForm />}
-          {activeTab === 'reset-password' && <ResetPasswordForm />}
+          {activeTab === 'find-password' && <FindPasswordForm onSwitchTab={switchTab} />}
         </div>
       </div>
     </div>
