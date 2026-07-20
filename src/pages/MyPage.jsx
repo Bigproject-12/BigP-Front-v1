@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -80,20 +79,15 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
-  const [org, setOrg] = useState(() => localStorage.getItem(GITHUB_ORG_KEY) ?? ''); // 백엔드 연결되면 const [org, setOrg] = useState('') 으로 변경, 뒤에 다 날림
-  const [token, setToken] = useState(() => localStorage.getItem(GITHUB_TOKEN_KEY) ?? ''); // 백엔드 연결되면 const [token, setToken] = useState('') 으로 변경
+  const [org, setOrg] = useState('');
+  const [token, setToken] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
 
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
-    //백엔드 연결 시 아래 구문 제거
-    trimmedOrg ? localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg) : 
-    localStorage.removeItem(GITHUB_ORG_KEY);
-    trimmedToken ? localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken) : 
-    localStorage.removeItem(GITHUB_TOKEN_KEY);
-    //여기까지 제거
+    
     if (trimmedToken) {
       try {
         await fetch('http://localhost:8081/api/repos', {
