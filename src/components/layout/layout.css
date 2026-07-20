@@ -15,10 +15,26 @@
   top: 0;
   height: 100svh;
   transition: width 0.2s ease;
+  z-index: 30;/*버튼 사이드바 버튼 가려짐 현상 해소*/
 }
 
 .gr-sidebar--collapsed {
   width: 72px;
+}
+
+/* 로고 레이아웃 고정 */
+.gr-sidebar__header {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  position: relative; /* 이 속성을 추가합니다 */
+}
+
+.gr-sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 /* 숨김 로직 (일관되게 처리) */
@@ -31,21 +47,31 @@
 
 /* 버튼 스타일 및 시인성 강화 */
 .gr-sidebar__toggle-btn {
-  margin: 0 0 10px 10px;
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  right: -14px; /* 사이드바 오른쪽 경계선 바깥으로 버튼을 뺌 */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
-  background: var(--surface-hover);
+  border-radius: 50%; /* 시인성이 좋도록 원형 버튼으로 변경 */
+  background: var(--surface-elevated, #fff);
   border: 1px solid var(--border-hairline);
   cursor: pointer;
   color: var(--text-muted);
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 버튼이 살짝 떠 보이도록 효과 추가 */
+}
+
+.gr-sidebar__toggle-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .gr-sidebar--collapsed .gr-sidebar__toggle-btn {
-  margin-left: 20px; /* 접혔을 때 정렬 */
+  margin-left: 0; /* 접혔을 때 정렬 */
 }
 
 .gr-sidebar__logo-mark {

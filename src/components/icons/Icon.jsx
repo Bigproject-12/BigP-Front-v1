@@ -15,6 +15,7 @@ const PATHS = {
   search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3',
   chevronDown: 'm6 9 6 6 6-6',
   chevronRight: 'm9 6 6 6-6 6',
+  chevronLeft: 'm15 6-6 6 6 6',
   plus: 'M12 5v14M5 12h14',
   edit: 'M12.5 5.5 18 11l-9.5 9.5H3V15Zm3-3L20 7',
   trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
