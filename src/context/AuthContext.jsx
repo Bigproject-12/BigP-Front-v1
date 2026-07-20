@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { api, TOKEN_KEY } from '../lib/api';
 
 const STORAGE_KEY = 'GuardrAil-user';
 const AuthContext = createContext(null);
@@ -34,16 +34,19 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  const login = useCallback(async (email, password) => {
-    const matches = await api.get(
-      `/users?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-    );
-    if (!matches || matches.length === 0) {
-      throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
-    }
-    const publicUser = toPublicUser(matches[0]);
-    setUser(publicUser);
-    return publicUser;
+  const login = useCallback(async (loginId, password) => {
+    const res = await fetch('http://localhost:8081/api/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loginId, password }),
+    });
+    if (res.status === 401) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+    if (!res.ok) throw new Error('로그인에 실패했습니다.');
+    const data = await res.json();
+    localStorage.setItem(TOKEN_KEY, data.accessToken);
+    const user = { id: data.userId, name: data.name, role: data.role, loginId };
+    setUser(user);
+    return user;
   }, []);
 
   const signup = useCallback(async ({ loginId, password, confirm, name, companyName, gitId }) => {
@@ -52,12 +55,15 @@ export function AuthProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName, gitId }),
     });
-    if (res.status === 404) throw new Error('등록된 회사를 찾을 수 없습니다.');
-    if (!res.ok) throw new Error('회원가입에 실패했습니다.');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || '회원가입에 실패했습니다.');
+    }
     return res.json();
   }, []);
 
   const logout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);
 
