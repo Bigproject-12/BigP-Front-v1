@@ -11,7 +11,9 @@ const NAV_ITEMS = [
   { key: 'analyze', label: '코드 분석', icon: 'code', to: '/Analyze' },
   { key: 'repolist', label: 'Repository 목록', icon: 'repo', to: '?page=repolist' },
   { key: 'board', label: '게시판', icon: 'board', to: '?page=board' },
+  { key: 'members', label: '회원 관리', icon: 'user', to: '?page=members', adminOnly: true },
 ];
+
 const NAV_ITEM_MAP = Object.fromEntries(NAV_ITEMS.map((item) => [item.key, item]));
 const DEFAULT_ORDER = NAV_ITEMS.map((item) => item.key);
 
@@ -43,6 +45,13 @@ export default function Sidebar() {
 
   const activeRepoId = params.get('repoId');
 
+  const visibleOrder = order.filter((key) => {
+    const item = NAV_ITEM_MAP[key];
+    if (!item) return false;
+    if (item.adminOnly && user?.role !== 'ADMIN') return false;
+    return true;
+  });
+  
   useEffect(() => {
     setOrder(readStoredOrder(user?.id ?? 'anon'));
   }, [user?.id]);
@@ -111,9 +120,8 @@ export default function Sidebar() {
       </div>
 
       <nav className="gr-sidebar__nav">
-   
         
-        {order.map((key) => {
+        {visibleOrder.map((key) => {
           const item = NAV_ITEM_MAP[key];
           if (!item) return null;
           const isRepoList = item.key === 'repolist';

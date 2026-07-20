@@ -12,6 +12,7 @@ import RepoListPage from './pages/RepoListPage';
 import RepoDetailPage from './pages/RepoDetailPage';
 import MyPage from './pages/MyPage';
 import BoardPage from './pages/BoardPage';
+import MembersPage from './pages/MembersPage';
 
 const PAGES = {
   dashboard: DashboardPage,
@@ -21,6 +22,7 @@ const PAGES = {
   'repo-detail': RepoDetailPage,
   mypage: MyPage,
   board: BoardPage,
+  members: MembersPage,
 };
 
 const DEFAULT_AUTHED_PAGE = 'dashboard';
