@@ -16,14 +16,10 @@ function ChangePasswordModal({ onClose }) {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   const handleSave = async () => {
     setError('');
-    const record = await api.get(`/users/${user.id}`);
-    if (record.password !== current) {
-      setError('현재 비밀번호가 올바르지 않습니다.');
-      return;
-    }
     if (next.length < 8) {
       setError('새 비밀번호는 8자 이상이어야 합니다.');
       return;
@@ -34,7 +30,14 @@ function ChangePasswordModal({ onClose }) {
     }
     setSaving(true);
     try {
-      await api.patch(`/users/${user.id}`, { password: next });
+      const token = localStorage.getItem('GuardrAil-token');
+      const res = await fetch('http://localhost:8081/api/users/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: current, newPassword: next, newPasswordConfirm: confirm }),
+      });
+      if (res.status === 401) { setError('현재 비밀번호가 올바르지 않습니다.'); return; }
+      if (!res.ok) throw new Error('비밀번호 변경에 실패했습니다.');
       onClose(true);
     } finally {
       setSaving(false);
@@ -57,9 +60,9 @@ function ChangePasswordModal({ onClose }) {
       }
     >
       <div className="modal-form">
-        <Input label="현재 비밀번호" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-        <Input label="새 비밀번호" type="password" value={next} onChange={(e) => setNext(e.target.value)} />
-        <Input label="새 비밀번호 확인" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <Input label="현재 비밀번호" type={showPw ? 'text' : 'password'} value={current} onChange={(e) => setCurrent(e.target.value)} rightSlot={<button type="button" className="ui-field__icon-right" onClick={() => setShowPw(v => !v)} aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}><Icon name={showPw ? 'eyeOff' : 'eye'} size={17} /></button>} />
+        <Input label="새 비밀번호" type={showPw ? 'text' : 'password'} value={next} onChange={(e) => setNext(e.target.value)} />
+        <Input label="새 비밀번호 확인" type={showPw ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {error && <div className="ui-banner ui-banner--error">{error}</div>}
       </div>
     </Modal>
