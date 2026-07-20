@@ -44,7 +44,11 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error('로그인에 실패했습니다.');
     const data = await res.json();
     localStorage.setItem(TOKEN_KEY, data.accessToken);
-    const user = { id: data.userId, name: data.name, role: data.role, loginId };
+    const meRes = await fetch('http://localhost:8081/api/users/me', {
+      headers: { Authorization: `Bearer ${data.accessToken}` },
+    });
+    const me = meRes.ok ? await meRes.json() : {};
+    const user = { id: data.userId, name: data.name, role: data.role, loginId, ...me };
     setUser(user);
     return user;
   }, []);
