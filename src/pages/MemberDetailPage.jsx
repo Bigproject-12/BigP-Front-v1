@@ -35,18 +35,14 @@ export default function MemberDetailPage() {
       setError('');
       try {
         const token = localStorage.getItem(TOKEN_KEY);
-        // 백엔드에 단건 조회(GET /api/users/{id}) API가 없어 목록 API에서 찾아 사용한다.(추후 백엔드에서 상세조회 생기면 수정해야함)
-        const res = await fetch('http://localhost:8081/api/users?size=1000', {
+        const res = await fetch(`http://localhost:8081/api/users/${memberId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
           const err = await res.json().catch(() => null);
           throw new Error(err?.message ?? '회원 정보를 불러오지 못했습니다.');
         }
-        const data = await res.json();
-        const found = data.content?.find((u) => String(u.id) === String(memberId));
-        if (!found) throw new Error('회원 정보를 찾을 수 없습니다.');
-        setMember(found);
+        setMember(await res.json());
       } catch (err) {
         setError(err.message);
       } finally {
