@@ -193,7 +193,8 @@ function SignupForm({ onSwitchTab }) {
         <Input label="기업명" value={form.companyName} onChange={set('companyName')} placeholder="AIVLE" />
         <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
         <Input label="이메일" type="email" value={form.loginId} onChange={set('loginId')} placeholder="you@company.com" />
-        <Input label="비밀번호" type="password" value={form.password} onChange={set('password')} placeholder="8자 이상" />
+
+        <Input label="비밀번호" type="password" value={form.password} onChange={set('password')} placeholder="8자 이상, 영문 대문자, 소문자, 숫자, 특수문자 포함" />
         <Input label="비밀번호 확인" type="password" value={form.confirm} onChange={set('confirm')} />
         {error && <div className="ui-banner ui-banner--error">{error}</div>}
         <Button type="submit" variant="primary" block disabled={submitting}>

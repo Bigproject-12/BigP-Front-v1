@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -46,13 +46,16 @@ export default function AnalyzePage() {
   &&localStorage.getItem(GITHUB_ORG_KEY));
 
   const { repos, reposLoading } = useRepos();
-  const [branches, setBranches] = useState([]);// [추가] 브랜치 목록 상태
+  const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
 
   const [repoId, setRepoId] = useState('');
-  const [branch, setBranch] = useState('');// [추가] 선택된 브랜치 상태
+  const [branch, setBranch] = useState('');
   const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
+  
+  // 선택된 확장자 필터 상태
+  const [selectedExt, setSelectedExt] = useState('');
 
   const [originalCode, setOriginalCode] = useState('');
   const [improvedCode, setImprovedCode] = useState('');
@@ -65,29 +68,63 @@ export default function AnalyzePage() {
   const [diffMode, setDiffMode] = useState(false);
   const fileInputRef = useRef(null);
 
-
   // AI 감지 & 프롬프트 추천 상태
-  const [aiDetection, setAiDetection] = useState(null); // {isAiGenerated, confidence, reasons}
+  const [aiDetection, setAiDetection] = useState(null);
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
-  const [promptResult, setPromptResult] = useState(null); // { improve: {prompt, explanation}, generate: {prompt, explanation} }
-  const [promptTab, setPromptTab] = useState('improve'); // 'improve' | 'generate'
+  const [promptResult, setPromptResult] = useState(null);
+  const [promptTab, setPromptTab] = useState('improve');
   const [recommending, setRecommending] = useState(false);
   const [promptError, setPromptError] = useState('');
   const [promptCopied, setPromptCopied] = useState(false);
 
-  // 소요 시간
-  const [detectElapsed, setDetectElapsed] = useState(null); // ms
-  const [promptElapsed, setPromptElapsed] = useState(null); // ms
+  const [detectElapsed, setDetectElapsed] = useState(null);
+  const [promptElapsed, setPromptElapsed] = useState(null);
 
+  // 저장소에 있는 모든 파일들의 확장자 목록을 중복 없이 추출
+  const availableExtensions = useMemo(() => {
+    const exts = new Set();
+    files.forEach((path) => {
+      const parts = path.split('/');
+      const fileName = parts[parts.length - 1];
+      if (fileName.includes('.')) {
+        exts.add(fileName.split('.').pop());
+      } else {
+        exts.add('기타');
+      }
+    });
+    return Array.from(exts).sort();
+  }, [files]);
 
-  // 페이지 탭
+  // 확장자 필터가 적용된 상태로 폴더별 그룹화 수행
+  const groupedFiles = useMemo(() => {
+    return files.reduce((acc, path) => {
+      const parts = path.split('/');
+      const fileName = parts[parts.length - 1];
+      const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+
+      // 선택한 확장자와 일치하지 않으면 제외
+      if (selectedExt && ext !== selectedExt) {
+        return acc;
+      }
+
+      const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '루트 디렉토리';
+      
+      if (!acc[folder]) acc[folder] = [];
+      
+      acc[folder].push({ 
+        path: path, 
+        name: fileName 
+      });
+      
+      return acc;
+    }, {});
+  }, [files, selectedExt]);
+
   const [activeTab, setActiveTab] = useState('analyze');
-
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
-  // 2. [수정] 레포지토리가 선택되면 브랜치 목록 로드
   useEffect(() => {
     if (!selectedRepo) { 
       setBranches([]); 
@@ -96,14 +133,12 @@ export default function AnalyzePage() {
     fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
 
-  // 3. [추가] 브랜치가 선택되면 해당 브랜치의 파일 트리 로드
   useEffect(()=>{
     if (!selectedRepo || !branch){
       setFiles([]);
       return;
     }
-    // fetchRepoTree에 선택된 브랜치 이름을 함께 전달합니다.
-    fetchRepoTree(selectedRepo.fullName,branch).then(setFiles).catch(()=>setFiles([]));
+    fetchRepoTree(selectedRepo.fullName, branch).then(setFiles).catch(()=>setFiles([]));
   }, [branch, selectedRepo?.fullName]);
 
   useEffect(() => {
@@ -111,9 +146,8 @@ export default function AnalyzePage() {
     if (initialRepoId) setRepoId(initialRepoId);
   }, [params]);
 
-  // 파일 선택 시 GitHub에서 내용 로드(branch 파라미터 추가)
   useEffect(() => {
-    if (!filePath || !selectedRepo|| !branch) return;
+    if (!filePath || !selectedRepo || !branch) return;
     setFileNameOverride('');
     setAnalyzed(false);
     setCompareMode(false);
@@ -174,7 +208,6 @@ export default function AnalyzePage() {
       window.location.hash='#/mypage#gihub-section';
     }
   };
-
 
   const handleDetectAi = async () => {
     if (!originalCode.trim()) return;
@@ -242,10 +275,8 @@ export default function AnalyzePage() {
       <Card>
         <div className="analyze-toolbar">
 
-          {/*0. 깃허브 연동되지 않았을 경우*/}
-
           {!isGithubLinked ? (
-            <div style={{display: 'flex', alighitems: 'center', gap:'12px', flex:1}}>
+            <div style={{display: 'flex', alignItems: 'center', gap:'12px', flex:1}}>
             <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
               GitHub가 아직 연동되지 않았습니다. 코드를 불러오려면 연동을 진행해 주세요.
             </span>
@@ -266,6 +297,7 @@ export default function AnalyzePage() {
                 setBranch(''); 
                 setFilePath('');
                 setFileNameOverride('');
+                setSelectedExt('');
                 setCompareMode(false);
                 setAnalyzed(false);
               }}
@@ -277,31 +309,29 @@ export default function AnalyzePage() {
             </Select>
           </div>
 
-          {/* 2. [추가] 브랜치 선택 */}
+          {/* 2. 브랜치 선택 */}
           <div className="analyze-toolbar__field">
             <label>Branch</label>
             <Select
               value={branch}
               onChange={(e)=>{
                 setBranch(e.target.value);
-                setFilePath(''); //브랜치 변경 시 파일 선택 초기화 
+                setFilePath(''); 
                 setFileNameOverride('');
+                setSelectedExt('');
                 setCompareMode(false);
                 setAnalyzed(false);
               }}
               disabled={!repoId}
-              >
-                <option value="">브랜치 선택</option>
-                {branches.map((b)=>(
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </Select>
+            >
+              <option value="">브랜치 선택</option>
+              {branches.map((b)=>(
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </Select>
           </div>
-          
-          {/*폴더/파일 선택*/}
 
+          {/* 3. 폴더/파일 선택 */}
           <div className="analyze-toolbar__field">
             <label>폴더 / 파일</label>
             <Select
@@ -316,8 +346,33 @@ export default function AnalyzePage() {
             >
               <option value="">파일 선택</option>
               {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
-              {files.map((path) => (
-                <option key={path} value={path}>{path}</option>
+              
+              {Object.entries(groupedFiles).map(([folder, fileList]) => (
+                <optgroup key={folder} label={`📂 ${folder}`}>
+                  {fileList.map((file) => (
+                    <option key={file.path} value={file.path}>
+                      📄 {file.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </Select>
+          </div>
+
+          {/* 4. 확장자 필터 선택 (맨 끝으로 이동) */}
+          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
+            <label>확장자 필터</label>
+            <Select
+              value={selectedExt}
+              onChange={(e) => {
+                setSelectedExt(e.target.value);
+                setFilePath(''); // 필터 변경 시 선택된 파일 초기화
+              }}
+              disabled={!branch}
+            >
+              <option value="">모든 확장자</option>
+              {availableExtensions.map((ext) => (
+                <option key={ext} value={ext}>*.{ext}</option>
               ))}
             </Select>
           </div>
@@ -347,7 +402,6 @@ export default function AnalyzePage() {
       {/* 메인 탭 */}
       <Tabs items={TAB_ITEMS} active={activeTab} onChange={setActiveTab} />
 
-      {/* ── 탭 1: 코드 분석 ── */}
       {activeTab === 'analyze' && (
         <>
           {analyzed && improvedCode && (
@@ -463,11 +517,9 @@ export default function AnalyzePage() {
         </>
       )}
 
-      {/* ── 탭 2: AI 감지 ── */}
       {activeTab === 'ai' && (
         <>
           <div className="analyze-actions">
-            
             {!originalCode.trim() && (
               <span className="text-caption-md" style={{ color: 'var(--text-muted)' }}>
                 코드 분석 탭에서 코드를 먼저 입력해주세요.
