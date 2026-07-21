@@ -84,9 +84,49 @@ export default function MyPage() {
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
 
+  // 🌟 추가된 부분: 컴포넌트 마운트 시 백엔드에서 GitHub 연동 정보 가져오기
+  useEffect(() => {
+    const fetchGithubSettings = async () => {
+      try {
+        const authToken = localStorage.getItem('GuardrAil-token');
+        // 백엔드 API 주소는 실제 연동 정보를 조회하는 주소로 맞춰주세요. (예: /api/repos/info)
+        const res = await fetch('http://localhost:8081/api/repos/info', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // 백엔드에서 orgName을 내려주면 state에 세팅
+          if (data.orgName) {
+            setOrg(data.orgName);
+          }
+          // 토큰이 존재한다는 응답(hasToken: true 혹은 실제 토큰값)이 오면 마스킹 처리
+          if (data.hasToken || data.githubToken) {
+            setToken('••••••••••••••••');
+          }
+        }
+      } catch (err) {
+        console.error('GitHub 연동 정보를 불러오는데 실패했습니다.', err);
+      }
+    };
+
+    fetchGithubSettings();
+  }, []); // 빈 배열을 넣어 페이지 렌더링 시 1회만 실행
+
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
+
+    const payload = {orgName: trimmedOrg};
+
+    if (trimmedToken && trimmedToken !=='••••••••••••••••') {
+      payload.githubToken = trimmedToken;
+    }
+
     if (trimmedToken) {
       try {
         await fetch('http://localhost:8081/api/repos', {
