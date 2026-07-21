@@ -1,3 +1,5 @@
+import { api } from './api';
+
 const BASE = 'https://api.github.com';
 
 export const GITHUB_TOKEN_KEY = 'bigp-github-token';
@@ -73,10 +75,17 @@ export async function fetchRepo(id) {
 }
 
 export async function fetchOrgRepos() {
-  const res = await fetch(`${BASE}/orgs/${getOrg()}/repos?per_page=100&sort=updated`, {
-    headers: headers(),
-  });
-  if (!res.ok) throw new Error(`GitHub API 오류 (${res.status})`);
-  const data = await res.json();
-  return data.map(mapRepo);
+  const data = await api.get('/api/repos');
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    fullName: r.repoUrl?.replace('https://github.com/', '') ?? '',
+    description: '',
+    private: false,
+    language: r.language ?? '기타',
+    updatedAt: r.lastUpdated,
+    htmlUrl: r.repoUrl,
+    stars: 0,
+    forks: 0,
+  }));
 }

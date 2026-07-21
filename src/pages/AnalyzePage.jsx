@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 
-// fetchBranches 함수 추가 
-import { fetchOrgRepos, fetchBranches, fetchRepoTree, fetchFileContent,
- GITHUB_TOKEN_KEY, GITHUB_ORG_KEY 
+import { useRepos } from '../context/RepoContext';
+// fetchBranches 함수 추가
+import { fetchBranches, fetchRepoTree, fetchFileContent,
+ GITHUB_TOKEN_KEY, GITHUB_ORG_KEY
  } from '../lib/github';
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
@@ -44,7 +45,7 @@ export default function AnalyzePage() {
   const isGithubLinked=Boolean(localStorage.getItem(GITHUB_TOKEN_KEY)
   &&localStorage.getItem(GITHUB_ORG_KEY));
 
-  const [repos, setRepos] = useState([]);
+  const { repos, reposLoading } = useRepos();
   const [branches, setBranches] = useState([]);// [추가] 브랜치 목록 상태
   const [files, setFiles] = useState([]);
 
@@ -83,12 +84,6 @@ export default function AnalyzePage() {
 
   // 페이지 탭
   const [activeTab, setActiveTab] = useState('analyze');
-  //1. 초기 레포지토리 목록 로드 
-  useEffect(() => {
-    if (isGithubLinked){
-    fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
-    }
-  }, [isGithubLinked]);
 
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
@@ -275,8 +270,8 @@ export default function AnalyzePage() {
                 setAnalyzed(false);
               }}
             >
-              <option value="">레포 선택</option>
-              {repos.map((r) => (
+              <option value="">{reposLoading ? 'Repository 목록을 불러오는 중입니다.' : '레포 선택'}</option>
+              {!reposLoading && repos.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
