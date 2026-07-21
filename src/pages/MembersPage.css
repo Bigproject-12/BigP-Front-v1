@@ -33,6 +33,9 @@
   color: var(--text-body);
   border-bottom: 1px solid var(--border-hairline);
 }
+.members-table__row {
+  cursor: pointer;
+}
 .members-table tbody tr:hover {
   background: var(--surface-input);
 }
