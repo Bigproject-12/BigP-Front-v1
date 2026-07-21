@@ -1,34 +1,42 @@
-import { createContext, useCallback, useContext, useState } from 'react';
-
-const STORAGE_KEY = 'bigp-favorites';
-
-function load() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-  } catch {
-    return [];
-  }
-}
-
-function save(repos) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
-}
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { api } from '../lib/api';
 
 const FavoritesContext = createContext(null);
 
 export function FavoritesProvider({ children }) {
-  const [favorites, setFavorites] = useState(load);
+  const { user } = useAuth();
+  const [favorites, setFavorites] = useState([]);
 
-  const isFavorite = useCallback((repoId) => favorites.some((r) => r.id === repoId), [favorites]);
-
-  const toggleFavorite = useCallback((repo) => {
-    setFavorites((prev) => {
-      const exists = prev.some((r) => r.id === repo.id);
-      const next = exists ? prev.filter((r) => r.id !== repo.id) : [repo, ...prev];
-      save(next);
-      return next;
-    });
+  const loadFavorites = useCallback(async () => {
+    try {
+      const data = await api.get('/api/favorites');
+      setFavorites(data ?? []);
+    } catch {
+      setFavorites([]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!user) { setFavorites([]); return; }
+    loadFavorites();
+  }, [user?.id, loadFavorites]);
+
+  const isFavorite = useCallback(
+    (repoId) => favorites.some((r) => r.id === repoId),
+    [favorites]
+  );
+
+  const toggleFavorite = useCallback(async (repo) => {
+    const exists = favorites.some((r) => r.id === repo.id);
+    if (exists) {
+      await api.del(`/api/favorites/${repo.id}`);
+      setFavorites((prev) => prev.filter((r) => r.id !== repo.id));
+    } else {
+      await api.post(`/api/favorites/${repo.id}`);
+      setFavorites((prev) => [repo, ...prev]);
+    }
+  }, [favorites]);
 
   return (
     <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite }}>
