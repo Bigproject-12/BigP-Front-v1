@@ -11,6 +11,45 @@ import Icon from '../components/icons/Icon';
 import Button from '../components/ui/Button';
 import './RepoListPage.css';
 
+const UNASSIGNED_ORG = '미분류';
+
+function RepoCard({ repo, isFavorite, onToggleFavorite, onClick }) {
+  return (
+    <Card className="repo-card" onClick={onClick}>
+      <div className="repo-card__head">
+        <div className="repo-card__title">
+          <Icon name="repo" size={16} />
+          <span className="repo-card__name">{repo.name}</span>
+        </div>
+        <div className="repo-card__actions">
+          <button
+            type="button"
+            className={`repo-card__fav ${isFavorite ? 'repo-card__fav--active' : ''}`}
+            onClick={onToggleFavorite}
+            aria-label={isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+          >
+            <Icon name="star" size={16} filled={isFavorite} />
+          </button>
+          <Badge variant={repo.private ? 'neutral' : 'info'}>
+            {repo.private ? '비공개' : '공개'}
+          </Badge>
+        </div>
+      </div>
+      <p className="repo-card__desc text-body-sm">{repo.description}</p>
+      <div className="repo-card__meta">
+        <span className="repo-card__lang text-caption-md">
+          <span
+            className="repo-card__lang-dot"
+            style={{ background: languageColor(repo.language) }}
+          />
+          {repo.language}
+        </span>
+        <span className="text-caption-md">업데이트 {formatDate(repo.updatedAt)}</span>
+      </div>
+    </Card>
+  );
+}
+
 export default function RepoListPage() {
   const { navigate } = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -18,7 +57,9 @@ export default function RepoListPage() {
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState('all');
   const [language, setLanguage] = useState('all');
+  const [organization, setOrganization] = useState('all');
   const [sort, setSort] = useState('recent');
+  const [collapsedOrgs, setCollapsedOrgs] = useState(new Set());
 
   // GitHub 연동 여부는 localStorage(개인 토큰)가 아니라
   // 백엔드(/api/repos, DB)에서 실제로 데이터를 받았는지로 판단한다.
@@ -27,6 +68,11 @@ export default function RepoListPage() {
 
   const languages = useMemo(
     () => [...new Set(repos.map((r) => r.language).filter(Boolean))],
+    [repos]
+  );
+
+  const organizations = useMemo(
+    () => [...new Set(repos.map((r) => r.organization).filter(Boolean))],
     [repos]
   );
 
@@ -39,14 +85,34 @@ export default function RepoListPage() {
       const matchesVisibility =
         visibility === 'all' || (visibility === 'private' ? r.private : !r.private);
       const matchesLanguage = language === 'all' || r.language === language;
-      return matchesQuery && matchesVisibility && matchesLanguage;
+      const matchesOrganization = organization === 'all' || r.organization === organization;
+      return matchesQuery && matchesVisibility && matchesLanguage && matchesOrganization;
     });
     list = [...list].sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
       return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
     return list;
-  }, [repos, query, visibility, language, sort]);
+  }, [repos, query, visibility, language, organization, sort]);
+
+  const groupedByOrganization = useMemo(() => {
+    const groups = new Map();
+    for (const repo of visible) {
+      const org = repo.organization || UNASSIGNED_ORG;
+      if (!groups.has(org)) groups.set(org, []);
+      groups.get(org).push(repo);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [visible]);
+
+  const toggleOrgCollapsed = (org) => {
+    setCollapsedOrgs((prev) => {
+      const next = new Set(prev);
+      if (next.has(org)) next.delete(org);
+      else next.add(org);
+      return next;
+    });
+  };
 
   const handleToggleFavorite = (e, repo) => {
     e.stopPropagation();
@@ -110,6 +176,18 @@ export default function RepoListPage() {
             </option>
           ))}
         </Select>
+        <Select
+          value={organization}
+          onChange={(e) => setOrganization(e.target.value)}
+          disabled={hasNoData}
+        >
+          <option value="all">전체 조직</option>
+          {organizations.map((org) => (
+            <option key={org} value={org}>
+              {org}
+            </option>
+          ))}
+        </Select>
         <Select value={sort} onChange={(e) => setSort(e.target.value)} disabled={hasNoData}>
           <option value="recent">최근 업데이트순</option>
           <option value="name">이름순</option>
@@ -164,45 +242,41 @@ export default function RepoListPage() {
           <span style={{ color: 'var(--text-muted)' }}>조건에 맞는 레포지토리가 없습니다.</span>
         </div>
       ) : (
-        <div className="repo-grid">
-          {visible.map((repo) => (
-            <Card
-              key={repo.id}
-              className="repo-card"
-              onClick={() => navigate(`?page=repo-detail&repoId=${repo.id}`)}
-            >
-              <div className="repo-card__head">
-                <div className="repo-card__title">
-                  <Icon name="repo" size={16} />
-                  <span className="repo-card__name">{repo.name}</span>
-                </div>
-                <div className="repo-card__actions">
-                  <button
-                    type="button"
-                    className={`repo-card__fav ${isFavorite(repo.id) ? 'repo-card__fav--active' : ''}`}
-                    onClick={(e) => handleToggleFavorite(e, repo)}
-                    aria-label={isFavorite(repo.id) ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                  >
-                    <Icon name="star" size={16} filled={isFavorite(repo.id)} />
-                  </button>
-                  <Badge variant={repo.private ? 'neutral' : 'info'}>
-                    {repo.private ? '비공개' : '공개'}
-                  </Badge>
-                </div>
-              </div>
-              <p className="repo-card__desc text-body-sm">{repo.description}</p>
-              <div className="repo-card__meta">
-                <span className="repo-card__lang text-caption-md">
-                  <span
-                    className="repo-card__lang-dot"
-                    style={{ background: languageColor(repo.language) }}
+        <div className="repo-groups">
+          {groupedByOrganization.map(([org, reposInGroup]) => {
+            const isOpen = !collapsedOrgs.has(org);
+            return (
+              <section key={org} className="repo-group">
+                <button
+                  type="button"
+                  className="repo-group__header"
+                  onClick={() => toggleOrgCollapsed(org)}
+                  aria-expanded={isOpen}
+                >
+                  <Icon
+                    name="chevronDown"
+                    size={16}
+                    className={`repo-group__chevron ${isOpen ? 'repo-group__chevron--open' : ''}`}
                   />
-                  {repo.language}
-                </span>
-                <span className="text-caption-md">업데이트 {formatDate(repo.updatedAt)}</span>
-              </div>
-            </Card>
-          ))}
+                  <h2 className="repo-group__title text-heading-md">{org}</h2>
+                  <span className="text-caption-md repo-group__count">{reposInGroup.length}개</span>
+                </button>
+                {isOpen && (
+                  <div className="repo-grid">
+                    {reposInGroup.map((repo) => (
+                      <RepoCard
+                        key={repo.id}
+                        repo={repo}
+                        isFavorite={isFavorite(repo.id)}
+                        onToggleFavorite={(e) => handleToggleFavorite(e, repo)}
+                        onClick={() => navigate(`?page=repo-detail&repoId=${repo.id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
     </>

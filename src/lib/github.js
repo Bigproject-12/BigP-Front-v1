@@ -85,6 +85,7 @@ export async function fetchOrgRepos() {
     description: '',
     private: Boolean(r.isPrivate),
     language: r.language ?? '기타',
+    organization: r.organization ?? '',
     updatedAt: r.lastUpdated,
     htmlUrl: r.repoUrl,
     stars: 0,
