@@ -41,7 +41,7 @@ export default function Sidebar() {
   const [favOpen, setFavOpen] = useState(false);
   const [order, setOrder] = useState(DEFAULT_ORDER);
   const [draggedKey, setDraggedKey] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(true); // 추가 (사이드바 여닫기 기능)
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const activeRepoId = params.get('repoId');
 
@@ -108,7 +108,6 @@ export default function Sidebar() {
   return (
     <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
       <div className="gr-sidebar__header">
-        {/* 네비게이션 안에서 헤더 영역으로 옮겨진 토글 버튼 */}
         <button 
           className="gr-sidebar__toggle-btn" 
           onClick={() => setIsExpanded(!isExpanded)}
@@ -116,11 +115,9 @@ export default function Sidebar() {
         >
           <Icon name={isExpanded ? 'chevronLeft' : 'chevronRight'} size={16} />
         </button>
-
       </div>
 
       <nav className="gr-sidebar__nav">
-        
         {visibleOrder.map((key) => {
           const item = NAV_ITEM_MAP[key];
           if (!item) return null;
@@ -148,7 +145,7 @@ export default function Sidebar() {
                   </span>
                   <span>{item.label}</span>
                 </button>
-                {isRepoList && (
+                {isRepoList && isExpanded && (
                   <button
                     type="button"
                     className="gr-nav-row__chevron-btn"
@@ -165,7 +162,8 @@ export default function Sidebar() {
                 )}
               </div>
 
-              {isRepoList && favOpen && (
+              {/* 사이드바가 열려있고, 레포 목록이고, 팝업이 열렸을 때만 렌더링 */}
+              {isExpanded && isRepoList && favOpen && (
                 <div className="gr-fav-dropdown">
                   {favorites.length === 0 ? (
                     <div className="gr-fav-dropdown__empty text-caption-md">
