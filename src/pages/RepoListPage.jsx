@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { fetchOrgRepos, GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
+import { useRepos } from '../context/RepoContext';
+import { GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -14,7 +15,7 @@ import './RepoListPage.css';
 export default function RepoListPage() {
   const { navigate } = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [repos, setRepos] = useState([]);
+  const { repos, reposLoading, refreshRepos } = useRepos();
   const [query, setQuery] = useState('');
   const [visibility, setVisibility] = useState('all');
   const [language, setLanguage] = useState('all');
@@ -23,12 +24,6 @@ export default function RepoListPage() {
   const isGithubLinked = Boolean(
     localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
   );
-
-  useEffect(() => {
-    if(isGithubLinked){
-    fetchOrgRepos().then(setRepos).catch(() => setRepos([]));
-    }
-  }, [isGithubLinked]);
 
   const languages = useMemo(() => [...new Set(repos.map((r) => r.language))], [repos]);
 
@@ -69,10 +64,16 @@ export default function RepoListPage() {
         <div className="gr-page__header-text">
           <h1 className="text-display-md">Repository 목록</h1>
           <span className="text-body-sm">
-            {isGithubLinked ? 
+            {isGithubLinked ?
             `연동된 GitHub 저장소 ${repos.length}개` : 'GitHub 연동이 필요합니다.'}
-            </span>
+          </span>
         </div>
+        {isGithubLinked && (
+          <Button variant="ghost" onClick={refreshRepos} disabled={reposLoading}>
+            <Icon name="refresh" size={16} />
+            {reposLoading ? '불러오는 중…' : '새로고침'}
+          </Button>
+        )}
       </div>
 
       <div className="repo-toolbar">
@@ -107,8 +108,15 @@ export default function RepoListPage() {
         </Select>
       </div>
 
-      {visible.length === 0 ? (
-        <div className="ui-empty" style = {{
+      {reposLoading ? (
+        <div className="ui-empty" style={{
+          display:'flex', flexDirection:'column',
+          alignItems:'center', gap:'16px', padding:'60px 0'
+        }}>
+          <span style={{color:'var(--text-muted)'}}>Repository 목록을 불러오는 중입니다.</span>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="ui-empty" style={{
           display:'flex', flexDirection:'column',
           alignItems:'center', gap:'16px', padding:'60px 0'
         }}>
@@ -118,7 +126,7 @@ export default function RepoListPage() {
           GitHub가 아직 연동되지 않았습니다. 저장소를 불러오려면 연동을 진행해 주세요.
           </span>
           <Button variant="primary" onClick={goToMyPage}>
-          GitHub 연동하러 가기 
+          GitHub 연동하러 가기
           </Button>
           </>
           ):(
