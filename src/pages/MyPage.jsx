@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRepos } from '../context/RepoContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -73,6 +74,7 @@ function ChangePasswordModal({ onClose }) {
 
 export default function MyPage() {
   const { user, persistUser } = useAuth();
+  const { refreshRepos } = useRepos();
   const [name, setName] = useState(user?.name || '');
   const [gitId, setGitId] = useState(user?.gitId || '');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -87,16 +89,17 @@ export default function MyPage() {
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
     const trimmedToken = token.trim();
-    if (trimmedToken) {
-      try {
-        await fetch('http://localhost:8081/api/repos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('GuardrAil-token')}` },
-          body: JSON.stringify({ githubToken: trimmedToken, orgName: trimmedOrg }),
-        });
-      } catch {}
+    if (!trimmedToken || !trimmedOrg) {
+      setTokenBanner({ type: 'error', text: '조직명과 토큰을 모두 입력해주세요.' });
+      return;
     }
-    setTokenBanner({ type: 'success', text: '저장되었습니다.' });
+    try {
+      await api.post('/api/repos', { githubToken: trimmedToken, orgName: trimmedOrg });
+      await refreshRepos();
+      setTokenBanner({ type: 'success', text: '연동되었습니다.' });
+    } catch (err) {
+      setTokenBanner({ type: 'error', text: err.message || '연동에 실패했습니다.' });
+    }
     setTimeout(() => setTokenBanner(null), 3000);
   };
 

@@ -65,7 +65,9 @@ export async function fetchFileContent(fullName, path, branch = 'HEAD') {
   if (!res.ok) throw new Error(`GitHub API 오류 (${res.status})`);
   
   const data = await res.json();
-  return atob(data.content.replace(/\n/g, ''));
+  const binary = atob(data.content.replace(/\n/g, ''));
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 export async function fetchRepo(id) {
