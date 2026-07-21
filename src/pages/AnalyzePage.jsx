@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,6 +17,9 @@ import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
 import { Tabs } from '../components/ui/Tabs';
 import './AnalyzePage.css';
+
+// 파일을 확장자 기준으로 그룹화하는 로직
+
 
 const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
@@ -81,6 +84,26 @@ export default function AnalyzePage() {
   const [detectElapsed, setDetectElapsed] = useState(null); // ms
   const [promptElapsed, setPromptElapsed] = useState(null); // ms
 
+
+const groupedFiles = useMemo(() => {
+  return files.reduce((acc, path) => {
+    // 슬래시(/)를 기준으로 경로를 쪼갬
+    const parts = path.split('/');
+    
+    // 파일이 루트에 있으면 '루트 디렉토리', 폴더 안에 있으면 해당 폴더 경로까지만 추출
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '루트 디렉토리';
+    
+    if (!acc[folder]) acc[folder] = [];
+    
+    // 전체 경로(path)와 파일명(name)을 함께 저장
+    acc[folder].push({ 
+      path: path, 
+      name: parts[parts.length - 1] 
+    });
+    
+    return acc;
+  }, {});
+}, [files]);
 
   // 페이지 탭
   const [activeTab, setActiveTab] = useState('analyze');
@@ -304,22 +327,30 @@ export default function AnalyzePage() {
 
           <div className="analyze-toolbar__field">
             <label>폴더 / 파일</label>
-            <Select
-              value={filePath || (fileNameOverride ? 'custom' : '')}
-              onChange={(e) => {
-                setFilePath(e.target.value);
-                setFileNameOverride('');
-                setCompareMode(false);
-                setAnalyzed(false);
-              }}
-              disabled={!branch}
-            >
-              <option value="">파일 선택</option>
-              {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
-              {files.map((path) => (
-                <option key={path} value={path}>{path}</option>
-              ))}
-            </Select>
+              <Select
+                value={filePath || (fileNameOverride ? 'custom' : '')}
+                onChange={(e) => {
+                  setFilePath(e.target.value);
+                  setFileNameOverride('');
+                  setCompareMode(false);
+                  setAnalyzed(false);
+                }}
+                disabled={!branch}
+              >
+                <option value="">파일 선택</option>
+                {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
+                
+                {/* 폴더별로 optgroup 렌더링 */}
+                {Object.entries(groupedFiles).map(([folder, fileList]) => (
+                  <optgroup key={folder} label={`📂 ${folder}`}>
+                    {fileList.map((file) => (
+                      <option key={file.path} value={file.path}>
+                        📄 {file.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </Select>
           </div>
           </>
           )}

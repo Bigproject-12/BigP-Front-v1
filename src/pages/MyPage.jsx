@@ -8,10 +8,6 @@ import Modal from '../components/ui/Modal';
 import Icon from '../components/icons/Icon';
 import './MyPage.css';
 
-// 로컬 스토리지 키 정의
-const GITHUB_ORG_KEY = 'bigp-github-org';
-const GITHUB_TOKEN_KEY = 'bigp-github-token';
-
 function ChangePasswordModal({ onClose }) {
   const { user } = useAuth();
   const [current, setCurrent] = useState('');
@@ -56,7 +52,9 @@ function ChangePasswordModal({ onClose }) {
       onClose={() => onClose(false)}
       actions={
         <>
-          <Button variant="secondary" onClick={() => onClose(false)}>취소</Button>
+          <Button variant="secondary" onClick={() => onClose(false)}>
+            취소
+          </Button>
           <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? '저장 중…' : '변경하기'}
           </Button>
@@ -73,134 +71,50 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
-// GitHub 연동 모달 추가
-function GithubIntegrationModal({ onClose, currentOrg }) {
-  const [org, setOrg] = useState(currentOrg !== '미등록' ? currentOrg : '');
-  const [token, setToken] = useState('');
-  const [showToken, setShowToken] = useState(false);
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setError('');
-    const trimmedOrg = org.trim();
-    const trimmedToken = token.trim();
-
-    if (!trimmedOrg) {
-      setError('조직명(Organization)을 입력해주세요.');
-      return;
-    }
-
-    const payload = { orgName: trimmedOrg };
-    if (trimmedToken) {
-      payload.githubToken = trimmedToken;
-    }
-
-    setSaving(true);
-    try {
-      // 1. 백엔드로 데이터 전송
-      const res = await fetch('http://localhost:8081/api/repos', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${localStorage.getItem('GuardrAil-token')}` 
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error('저장에 실패했습니다.');
-      
-      // 2. 프론트엔드 연동 유지를 위해 로컬 스토리지에 동시 저장
-      localStorage.setItem(GITHUB_ORG_KEY, trimmedOrg);
-      if (trimmedToken) {
-        localStorage.setItem(GITHUB_TOKEN_KEY, trimmedToken);
-      }
-
-      onClose(true); // 성공 상태 전달
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal
-      title="GitHub 연동 관리"
-      onClose={() => onClose(false)}
-      actions={
-        <>
-          <Button variant="secondary" onClick={() => onClose(false)}>취소</Button>
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
-            {saving ? '저장 중…' : '저장하기'}
-          </Button>
-        </>
-      }
-    >
-      <div className="modal-form">
-        <Input
-          label="GitHub 조직명 (Organization)"
-          value={org}
-          onChange={(e) => setOrg(e.target.value)}
-          placeholder="ex) Bigproject-12"
-          hint="팀원 모두 동일한 조직명을 입력하면 같은 대시보드를 공유합니다."
-        />
-        <div className="mypage-row">
-          <Input
-            label="Personal Access Token"
-            type={showToken ? 'text' : 'password'}
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="새로운 토큰으로 변경하려면 입력하세요"
-            hint="GitHub Personal Access Token을 입력하세요. (repo 권한 필요)"
-          />
-          <Button variant="secondary" onClick={() => setShowToken((v) => !v)}>
-            {showToken ? '숨기기' : '보기'}
-          </Button>
-        </div>
-        {error && <div className="ui-banner ui-banner--error">{error}</div>}
-      </div>
-    </Modal>
-  );
-}
-
 export default function MyPage() {
   const { user, persistUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [gitId, setGitId] = useState(user?.gitId || '');
-  
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showGithubModal, setShowGithubModal] = useState(false);
-  
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
-  // 로컬 스토리지 데이터 상태
-  const [localOrg, setLocalOrg] = useState('미등록');
-  const [hasLocalToken, setHasLocalToken] = useState(false);
+  const [org, setOrg] = useState('');
+  const [token, setToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [tokenBanner, setTokenBanner] = useState(null);
 
-  // 로컬 스토리지에서 값 읽어오기 (초기 마운트 및 모달 닫힐 때 실행)
-  useEffect(() => {
-    const savedOrg = localStorage.getItem(GITHUB_ORG_KEY);
-    const savedToken = localStorage.getItem(GITHUB_TOKEN_KEY);
-
-    if (savedOrg) setLocalOrg(savedOrg);
-    if (savedToken) setHasLocalToken(true);
-  }, [showGithubModal]);
+  const handleSaveToken = async () => {
+    const trimmedOrg = org.trim();
+    const trimmedToken = token.trim();
+    if (trimmedToken) {
+      try {
+        await fetch('http://localhost:8081/api/repos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('GuardrAil-token')}` },
+          body: JSON.stringify({ githubToken: trimmedToken, orgName: trimmedOrg }),
+        });
+      } catch {}
+    }
+    setTokenBanner({ type: 'success', text: '저장되었습니다.' });
+    setTimeout(() => setTokenBanner(null), 3000);
+  };
 
   useEffect(() => {
     setName(user?.name || '');
     setGitId(user?.gitId || '');
   }, [user]);
 
+  //깃허브 등록 부분까지 스크롤되는 기능 추가 
   useEffect(() => {
-    if (window.location.hash.includes('github-section')) {
-      const el = document.getElementById('github-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
+  if (window.location.hash.includes('github-section')) {
+    const el = document.getElementById('github-section');
+    if (el) {
+      // 부드럽게 스크롤 되도록 smooth 옵션 적용
+      el.scrollIntoView({ behavior: 'smooth' });
     }
-  }, []);
+  }
+}, []);
 
   if (!user) return null;
 
@@ -265,24 +179,30 @@ export default function MyPage() {
       <Card id="github-section">
         <div className="mypage-form">
           <h2 className="text-body-md" style={{ fontWeight: 600 }}>GitHub 연동</h2>
-          
-          <Input 
-            label="GitHub 조직명 (Organization)" 
-            value={localOrg} 
-            readOnly 
-            disabled 
+          <Input
+            label="GitHub 조직명 (Organization)"
+            value={org}
+            onChange={(e) => setOrg(e.target.value)}
+            placeholder="ex) Bigproject-12"
+            hint="팀원 모두 동일한 조직명을 입력하면 같은 대시보드를 공유합니다."
           />
-          
           <div className="mypage-row">
-            <Input 
-              label="Personal Access Token" 
-              value={hasLocalToken ? '••••••••••••••••' : '미등록'} 
-              type="password" 
-              readOnly 
-              disabled 
+            <Input
+              label="Personal Access Token"
+              type={showToken ? 'text' : 'password'}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              hint="GitHub Personal Access Token을 입력하세요. (repo 권한 필요)"
             />
-            <Button variant="secondary" onClick={() => setShowGithubModal(true)}>
-              {hasLocalToken ? '연동 정보 변경' : 'GitHub 연동하기'}
+            <Button variant="secondary" onClick={() => setShowToken((v) => !v)}>
+              {showToken ? '숨기기' : '보기'}
+            </Button>
+          </div>
+          {tokenBanner && <div className={`ui-banner ui-banner--${tokenBanner.type}`}>{tokenBanner.text}</div>}
+          <div className="mypage-actions">
+            <Button variant="primary" onClick={handleSaveToken}>
+              토큰 저장
             </Button>
           </div>
         </div>
@@ -293,16 +213,6 @@ export default function MyPage() {
           onClose={(success) => {
             setShowPasswordModal(false);
             if (success) setBanner({ type: 'success', text: '비밀번호가 변경되었습니다.' });
-          }}
-        />
-      )}
-
-      {showGithubModal && (
-        <GithubIntegrationModal
-          currentOrg={localOrg}
-          onClose={(success) => {
-            setShowGithubModal(false);
-            if (success) setBanner({ type: 'success', text: 'GitHub 연동 정보가 저장되었습니다.' });
           }}
         />
       )}
