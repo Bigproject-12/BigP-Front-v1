@@ -81,7 +81,7 @@ export async function fetchOrgRepos() {
     name: r.name,
     fullName: r.repoUrl?.replace('https://github.com/', '') ?? '',
     description: '',
-    private: false,
+    private: Boolean(r.isPrivate),
     language: r.language ?? '기타',
     updatedAt: r.lastUpdated,
     htmlUrl: r.repoUrl,
