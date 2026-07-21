@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useRepos } from '../context/RepoContext';
-import { GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -21,18 +20,22 @@ export default function RepoListPage() {
   const [language, setLanguage] = useState('all');
   const [sort, setSort] = useState('recent');
 
-  const isGithubLinked = Boolean(
-    localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
-  );
+  // GitHub 연동 여부는 localStorage(개인 토큰)가 아니라
+  // 백엔드(/api/repos, DB)에서 실제로 데이터를 받았는지로 판단한다.
+  // 로딩 중이 아닌데 repos가 비어 있으면 "연동 필요/데이터 없음" 상태로 취급.
+  const hasNoData = !reposLoading && repos.length === 0;
 
-  const languages = useMemo(() => [...new Set(repos.map((r) => r.language))], [repos]);
+  const languages = useMemo(
+    () => [...new Set(repos.map((r) => r.language).filter(Boolean))],
+    [repos]
+  );
 
   const visible = useMemo(() => {
     let list = repos.filter((r) => {
       const matchesQuery =
         !query.trim() ||
         r.name.toLowerCase().includes(query.toLowerCase()) ||
-        r.description.toLowerCase().includes(query.toLowerCase());
+        (r.description ?? '').toLowerCase().includes(query.toLowerCase());
       const matchesVisibility =
         visibility === 'all' || (visibility === 'private' ? r.private : !r.private);
       const matchesLanguage = language === 'all' || r.language === language;
@@ -50,11 +53,11 @@ export default function RepoListPage() {
     toggleFavorite(repo);
   };
 
-  const goToMyPage=()=>{
-    if(navigate){
+  const goToMyPage = () => {
+    if (navigate) {
       navigate('?page=mypage#github-section');
-    }else{
-      window.location.hash='#/mypage#github-section';
+    } else {
+      window.location.hash = '#/mypage#github-section';
     }
   };
 
@@ -64,16 +67,16 @@ export default function RepoListPage() {
         <div className="gr-page__header-text">
           <h1 className="text-display-md">Repository 목록</h1>
           <span className="text-body-sm">
-            {isGithubLinked ?
-            `연동된 GitHub 저장소 ${repos.length}개` : 'GitHub 연동이 필요합니다.'}
+            {hasNoData
+              ? 'GitHub 연동이 필요합니다.'
+              : `연동된 GitHub 저장소 ${repos.length}개`}
           </span>
         </div>
-        {isGithubLinked && (
-          <Button variant="ghost" onClick={refreshRepos} disabled={reposLoading}>
-            <Icon name="refresh" size={16} />
-            {reposLoading ? '불러오는 중…' : '새로고침'}
-          </Button>
-        )}
+        {/* 새로고침은 항상 가능해야 함 (연동 여부와 무관하게 DB 재조회 시도) */}
+        <Button variant="ghost" onClick={refreshRepos} disabled={reposLoading}>
+          <Icon name="refresh" size={16} />
+          {reposLoading ? '불러오는 중…' : '새로고침'}
+        </Button>
       </div>
 
       <div className="repo-toolbar">
@@ -83,17 +86,23 @@ export default function RepoListPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Icon name="search" size={16} />}
-            disabled={!isGithubLinked}
+            disabled={hasNoData}
           />
         </div>
-        <Select value={visibility} onChange={(e) => setVisibility(e.target.value)}
-          disabled={!isGithubLinked}>
+        <Select
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value)}
+          disabled={hasNoData}
+        >
           <option value="all">전체 유형</option>
           <option value="public">공개</option>
           <option value="private">비공개</option>
         </Select>
-        <Select value={language} onChange={(e) => setLanguage(e.target.value)}
-          disabled={!isGithubLinked}>
+        <Select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          disabled={hasNoData}
+        >
           <option value="all">전체 언어</option>
           {languages.map((lang) => (
             <option key={lang} value={lang}>
@@ -101,40 +110,58 @@ export default function RepoListPage() {
             </option>
           ))}
         </Select>
-        <Select value={sort} onChange={(e) => setSort(e.target.value)}
-          disabled={!isGithubLinked}>
+        <Select value={sort} onChange={(e) => setSort(e.target.value)} disabled={hasNoData}>
           <option value="recent">최근 업데이트순</option>
           <option value="name">이름순</option>
         </Select>
       </div>
 
       {reposLoading ? (
-        <div className="ui-empty" style={{
-          display:'flex', flexDirection:'column',
-          alignItems:'center', gap:'16px', padding:'60px 0'
-        }}>
-          <span style={{color:'var(--text-muted)'}}>Repository 목록을 불러오는 중입니다.</span>
+        <div
+          className="ui-empty"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '60px 0',
+          }}
+        >
+          <span style={{ color: 'var(--text-muted)' }}>
+            Repository 목록을 불러오는 중입니다.
+          </span>
         </div>
-      ) : visible.length === 0 ? (
-        <div className="ui-empty" style={{
-          display:'flex', flexDirection:'column',
-          alignItems:'center', gap:'16px', padding:'60px 0'
-        }}>
-          {!isGithubLinked ? (
-          <>
-          <span style={{color:'var(--text-muted)'}}>
-          GitHub가 아직 연동되지 않았습니다. 저장소를 불러오려면 연동을 진행해 주세요.
+      ) : hasNoData ? (
+        <div
+          className="ui-empty"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '60px 0',
+          }}
+        >
+          <span style={{ color: 'var(--text-muted)' }}>
+            불러올 수 있는 저장소가 없습니다. GitHub 연동을 확인해 주세요.
           </span>
           <Button variant="primary" onClick={goToMyPage}>
-          GitHub 연동하러 가기
+            GitHub 연동하러 가기
           </Button>
-          </>
-          ):(
-          <>
+        </div>
+      ) : visible.length === 0 ? (
+        <div
+          className="ui-empty"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '60px 0',
+          }}
+        >
           <Icon name="repo" size={28} />
-          <span style={{color:'var(--text-muted)'}}>조건에 맞는 레포지토리가 없습니다.</span>
-          </>
-          )}
+          <span style={{ color: 'var(--text-muted)' }}>조건에 맞는 레포지토리가 없습니다.</span>
         </div>
       ) : (
         <div className="repo-grid">
@@ -158,13 +185,18 @@ export default function RepoListPage() {
                   >
                     <Icon name="star" size={16} filled={isFavorite(repo.id)} />
                   </button>
-                  <Badge variant={repo.private ? 'neutral' : 'info'}>{repo.private ? '비공개' : '공개'}</Badge>
+                  <Badge variant={repo.private ? 'neutral' : 'info'}>
+                    {repo.private ? '비공개' : '공개'}
+                  </Badge>
                 </div>
               </div>
               <p className="repo-card__desc text-body-sm">{repo.description}</p>
               <div className="repo-card__meta">
                 <span className="repo-card__lang text-caption-md">
-                  <span className="repo-card__lang-dot" style={{ background: languageColor(repo.language) }} />
+                  <span
+                    className="repo-card__lang-dot"
+                    style={{ background: languageColor(repo.language) }}
+                  />
                   {repo.language}
                 </span>
                 <span className="text-caption-md">업데이트 {formatDate(repo.updatedAt)}</span>
