@@ -29,6 +29,18 @@ function BoardList({ isAdmin, navigate }) {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // 검색어·정렬 변경 시 페이지도 함께 0으로 되돌린다.
+  // effect로 뒤늦게 고치면 요청이 두 번 나가므로 입력 시점에 같이 처리
+  const handleQueryChange = (e) => {
+    setQuery(e.target.value);
+    setPage(0);
+  };
+
+  const handleSortChange = (e) => {
+    setSort(e.target.value);
+    setPage(0);
+  };
+
   useEffect(() => {
     setLoading(true);
     fetchNotices({ keyword: query.trim(), page, size: PAGE_SIZE, sort })
@@ -39,9 +51,6 @@ function BoardList({ isAdmin, navigate }) {
       .catch(() => setPosts([]))
       .finally(() => setLoading(false));
   }, [query, sort, page]);
-
-  // 검색어나 정렬이 바뀌면 1페이지로 되돌림
-  useEffect(() => { setPage(0); }, [query, sort]);
 
   return (
     <>
@@ -57,11 +66,11 @@ function BoardList({ isAdmin, navigate }) {
           <Input
             placeholder="제목, 내용 검색"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             leftIcon={<Icon name="search" size={16} />}
           />
         </div>
-        <Select value={sort} onChange={(e) => setSort(e.target.value)}>
+        <Select value={sort} onChange={handleSortChange}>
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
