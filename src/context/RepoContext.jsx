@@ -9,9 +9,24 @@ export function RepoProvider({ children }) {
   const [repos, setRepos] = useState([]);
   const [reposLoading, setReposLoading] = useState(false);
 
-  const isGithubLinked = Boolean(
-    localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
-  );
+  //const isGithubLinked = Boolean(
+  //  localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
+  //);//이 부분이 문제로 사료됨
+
+
+  /*
+  useEffect(() => {
+    if (!user) { setRepos([]); return; }
+    if (!isGithubLinked) return;
+    let cancelled = false;
+    setReposLoading(true);
+    fetchOrgRepos()
+      .then((data) => { if (!cancelled) setRepos(data); })
+      .catch(() => { if (!cancelled) setRepos([]); })
+      .finally(() => { if (!cancelled) setReposLoading(false); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  */
 
   const loadRepos = useCallback(async () => {
     setReposLoading(true);
@@ -26,16 +41,13 @@ export function RepoProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!user) { setRepos([]); return; }
-    if (!isGithubLinked) return;
-    let cancelled = false;
-    setReposLoading(true);
-    fetchOrgRepos()
-      .then((data) => { if (!cancelled) setRepos(data); })
-      .catch(() => { if (!cancelled) setRepos([]); })
-      .finally(() => { if (!cancelled) setReposLoading(false); });
-    return () => { cancelled = true; };
-  }, [user?.id]);
+    if (!user) { 
+      setRepos([]); 
+      return; 
+    }
+    loadRepos();
+    //사용자가 로그인 상태라면 로컬스토리지 검사 없이 바로 백엔드에서 리포지토리를 불러옴
+  }, [user?.id, loadRepos]);
 
   return (
     <RepoContext.Provider value={{ repos, reposLoading, refreshRepos: loadRepos }}>
