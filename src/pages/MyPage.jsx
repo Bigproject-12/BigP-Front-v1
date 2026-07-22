@@ -46,7 +46,6 @@ function ChangePasswordModal({ onClose }) {
       setSaving(false);
     }
   };
-
   return (
     <Modal
       title="비밀번호 변경"
@@ -72,6 +71,58 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
+function WithdrawModal({ onClose, onConfirm }) {
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!password) {
+      alert('비밀번호를 입력해주세요.');
+      return;
+    }
+    if (!window.confirm('정말 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.')) return;
+
+    setSubmitting(true);
+    await onConfirm(password); // 부모 컴포넌트의 API 호출 함수 실행
+    setSubmitting(false);
+  };
+
+  return (
+    <Modal
+      title="회원 탈퇴"
+      onClose={() => onClose(false)}
+      actions={
+        <>
+          <Button variant="secondary" onClick={() => onClose(false)}>
+            취소
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={submitting} style={{ backgroundColor: '#d32f2f', borderColor: '#d32f2f', color: 'white' }}>
+            {submitting ? '처리 중…' : '탈퇴하기'}
+          </Button>
+        </>
+      }
+    >
+      <div className="modal-form">
+        <p className="text-body-sm" style={{ color: '#d32f2f' }}>
+          탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다. 계속하시려면 현재 비밀번호를 입력해주세요.
+        </p>
+        <Input
+          label="현재 비밀번호"
+          type={showPw ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          rightSlot={
+            <button type="button" className="ui-field__icon-right" onClick={() => setShowPw(v => !v)} aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}>
+              <Icon name={showPw ? 'eyeOff' : 'eye'} size={17} />
+            </button>
+          }
+        />
+      </div>
+    </Modal>
+  );
+}
+
 export default function MyPage() {
   const { user, persistUser } = useAuth();
   const { refreshRepos } = useRepos();
@@ -85,6 +136,7 @@ export default function MyPage() {
   const [token, setToken] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
@@ -142,6 +194,40 @@ export default function MyPage() {
     }
   };
 
+  //탈퇴 api 호출
+  const executeWithdraw = async (password) => {
+    try {
+      const token = localStorage.getItem('GuardrAil-token');
+      const res = await fetch('http://localhost:8081/api/users/me', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword: password }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || '회원 탈퇴에 실패했습니다. 비밀번호를 확인해주세요.');
+      }
+
+      // 테마만 남기고 로컬스토리지 정리
+      // 프로젝트의 테마 키로 맞출 것
+      const currentTheme = localStorage.getItem('GuardrAil-theme'); 
+      localStorage.clear();
+      if (currentTheme) {
+        localStorage.setItem('GuardrAil-theme', currentTheme);
+      }
+
+      alert('회원 탈퇴가 완료되었습니다.');
+      window.location.href = '?page=login'; 
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+
   return (
     <>
       <div className="mypage-head">
@@ -168,15 +254,24 @@ export default function MyPage() {
 
           {banner && <div className={`ui-banner ui-banner--${banner.type}`}>{banner.text}</div>}
 
-          <div className="mypage-actions">
-            <Button variant="secondary" onClick={handleCancel} disabled={!isDirty}>
-              취소
+          <div className="mypage-actions" style={{ justifyContent: 'space-between' }}>
+            {/* 위험 버튼은 눈에 띄지 않게 secondary나 빨간색 스타일(위험 강조)로 배치 */}
+            <Button variant="secondary" onClick={() => setShowWithdrawModal(true)} style={{ color: '#d32f2f', borderColor: '#d32f2f' }}>
+              회원 탈퇴
             </Button>
-            <Button variant="primary" onClick={handleSave} disabled={!isDirty || saving}>
-              {saving ? '저장 중…' : '저장'}
-            </Button>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <Button variant="secondary" onClick={handleCancel} disabled={!isDirty}>
+                취소
+              </Button>
+              <Button variant="primary" onClick={handleSave} disabled={!isDirty || saving}>
+                {saving ? '저장 중…' : '저장'}
+              </Button>
+            </div>
           </div>
+          
         </div>
+
+        
       </Card>
 
       <Card id="github-section">
@@ -217,6 +312,13 @@ export default function MyPage() {
             setShowPasswordModal(false);
             if (success) setBanner({ type: 'success', text: '비밀번호가 변경되었습니다.' });
           }}
+        />
+      )}
+
+      {showWithdrawModal && (
+        <WithdrawModal 
+          onClose={() => setShowWithdrawModal(false)} 
+          onConfirm={executeWithdraw} 
         />
       )}
     </>
