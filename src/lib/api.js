@@ -33,4 +33,23 @@ export const api = {
   del: (path) => request(path, { method: 'DELETE' }),
 };
 
+export async function deleteAccount(password, token) {
+  const response = await fetch('http://localhost:8081/api/users/me', {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ currentPassword: password }), // 백엔드 DTO(AccountDeleteRequest) 형식에 맞춤
+  });
+
+  if (!response.ok) {
+    throw new Error('회원 탈퇴에 실패했습니다. 비밀번호를 확인해주세요.');
+  }
+  
+  return true;
+}
+
+
 export { API_BASE };
+
