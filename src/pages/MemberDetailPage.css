@@ -5,6 +5,14 @@
   margin-bottom: var(--space-md);
   flex-wrap: wrap;
 }
+.member-detail__delete-btn {
+  margin-left: auto;
+}
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
 .member-detail__avatar {
   display: flex;
   align-items: center;
