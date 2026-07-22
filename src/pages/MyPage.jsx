@@ -132,11 +132,25 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
+  const {repos}=useRepos();
+
   const [org, setOrg] = useState('');
   const [token, setToken] = useState('');
+  const [initialOrg, setInitialOrg] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+
+
+  //이미 등록된 조직명 있다면 화면에 표시하거나 초기값 세팅
+  useEffect(() => {
+    if (repos && repos.length > 0 && repos[0].organization && !initialOrg) {
+      const fetchedOrg = repos[0].organization;
+      setInitialOrg(fetchedOrg);
+      setOrg(fetchedOrg); // 입력란의 초기값으로도 세팅
+    }
+    }, [repos, initialOrg]);
+
 
   const handleSaveToken = async () => {
     const trimmedOrg = org.trim();
@@ -148,6 +162,7 @@ export default function MyPage() {
     try {
       await api.post('/api/repos', { githubToken: trimmedToken, orgName: trimmedOrg });
       await refreshRepos();
+      setInitialOrg(trimmedOrg); // ✅ 저장이 성공하면 초기 연동 조직명도 갱신
       setTokenBanner({ type: 'success', text: '연동되었습니다.' });
     } catch (err) {
       setTokenBanner({ type: 'error', text: err.message || '연동에 실패했습니다.' });
@@ -256,9 +271,12 @@ export default function MyPage() {
 
           <div className="mypage-actions" style={{ justifyContent: 'space-between' }}>
             {/* 위험 버튼은 눈에 띄지 않게 secondary나 빨간색 스타일(위험 강조)로 배치 */}
+            
+            {user.role!=='ADMIN'&&(
             <Button variant="secondary" onClick={() => setShowWithdrawModal(true)} style={{ color: '#d32f2f', borderColor: '#d32f2f' }}>
               회원 탈퇴
             </Button>
+            )}
             <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
               <Button variant="secondary" onClick={handleCancel} disabled={!isDirty}>
                 취소
@@ -277,6 +295,14 @@ export default function MyPage() {
       <Card id="github-section">
         <div className="mypage-form">
           <h2 className="text-body-md" style={{ fontWeight: 600 }}>GitHub 연동</h2>
+
+          {/* 등록 상태 안내 배너 추가 */}
+          {initialOrg && (
+            <div className="ui-banner ui-banner--success">
+              현재 <strong>{initialOrg}</strong> 조직으로 GitHub가 연동되어 있습니다.
+            </div>
+          )}
+
           <Input
             label="GitHub 조직명 (Organization)"
             value={org}
