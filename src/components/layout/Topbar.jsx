@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../../router/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../lib/api';
+import { TOKEN_KEY } from '../../lib/api';
 import Icon from '../icons/Icon';
 import Button from '../ui/Button';
 import './layout.css';
@@ -17,6 +17,8 @@ function timeAgo(iso) {
   return `${Math.round(hours / 24)}일 전`;
 }
 
+const NOTIFICATION_API = 'http://localhost:8081/api/notification';
+
 export default function Topbar() {
   const { navigate } = useRouter();
   const { theme, toggleTheme } = useTheme();
@@ -25,30 +27,73 @@ export default function Topbar() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
 
-  useEffect(() => {
+  const authHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
+  });
+
+  const fetchNotifications = () => {
     if (!user) return;
-    api
-      .get(`/notifications?userId=${user.id}&_sort=createdAt&_order=desc`)
+    fetch(NOTIFICATION_API, { headers: authHeaders() })
+      .then((res) => (res.ok ? res.json() : []))
       .then(setNotifications)
       .catch(() => setNotifications([]));
-  }, [user]);
+  };
 
   useEffect(() => {
-    const onClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, []);
+    fetchNotifications();
+  }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    notifications
-      .filter((n) => !n.read)
-      .forEach((n) => api.patch(`/notifications/${n.id}`, { read: true }).catch(() => {}));
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (open && panelRef.current && !panelRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  const deleteOne = async (notificationId) => {
+    setNotifications((prev) => prev.filter((n) => n.notificationId !== notificationId));
+    try {
+      await fetch(`${NOTIFICATION_API}/${notificationId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+    } catch {
+      fetchNotifications();
+    }
   };
+
+  const clearAll = async () => {
+    setNotifications([]);
+    try {
+      await fetch(NOTIFICATION_API, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+    } catch {
+      fetchNotifications();
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    setOpen(false);
+    setNotifications((prev) =>
+      prev.map((item) => (item.notificationId === n.notificationId ? {
+         ...item, read: true } : item)),
+    );
+    fetch(`${NOTIFICATION_API}/${n.notificationId}/read`, 
+      { method: 'PATCH', headers: authHeaders() }).catch(() => {});
+
+      if (n.type === 'ANNOUNCEMENT' && n.boardId) {
+        navigate(`?page=board&postId=${n.boardId}`);
+      } else if (n.type === 'ANALYSIS_COMPLETE' && n.analysisId) {
+        navigate(`/Analyze?analysisId=${n.analysisId}`);
+      }
+    };
 
   return (
     <header className="gr-topbar">
@@ -61,18 +106,24 @@ export default function Topbar() {
         <Button
           variant="icon"
           aria-label="알림"
-          onClick={() => {
-            setOpen((v) => !v);
-            if (!open) markAllRead();
-          }}
+          onClick={() => (open ? setOpen(false) : setOpen(true))}
         >
           <Icon name="bell" size={18} />
         </Button>
-        {unreadCount > 0 && <span className="gr-topbar__dot" />}
+        {unreadCount > 0 && (
+          <span className="gr-topbar__badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+        )}
 
         {open && (
           <div className="gr-notif-panel">
-            <div className="gr-notif-panel__title text-heading-md">알림</div>
+            <div className="gr-notif-panel__header">
+              <span className="gr-notif-panel__title text-heading-md">알림</span>
+              {notifications.length > 0 && (
+                <button className="gr-notif-panel__clear" onClick={clearAll}>
+                  모두 지우기
+                </button>
+              )}
+            </div>
             {notifications.length === 0 ? (
               <div className="ui-empty">
                 <Icon name="bell" size={22} />
@@ -80,12 +131,26 @@ export default function Topbar() {
               </div>
             ) : (
               notifications.map((n) => (
-                <div key={n.id} className="gr-notif-item">
+                <div
+                  key={n.notificationId}
+                  className={`gr-notif-item ${n.read ? 'gr-notif-item--read' : ''}`}
+                  onClick={() => handleNotificationClick(n)}
+                >
                   <span className={`gr-notif-item__dot ${n.read ? 'gr-notif-item__dot--read' : ''}`} />
-                  <div>
+                  <div className="gr-notif-item__body">
                     <div className="text-body-sm">{n.message}</div>
                     <div className="text-caption-sm">{timeAgo(n.createdAt)}</div>
                   </div>
+                  <button
+                    className="gr-notif-item__delete"
+                    aria-label="알림 삭제"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteOne(n.notificationId);
+                    }}
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
                 </div>
               ))
             )}
