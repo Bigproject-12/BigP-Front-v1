@@ -41,6 +41,8 @@ export default function Topbar() {
 
   useEffect(() => {
     fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(intervalId);
   }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
