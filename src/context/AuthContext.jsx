@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 
 function readStoredUser() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -22,12 +22,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredUser);
   const [initializing, setInitializing] = useState(true);
 
-  // 시작 시 localStorage에 남은 user만 믿지 않고, 토큰이 실제로 유효한지 서버에 확인한다.
+  // 시작 시 sessionStorage에 남은 user만 믿지 않고, 토큰이 실제로 유효한지 서버에 확인한다.
   // 만료된 토큰이면 api.js가 refresh를 시도하고, 그것도 실패하면 auth:logout 이벤트로 로그아웃 처리된다.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = sessionStorage.getItem(TOKEN_KEY);
       if (!user || !token) {
         if (user) setUser(null);
         setInitializing(false);
@@ -56,9 +56,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     } else {
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     }
   }, [user]);
 
@@ -71,8 +71,8 @@ export function AuthProvider({ children }) {
     if (res.status === 401) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
     if (!res.ok) throw new Error('로그인에 실패했습니다.');
     const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    sessionStorage.setItem(TOKEN_KEY, data.accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     const meRes = await fetch('http://localhost:8081/api/users/me', {
       headers: { Authorization: `Bearer ${data.accessToken}` },
     });
@@ -96,15 +96,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = sessionStorage.getItem(TOKEN_KEY);
     if (token) {
       await fetch('http://localhost:8081/api/users/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});
     }
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     setUser(null);
   }, []);
 

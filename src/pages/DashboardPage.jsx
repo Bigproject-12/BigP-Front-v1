@@ -1,4 +1,3 @@
-import { getOrg } from '../lib/github';
 import Card from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
 import LineChart from '../components/charts/LineChart';
@@ -25,7 +24,6 @@ const MOCK = {
 };
 
 export default function DashboardPage() {
-  const org = getOrg();
   const { stats, qualityTrend, issueDistribution } = MOCK;
 
   return (
@@ -33,9 +31,7 @@ export default function DashboardPage() {
       <div className="gr-page__header">
         <div className="gr-page__header-text">
           <h1 className="text-display-md">HOME</h1>
-          <span className="text-body-sm">
-            {org ? `${org} 조직의 이번 달 코드 분석 현황입니다.` : '조직 전체의 이번 달 코드 분석 현황입니다.'}
-          </span>
+          <span className="text-body-sm">조직 전체의 이번 달 코드 분석 현황입니다.</span>
         </div>
       </div>
 

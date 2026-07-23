@@ -2,22 +2,8 @@ import { api } from './api';
 
 const BASE = 'https://api.github.com';
 
-export const GITHUB_TOKEN_KEY = 'bigp-github-token';
-export const GITHUB_ORG_KEY = 'bigp-github-org';
-
-function getToken() {
-  return localStorage.getItem(GITHUB_TOKEN_KEY) || '';
-}
-
-export function getOrg() {
-  return localStorage.getItem(GITHUB_ORG_KEY) || '';
-}
-
 function headers() {
-  const token = getToken();
-  return token
-    ? { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
-    : { Accept: 'application/vnd.github+json' };
+  return { Accept: 'application/vnd.github+json' };
 }
 
 function mapRepo(r) {

@@ -28,7 +28,7 @@ export default function Topbar() {
   const panelRef = useRef(null);
 
   const authHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
+    Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}`,
   });
 
   const fetchNotifications = () => {

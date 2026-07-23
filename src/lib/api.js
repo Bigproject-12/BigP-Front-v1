@@ -4,14 +4,14 @@ export const TOKEN_KEY = 'GuardrAil-token';
 export const REFRESH_TOKEN_KEY = 'GuardrAil-refresh-token';
 
 function clearAuthStorage() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
   window.dispatchEvent(new Event('auth:logout'));
 }
 
 // accessToken 만료(401) 시 refreshToken으로 토큰을 재발급받는다. 성공하면 새 토큰을 저장한다.
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refreshToken) return false;
 
   try {
@@ -24,8 +24,8 @@ async function refreshAccessToken() {
     if (!res.ok) return false;
 
     const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    sessionStorage.setItem(TOKEN_KEY, data.accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     return true;
   } catch {
     return false;
@@ -36,7 +36,7 @@ async function refreshAccessToken() {
 const TOKEN_ERROR_CODES = new Set(['EXPIRED_TOKEN', 'INVALID_TOKEN', 'LOGIN_REQUIRED']);
 
 async function request(path, options = {}, isRetry = false) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = sessionStorage.getItem(TOKEN_KEY);
   let res;
   try {
     res = await fetch(`${API_BASE}${path}`, {
@@ -55,7 +55,7 @@ async function request(path, options = {}, isRetry = false) {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
 
-    if (res.status === 401 && !isRetry && TOKEN_ERROR_CODES.has(body?.code) && localStorage.getItem(REFRESH_TOKEN_KEY)) {
+    if (res.status === 401 && !isRetry && TOKEN_ERROR_CODES.has(body?.code) && sessionStorage.getItem(REFRESH_TOKEN_KEY)) {
       const refreshed = await refreshAccessToken();
       if (refreshed) return request(path, options, true);
       clearAuthStorage();

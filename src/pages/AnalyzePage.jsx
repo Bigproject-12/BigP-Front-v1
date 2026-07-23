@@ -4,9 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
-import { fetchBranches, fetchRepoTree, fetchFileContent,
- GITHUB_TOKEN_KEY, GITHUB_ORG_KEY
- } from '../lib/github';
+import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import Card from '../components/ui/Card';
@@ -41,9 +39,6 @@ function genericMockAnalyze(code) {
 export default function AnalyzePage() {
   const { params, navigate } = useRouter();
   const { user } = useAuth();
-
-  const isGithubLinked=Boolean(localStorage.getItem(GITHUB_TOKEN_KEY)
-  &&localStorage.getItem(GITHUB_ORG_KEY));
 
   const { repos, reposLoading } = useRepos();
   const [branches, setBranches] = useState([]);

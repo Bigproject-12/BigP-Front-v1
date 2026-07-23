@@ -208,11 +208,13 @@ export default function MyPage() {
 
       // 테마만 남기고 로컬스토리지 정리
       // 프로젝트의 테마 키로 맞출 것
-      const currentTheme = localStorage.getItem('GuardrAil-theme'); 
+      const currentTheme = localStorage.getItem('GuardrAil-theme');
       localStorage.clear();
       if (currentTheme) {
         localStorage.setItem('GuardrAil-theme', currentTheme);
       }
+      // 로그인 토큰/유저 정보는 sessionStorage에 저장되므로 별도로 정리
+      sessionStorage.clear();
 
       alert('회원 탈퇴가 완료되었습니다.');
       window.location.href = '?page=login'; 

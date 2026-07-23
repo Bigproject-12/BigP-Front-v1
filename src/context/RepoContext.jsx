@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { fetchOrgRepos, GITHUB_TOKEN_KEY, GITHUB_ORG_KEY } from '../lib/github';
+import { fetchOrgRepos } from '../lib/github';
 
 const RepoContext = createContext(null);
 
@@ -8,25 +8,6 @@ export function RepoProvider({ children }) {
   const { user } = useAuth();
   const [repos, setRepos] = useState([]);
   const [reposLoading, setReposLoading] = useState(false);
-
-  //const isGithubLinked = Boolean(
-  //  localStorage.getItem(GITHUB_TOKEN_KEY) && localStorage.getItem(GITHUB_ORG_KEY)
-  //);//이 부분이 문제로 사료됨
-
-
-  /*
-  useEffect(() => {
-    if (!user) { setRepos([]); return; }
-    if (!isGithubLinked) return;
-    let cancelled = false;
-    setReposLoading(true);
-    fetchOrgRepos()
-      .then((data) => { if (!cancelled) setRepos(data); })
-      .catch(() => { if (!cancelled) setRepos([]); })
-      .finally(() => { if (!cancelled) setReposLoading(false); });
-    return () => { cancelled = true; };
-  }, [user?.id]);
-  */
 
   const loadRepos = useCallback(async () => {
     setReposLoading(true);
