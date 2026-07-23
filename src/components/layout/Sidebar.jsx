@@ -38,7 +38,7 @@ export default function Sidebar() {
   const { page, params, navigate } = useRouter();
   const { logout, user } = useAuth();
   const { favorites } = useFavorites();
-  const [favOpen, setFavOpen] = useState(false);
+  const [favOpen, setFavOpen] = useState(true);
   const [order, setOrder] = useState(DEFAULT_ORDER);
   const [draggedKey, setDraggedKey] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
