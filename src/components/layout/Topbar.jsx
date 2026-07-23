@@ -31,11 +31,31 @@ export default function Topbar() {
     Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}`,
   });
 
+  const seenIdsRef = useRef(null);
+  const [toasts, setToasts] = useState([]);
+  const showToast = (message) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id ));
+    }, 4000);
+  }
+
   const fetchNotifications = () => {
     if (!user) return;
     fetch(NOTIFICATION_API, { headers: authHeaders() })
       .then((res) => (res.ok ? res.json() : []))
-      .then(setNotifications)
+      .then((list) => {
+        if (seenIdsRef.current) {
+          list.forEach((n) => {
+            if (n.type === 'ANALYSIS_COMPLETE' && !seenIdsRef.current.has(n.notificationId)) {
+              showToast(n.message);
+            }
+          });
+        }
+        seenIdsRef.current = new Set(list.map((n) => n.notificationId));
+        setNotifications(list);
+      })
       .catch(() => setNotifications([]));
   };
 
@@ -167,6 +187,15 @@ export default function Topbar() {
       >
         <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
       </Button>
+    
+      <div className="toast-stack">
+        {toasts.map((t) => (
+          <div key={t.id} className="toast-item">
+            <Icon name="check" size={16} className="toast-item__icon" />
+            <span className="text-body-sm">{t.message}</span>
+          </div>
+        ))}
+      </div>
     </header>
   );
 }
