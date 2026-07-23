@@ -73,12 +73,17 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     sessionStorage.setItem(TOKEN_KEY, data.accessToken);
     sessionStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    const meRes = await fetch('http://localhost:8081/api/users/me', {
-      headers: { Authorization: `Bearer ${data.accessToken}` },
-    });
-    const me = meRes.ok ? await meRes.json() : {};
-    const user = { id: data.userId, name: data.name, role: data.role, loginId, ...me };
+    const user = { id: data.userId, name: data.name, role: data.role, loginId };
     setUser(user);
+    // gitId, companyName 등 나머지 프로필 정보는 화면 전환을 막지 않고 백그라운드에서 채운다.
+    fetch('http://localhost:8081/api/users/me', {
+      headers: { Authorization: `Bearer ${data.accessToken}` },
+    })
+      .then((meRes) => (meRes.ok ? meRes.json() : null))
+      .then((me) => {
+        if (me) setUser((prev) => (prev ? { ...prev, ...me } : prev));
+      })
+      .catch(() => {});
     return user;
   }, []);
 
@@ -95,17 +100,18 @@ export function AuthProvider({ children }) {
     return res.json();
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(() => {
     const token = sessionStorage.getItem(TOKEN_KEY);
+    // user를 먼저 지워야 페이지 전환이 즉시 반영된다. 백엔드 로그아웃 호출 결과는 기다릴 필요 없다.
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    setUser(null);
     if (token) {
-      await fetch('http://localhost:8081/api/users/logout', {
+      fetch('http://localhost:8081/api/users/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});
     }
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    setUser(null);
   }, []);
 
   const persistUser = useCallback(
