@@ -51,7 +51,7 @@ export default function Sidebar() {
     if (item.adminOnly && user?.role !== 'ADMIN') return false;
     return true;
   });
-  
+
   useEffect(() => {
     setOrder(readStoredOrder(user?.id ?? 'anon'));
   }, [user?.id]);
@@ -108,8 +108,8 @@ export default function Sidebar() {
   return (
     <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
       <div className="gr-sidebar__header">
-        <button 
-          className="gr-sidebar__toggle-btn" 
+        <button
+          className="gr-sidebar__toggle-btn"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-label="사이드바 토글"
         >
