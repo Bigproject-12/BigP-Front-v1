@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
-import { TOKEN_KEY } from '../lib/api';
+import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import './MembersPage.css';
 
@@ -13,15 +13,7 @@ export default function MembersPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const res = await fetch('http://localhost:8081/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          throw new Error(err?.message ?? '회원 목록을 불러오지 못했습니다.');
-        }
-        const data = await res.json();
+        const data = await api.get('/api/users');
         setMembers(data.content); // Page 객체라 실제 목록은 content 안에 있음
       } catch (err) {
         setError(err.message);

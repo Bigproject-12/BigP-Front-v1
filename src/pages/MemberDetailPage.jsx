@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
-import { TOKEN_KEY } from '../lib/api';
+import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -90,15 +90,7 @@ export default function MemberDetailPage() {
       setLoading(true);
       setError('');
       try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const res = await fetch(`http://localhost:8081/api/users/${memberId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          throw new Error(err?.message ?? '회원 정보를 불러오지 못했습니다.');
-        }
-        setMember(await res.json());
+        setMember(await api.get(`/api/users/${memberId}`));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -109,15 +101,7 @@ export default function MemberDetailPage() {
   }, [memberId]);
 
   const handleDeleteConfirm = async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const res = await fetch(`http://localhost:8081/api/users/${memberId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      throw new Error(err?.message ?? '회원 삭제에 실패했습니다.');
-    }
+    await api.del(`/api/users/${memberId}`);
     navigate('?page=members');
   };
 

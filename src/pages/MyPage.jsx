@@ -30,18 +30,10 @@ function ChangePasswordModal({ onClose }) {
     }
     setSaving(true);
     try {
-      const token = localStorage.getItem('GuardrAil-token');
-      const res = await fetch('http://localhost:8081/api/users/password', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword: current, newPassword: next, newPasswordConfirm: confirm }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setError(err.message || '비밀번호 변경에 실패했습니다.');
-        return;
-      }
+      await api.patch('/api/users/password', { currentPassword: current, newPassword: next, newPasswordConfirm: confirm });
       onClose(true);
+    } catch (err) {
+      setError(err.message || '비밀번호 변경에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -212,20 +204,7 @@ export default function MyPage() {
   //탈퇴 api 호출
   const executeWithdraw = async (password) => {
     try {
-      const token = localStorage.getItem('GuardrAil-token');
-      const res = await fetch('http://localhost:8081/api/users/me', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ currentPassword: password }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || '회원 탈퇴에 실패했습니다. 비밀번호를 확인해주세요.');
-      }
+      await api.del('/api/users/me', { currentPassword: password });
 
       // 테마만 남기고 로컬스토리지 정리
       // 프로젝트의 테마 키로 맞출 것
