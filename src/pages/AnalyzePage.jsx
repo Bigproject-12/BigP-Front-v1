@@ -32,7 +32,8 @@ function parseJsonArray(str) {
 async function runAnalysis({ repoId, language, code }) {
   const { analysis_id } = await api.post('/api/analysis', {
     code_content: code,
-    repoId: Number(repoId),
+    // 'custom'인 경우 repoId를 null로 전송
+    repoId: repoId === 'custom' || !repoId ? null : Number(repoId), 
     language,
     prompt: null,
   });
@@ -188,7 +189,7 @@ export default function AnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
-    if (!repoId) { setDetectError('먼저 분석할 레포지토리를 선택해주세요.'); return; }
+    if (!repoId) { setDetectError('먼저 분석할 레포지토리를 선택하거나 직접 입력을 선택해 주세요'); return; }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
@@ -332,9 +333,11 @@ export default function AnalyzePage() {
                     setSelectedExt('');
                     setCompareMode(false);
                     setAnalyzed(false);
+                    if (e.target.value === 'custom') setOriginalCode('');//직접 입력
                   }}
                 >
                   <option value="">레포 선택</option>
+                  {/*<option value="custom">✍️ 코드 직접 입력</option>*/}
                   {repos.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
@@ -355,6 +358,7 @@ export default function AnalyzePage() {
                 setAnalyzed(false);
               }}
               disabled={!repoId}
+              //disabled={!repoId || repoId === 'custom'}// 👈 'custom'일 때 비활성화
             >
               <option value="">브랜치 선택</option>
               {branches.map((b)=>(
@@ -375,6 +379,7 @@ export default function AnalyzePage() {
                 setAnalyzed(false);
               }}
               disabled={!branch}
+              //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
             >
               <option value="">파일 선택</option>
               {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
@@ -401,6 +406,7 @@ export default function AnalyzePage() {
                 setFilePath(''); // 필터 변경 시 선택된 파일 초기화
               }}
               disabled={!branch}
+              //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
             >
               <option value="">모든 확장자</option>
               {availableExtensions.map((ext) => (
@@ -468,6 +474,7 @@ export default function AnalyzePage() {
                   <textarea
                     className="code-textarea"
                     placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
+                    style={{ resize: 'none' }}
                     value={originalCode}
                     onChange={(e) => {
                       setOriginalCode(e.target.value);
