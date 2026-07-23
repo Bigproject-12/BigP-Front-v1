@@ -24,6 +24,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-lg);
+  align-items: stretch;
 }
 @media (max-width: 980px) {
   .analyze-panes {
@@ -49,8 +50,8 @@
 }
 .code-textarea {
   width: 100%;
-  min-height: 340px;
-  resize: vertical;
+  height: 400px;
+  resize: none;
   background: var(--surface-input);
   color: var(--text-primary);
   border: 1px solid var(--border-hairline);
@@ -66,8 +67,7 @@
 }
 .code-view {
   width: 100%;
-  min-height: 340px;
-  max-height: 480px;
+  height: 400px;
   overflow: auto;
   background: var(--surface-input);
   border: 1px solid var(--border-hairline);
