@@ -7,6 +7,7 @@ import { useRepos } from '../context/RepoContext';
 import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
+import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
@@ -18,22 +19,31 @@ import './AnalyzePage.css';
 
 const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
-function genericMockAnalyze(code) {
-  const improvedCode = code
-    .split('\n')
-    .map((line) => line.replace(/\bvar\s+/g, 'const ').replace(/\s+$/g, ''))
-    .join('\n');
-  return {
-    improvedCode,
-    issues: [
-      {
-        type: '이슈',
-        severity: 'low',
-        description: '입력된 코드에서 등록된 히스토리와 일치하는 항목을 찾지 못해 일반 규칙만 적용되었습니다.',
-        reason: 'var 선언을 const로 교체하고 후행 공백을 정리하는 기본 스타일 규칙을 적용했습니다.',
-      },
-    ],
-  };
+function parseJsonArray(str) {
+  if (!str) return [];
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function runAnalysis({ repoId, language, code }) {
+  const { analysis_id } = await api.post('/api/analysis', {
+    code_content: code,
+    repoId: Number(repoId),
+    language,
+    prompt: null,
+  });
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 120000) {
+    const data = await api.get(`/api/analysis/${analysis_id}`);
+    if (data.status !== 'ANALYZING') return data;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  throw new Error('코드 분석이 비정상적으로 오래걸립니다. 잠시 후 다시 시도해주세요.');
 }
 
 export default function AnalyzePage() {
@@ -178,22 +188,47 @@ export default function AnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
+    if (!repoId) { setDetectError('먼저 분석할 레포지토리를 선택해주세요.'); return; }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
     setDetectError('');
     setPromptResult(null);
     try {
-      const [mocked, detection] = await Promise.all([
-        new Promise((resolve) => setTimeout(() => resolve(genericMockAnalyze(originalCode)), 700)),
-        detectAiGeneratedCode(originalCode).then((r) => r.result).catch(() => null),
+      const ext = activeFileName.includes('.') ? activeFileName.split('.').pop().toUpperCase() : 'JAVA';
+      const data = await runAnalysis({ repoId, language: ext, code: originalCode });
+      if (data.status === 'FAILED') throw new Error('분석에 실패했습니다.');
+
+      const vulnerabilities = parseJsonArray(data.secuResult);
+      const complexityDetails = parseJsonArray(data.inefficiencyResult);
+
+      setImprovedCode(data.modifiedCode || originalCode);
+      setIssues([
+        ...vulnerabilities.map((v) => ({
+          type: '보안',
+          severity: 'high',
+          description: `${v.line}번째 줄 — ${v.message}`,
+          reason: v.rule_id,
+        })),
+        ...complexityDetails.map((c) => ({
+          type: '비효율',
+          severity: 'low',
+          description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
+          reason: c.message,
+        })),
       ]);
-      setImprovedCode(mocked.improvedCode);
-      setIssues(mocked.issues);
-      setIssueCount(mocked.issues.length);
-      setImprovementRate(12);
-      setAiDetection(detection);
+      setIssueCount(data.totalIssues ?? 0);
+      setImprovementRate(data.modifiedCode ? 100 : 0);
+      setAiDetection({
+        isAiGenerated: !!data.aiGenerated,
+        confidence: null,
+        reasons: [],
+        hasVulnerability: vulnerabilities.length > 0,
+        vulnerabilities,
+      });
       setAnalyzed(true);
+    } catch (e) {
+      setDetectError(e.message || '분석 중 오류가 발생했습니다.');
     } finally {
       setAnalyzing(false);
     }
@@ -462,6 +497,12 @@ export default function AnalyzePage() {
             </div>
           )}
 
+          {detectError && (
+            <div className="ui-banner ui-banner--error">
+              <Icon name="close" size={16} /> {detectError}
+            </div>
+          )}
+
           <div className="analyze-actions">
             <Button variant="primary" onClick={handleAnalyze} disabled={analyzing || !originalCode.trim()}>
               {analyzing ? '분석 중…' : '분석하기'}
@@ -550,9 +591,11 @@ export default function AnalyzePage() {
                   <h2 className="text-heading-lg">
                     {aiDetection.isAiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
                   </h2>
-                  <Badge variant={aiDetection.isAiGenerated ? 'warning' : 'success'}>
-                    확신도 {aiDetection.confidence}%
-                  </Badge>
+                  {aiDetection.confidence !== null && (
+                    <Badge variant={aiDetection.isAiGenerated ? 'warning' : 'success'}>
+                      확신도 {aiDetection.confidence}%
+                    </Badge>
+                  )}
                   {detectElapsed !== null && (
                     <span className="ai-elapsed text-caption-md">
                       <Icon name="spark" size={12} /> {detectElapsed >= 1000 ? `${(detectElapsed / 1000).toFixed(2)}s` : `${detectElapsed}ms`}
