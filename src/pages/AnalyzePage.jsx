@@ -48,11 +48,14 @@ export default function AnalyzePage() {
   const { repos, reposLoading } = useRepos();
   const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
+  const hasNoData = !reposLoading && repos.length === 0;
 
   const [repoId, setRepoId] = useState('');
   const [branch, setBranch] = useState('');
   const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
+
+
   
   // 선택된 확장자 필터 상태
   const [selectedExt, setSelectedExt] = useState('');
@@ -272,42 +275,41 @@ export default function AnalyzePage() {
       </div>
 
       {/* 파일 선택 툴바 — 탭 공통 영역 */}
-      <Card>
+<Card>
         <div className="analyze-toolbar">
 
-          {!isGithubLinked ? (
+          {hasNoData ? (
             <div style={{display: 'flex', alignItems: 'center', gap:'12px', flex:1}}>
-            <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
-              GitHub가 아직 연동되지 않았습니다. 코드를 불러오려면 연동을 진행해 주세요.
-            </span>
-            <Button variant="primary" size="sm" onClick={goToMyPage}>
-              GitHub 연동하러 가기
-            </Button>
+              <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
+                {reposLoading ? 'GitHub 연동 정보를 확인 중입니다…' : 'GitHub가 아직 연동되지 않았습니다. 코드를 불러오려면 연동을 진행해 주세요.'}
+              </span>
+              <Button variant="primary" size="sm" onClick={goToMyPage} disabled={reposLoading}>
+                GitHub 연동하러 가기
+              </Button>
             </div>
-          ):(
-          <>
-
-          {/*1. 레포지토리 선택*/}
-          <div className="analyze-toolbar__field">
-            <label>Repository</label>
-            <Select
-              value={repoId}
-              onChange={(e) => {
-                setRepoId(e.target.value);
-                setBranch(''); 
-                setFilePath('');
-                setFileNameOverride('');
-                setSelectedExt('');
-                setCompareMode(false);
-                setAnalyzed(false);
-              }}
-            >
-              <option value="">{reposLoading ? 'Repository 목록을 불러오는 중입니다.' : '레포 선택'}</option>
-              {!reposLoading && repos.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </Select>
-          </div>
+          ) : (
+            <>
+              {/* 1. 레포지토리 선택 (정상적으로 repos 목록 출력) */}
+              <div className="analyze-toolbar__field">
+                <label>Repository</label>
+                <Select
+                  value={repoId}
+                  onChange={(e) => {
+                    setRepoId(e.target.value);
+                    setBranch(''); 
+                    setFilePath('');
+                    setFileNameOverride('');
+                    setSelectedExt('');
+                    setCompareMode(false);
+                    setAnalyzed(false);
+                  }}
+                >
+                  <option value="">레포 선택</option>
+                  {repos.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Select>
+              </div>
 
           {/* 2. 브랜치 선택 */}
           <div className="analyze-toolbar__field">
