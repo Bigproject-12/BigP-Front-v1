@@ -29,20 +29,22 @@ function parseJsonArray(str) {
   }
 }
 
-async function runAnalysis({ repoId, language, code }) {
+async function runAnalysis({ repoId, language, code, onStarted }) {
   const { analysis_id } = await api.post('/api/analysis', {
     code_content: code,
     // 'custom'인 경우 repoId를 null로 전송
-    repoId: repoId === 'custom' || !repoId ? null : Number(repoId), 
+    repoId: repoId === 'custom' || !repoId ? null : Number(repoId),
     language,
     prompt: null,
   });
+
+  if (onStarted) onStarted(analysis_id);
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < 120000) {
     const data = await api.get(`/api/analysis/${analysis_id}`);
     if (data.status !== 'ANALYZING') return data;
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 2500));
   }
   throw new Error('코드 분석이 비정상적으로 오래걸립니다. 잠시 후 다시 시도해주세요.');
 }
@@ -72,6 +74,7 @@ export default function AnalyzePage() {
   const [issueCount, setIssueCount] = useState(null);
   const [improvementRate, setImprovementRate] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [diffMode, setDiffMode] = useState(false);
@@ -197,7 +200,8 @@ export default function AnalyzePage() {
     setPromptResult(null);
     try {
       const ext = activeFileName.includes('.') ? activeFileName.split('.').pop().toUpperCase() : 'JAVA';
-      const data = await runAnalysis({ repoId, language: ext, code: originalCode });
+      const data = await runAnalysis({ repoId, language: ext, code: originalCode, onStarted: setCurrentAnalysisId });
+      if (data.status === 'CANCELED') { setDetectError('분석이 취소되었습니다.'); return; }
       if (data.status === 'FAILED') throw new Error('분석에 실패했습니다.');
 
       const vulnerabilities = parseJsonArray(data.secuResult);
@@ -232,6 +236,16 @@ export default function AnalyzePage() {
       setDetectError(e.message || '분석 중 오류가 발생했습니다.');
     } finally {
       setAnalyzing(false);
+      setCurrentAnalysisId(null);
+    }
+  };
+
+  const handleStopAnalysis = async () => {
+    if (!currentAnalysisId) return;
+    try {
+      await api.patch(`/api/analysis/${currentAnalysisId}`);
+    } catch {
+      /* 폴링 쪽에서 최종 상태를 다시 확인하니 여기선 무시해도 됨 */
     }
   };
 
@@ -295,7 +309,7 @@ export default function AnalyzePage() {
   ];
 
   return (
-    <>
+    <div className="analyze-page">
       <div className="gr-page__header">
         <div className="gr-page__header-text">
           <h1 className="text-display-md">코드 분석</h1>
@@ -335,6 +349,7 @@ export default function AnalyzePage() {
                     setAnalyzed(false);
                     if (e.target.value === 'custom') setOriginalCode('');//직접 입력
                   }}
+                  disabled={analyzing}
                 >
                   <option value="">레포 선택</option>
                   {/*<option value="custom">✍️ 코드 직접 입력</option>*/}
@@ -357,7 +372,7 @@ export default function AnalyzePage() {
                 setCompareMode(false);
                 setAnalyzed(false);
               }}
-              disabled={!repoId}
+              disabled={!repoId || analyzing}
               //disabled={!repoId || repoId === 'custom'}// 👈 'custom'일 때 비활성화
             >
               <option value="">브랜치 선택</option>
@@ -378,7 +393,7 @@ export default function AnalyzePage() {
                 setCompareMode(false);
                 setAnalyzed(false);
               }}
-              disabled={!branch}
+              disabled={!branch || analyzing}
               //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
             >
               <option value="">파일 선택</option>
@@ -405,7 +420,7 @@ export default function AnalyzePage() {
                 setSelectedExt(e.target.value);
                 setFilePath(''); // 필터 변경 시 선택된 파일 초기화
               }}
-              disabled={!branch}
+              disabled={!branch || analyzing}
               //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
             >
               <option value="">모든 확장자</option>
@@ -425,7 +440,7 @@ export default function AnalyzePage() {
             onChange={handleUpload}
             accept=".js,.jsx,.ts,.tsx,.py,.java,.go,.rb,.txt"
           />
-          <Button variant="secondary" size="sm" icon={<Icon name="upload" size={15} />} onClick={() => fileInputRef.current?.click()}>
+          <Button variant="secondary" size="sm" icon={<Icon name="upload" size={15} />} onClick={() => fileInputRef.current?.click()} disabled={analyzing}>
             파일 업로드
           </Button>
         </div>
@@ -511,9 +526,18 @@ export default function AnalyzePage() {
           )}
 
           <div className="analyze-actions">
-            <Button variant="primary" onClick={handleAnalyze} disabled={analyzing || !originalCode.trim()}>
-              {analyzing ? '분석 중…' : '분석하기'}
-            </Button>
+            {analyzing ? (
+              <>
+                <span className="ui-spinner" aria-hidden="true" />
+                <Button variant="danger" onClick={handleStopAnalysis}>
+                  분석 중지
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
+                분석하기
+              </Button>
+            )}
           </div>
 
           {analyzed && (
@@ -684,6 +708,6 @@ export default function AnalyzePage() {
           )}
         </>
       )}
-    </>
+    </div>
   );
 }
