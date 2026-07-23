@@ -63,11 +63,16 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const login = useCallback(async (loginId, password) => {
-    const res = await fetch('http://localhost:8081/api/users/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginId, password }),
-    });
+    let res;
+    try {
+      res = await fetch('http://localhost:8081/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginId, password }),
+      });
+    } catch {
+      throw new Error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+    }
     if (res.status === 401) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
     if (!res.ok) throw new Error('로그인에 실패했습니다.');
     const data = await res.json();
@@ -88,11 +93,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signup = useCallback(async ({ loginId, password, confirm, name, companyName, gitId }) => {
-    const res = await fetch('http://localhost:8081/api/users/signup', {
+    let res;
+    try {
+      res = await fetch('http://localhost:8081/api/users/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName, gitId }),
     });
+    } catch {
+      throw new Error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || '회원가입에 실패했습니다.');
