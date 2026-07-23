@@ -29,8 +29,6 @@ function BoardList({ isAdmin, navigate }) {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 검색어·정렬 변경 시 페이지도 함께 0으로 되돌린다.
-  // effect로 뒤늦게 고치면 요청이 두 번 나가므로 입력 시점에 같이 처리
   const handleQueryChange = (e) => {
     setQuery(e.target.value);
     setPage(0);
@@ -45,7 +43,7 @@ function BoardList({ isAdmin, navigate }) {
     setLoading(true);
     fetchNotices({ keyword: query.trim(), page, size: PAGE_SIZE, sort })
       .then((data) => {
-        setPosts(data.content ?? []);   // Page 객체 안의 content 배열만 꺼냄
+        setPosts(data.content ?? []);
         setTotalPages(data.totalPages ?? 0);
       })
       .catch(() => setPosts([]))
@@ -61,6 +59,7 @@ function BoardList({ isAdmin, navigate }) {
         </div>
       </div>
 
+      {/* 🛠️ 검색바 툴바 영역에 관리자용 '게시글 작성' 버튼 통합 */}
       <div className="board-toolbar">
         <div className="board-toolbar__search">
           <Input
@@ -70,11 +69,22 @@ function BoardList({ isAdmin, navigate }) {
             leftIcon={<Icon name="search" size={16} />}
           />
         </div>
-        <Select value={sort} onChange={handleSortChange}>
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+        
+        <div className="board-toolbar__right">
+          <Select value={sort} onChange={handleSortChange}>
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+
+          {isAdmin && (
+            <Button variant="primary" icon={<Icon name="plus" size={16} />}
+              onClick={() => navigate('?page=board&mode=write')}
+              style={{ whiteSpace: 'nowrap' }}>
+              게시글 작성
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="board-list">
@@ -85,21 +95,21 @@ function BoardList({ isAdmin, navigate }) {
         ) : (
           posts.map((post) => (
             <Card
-              key={post.boardId}                              // id → boardId
+              key={post.boardId}
               className="board-card"
               onClick={() => navigate(`?page=board&postId=${post.boardId}`)}
             >
               <div className="board-card__main">
                 <span className="board-card__title">
-                  {post.isPinned && '📌 '}{post.title}         {/* 고정 공지 표시 */}
+                  {post.isPinned && '📌 '}{post.title}
                 </span>
                 <div className="board-card__meta">
-                  <span>{formatDateTime(post.createdAt)}</span> {/* author 제거 */}
+                  <span>{formatDateTime(post.createdAt)}</span>
                 </div>
               </div>
               <div className="board-card__stats">
                 <span className="board-card__stat">
-                  <Icon name="eye" size={14} /> {post.viewCount}  {/* views → viewCount */}
+                  <Icon name="eye" size={14} /> {post.viewCount}
                 </span>
               </div>
             </Card>
@@ -117,15 +127,6 @@ function BoardList({ isAdmin, navigate }) {
           </span>
           <Button variant="secondary" disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}>다음</Button>
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="board-write-cta">
-          <Button variant="primary" icon={<Icon name="plus" size={16} />}
-            onClick={() => navigate('?page=board&mode=write')}>
-            게시글 작성
-          </Button>
         </div>
       )}
     </>

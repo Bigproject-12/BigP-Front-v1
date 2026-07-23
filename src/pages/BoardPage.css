@@ -1,14 +1,20 @@
 .board-toolbar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: var(--space-md);
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: wrap; /* 화면이 좁아지면 자동으로 아래로 떨어지도록 정렬 */
 }
 .board-toolbar__search {
   flex: 1;
   min-width: 220px;
   max-width: 420px;
+}
+/* 툴바 우측 영역 (정렬 + 작성 버튼) */
+.board-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .board-list {
