@@ -4,10 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import { validatePassword, PASSWORD_HINT } from '../lib/passwordPolicy';
 import './LoginPage.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 
 function FeatureRow({ icon, title, desc }) {
@@ -146,10 +146,8 @@ function SignupForm({ onSwitchTab }) {
     if (!form.name.trim()) return setError('이름을 입력해주세요.');
     if (!form.gitId.trim()) return setError('Git ID를 입력해주세요.');
     if (!EMAIL_RE.test(form.loginId)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
-    if (form.password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.');
-    if (!PASSWORD_RE.test(form.password)) {
-      return setError('비밀번호는 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
-    }
+    const passwordError = validatePassword(form.password);
+    if (passwordError) return setError(passwordError);
     if (form.password !== form.confirm) return setError('비밀번호가 일치하지 않습니다.');
 
     // 유효성 검사 통과 시 팝업 띄우기
@@ -194,8 +192,15 @@ function SignupForm({ onSwitchTab }) {
         <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
         <Input label="이메일" type="email" value={form.loginId} onChange={set('loginId')} placeholder="you@company.com" />
 
-        <Input label="비밀번호" type="password" value={form.password} onChange={set('password')} placeholder="8자 이상, 영문 대문자, 소문자, 숫자, 특수문자 포함" />
-        <Input label="비밀번호 확인" type="password" value={form.confirm} onChange={set('confirm')} />
+        <Input
+          label="비밀번호"
+          type="password"
+          value={form.password}
+          onChange={set('password')}
+          placeholder="비밀번호 입력"
+          hint={PASSWORD_HINT}
+        />
+        <Input label="비밀번호 확인" type="password" value={form.confirm} onChange={set('confirm')} placeholder="비밀번호 재입력" />
         {error && <div className="ui-banner ui-banner--error">{error}</div>}
         <Button type="submit" variant="primary" block disabled={submitting}>
           {submitting ? '가입 처리 중…' : '회원가입'}
@@ -278,7 +283,14 @@ function ResetPasswordForm() {
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
       <p className="text-body-sm">새로운 비밀번호를 설정해주세요.</p>
-      <Input label="새 비밀번호" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" />
+      <Input
+        label="새 비밀번호"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="비밀번호 입력"
+        hint="8자 이상, 영문 대문자·소문자·숫자·특수문자를 각각 하나 이상 포함해주세요."
+      />
       <Input label="새 비밀번호 확인" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
       {done && <div className="ui-banner ui-banner--success">비밀번호가 재설정되었습니다.</div>}

@@ -7,6 +7,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Icon from '../components/icons/Icon';
+import { PASSWORD_HINT } from '../lib/passwordPolicy';
 import './MyPage.css';
 
 function ChangePasswordModal({ onClose }) {
@@ -20,14 +21,8 @@ function ChangePasswordModal({ onClose }) {
 
   const handleSave = async () => {
     setError('');
-    if (next.length < 8 || next.length > 18) {
-      setError('비밀번호는 8자 이상 18자 이하여야 하며 영문 대문자, 소문자, 숫자, 특수문자를 각각 하나 이상 포함해야 합니다.');
-      return;
-    }
-    if (next !== confirm) {
-      setError('새 비밀번호가 일치하지 않습니다.');
-      return;
-    }
+    // 현재 비밀번호 불일치 -> 새/확인 불일치 -> 길이 -> 복잡도 -> 현재 비밀번호와 동일,
+    // 이 우선순위는 서버(UserService.changePassword)가 순서대로 검증해 그대로 내려준다.
     setSaving(true);
     try {
       await api.patch('/api/users/password', { currentPassword: current, newPassword: next, newPasswordConfirm: confirm });
@@ -55,7 +50,13 @@ function ChangePasswordModal({ onClose }) {
     >
       <div className="modal-form">
         <Input label="현재 비밀번호" type={showPw ? 'text' : 'password'} value={current} onChange={(e) => setCurrent(e.target.value)} rightSlot={<button type="button" className="ui-field__icon-right" onClick={() => setShowPw(v => !v)} aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}><Icon name={showPw ? 'eyeOff' : 'eye'} size={17} /></button>} />
-        <Input label="새 비밀번호" type={showPw ? 'text' : 'password'} value={next} onChange={(e) => setNext(e.target.value)} />
+        <Input
+          label="새 비밀번호"
+          type={showPw ? 'text' : 'password'}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          hint={PASSWORD_HINT}
+        />
         <Input label="새 비밀번호 확인" type={showPw ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {error && <div className="ui-banner ui-banner--error">{error}</div>}
       </div>
