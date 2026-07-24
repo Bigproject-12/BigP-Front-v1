@@ -29,6 +29,12 @@ function parseJsonArray(str) {
   }
 }
 
+function getConfidenceLevel(probability) {
+  if (probability >= 70) return 'high';
+  if (probability >= 40) return 'medium';
+  return 'low';
+}
+
 async function runAnalysis({ repoId, language, code, onStarted }) {
   const { analysis_id } = await api.post('/api/analysis', {
     code_content: code,
@@ -226,7 +232,7 @@ export default function AnalyzePage() {
       setImprovementRate(data.modifiedCode ? 100 : 0);
       setAiDetection({
         isAiGenerated: !!data.aiGenerated,
-        confidence: null,
+        confidence: data.aiProbability ?? null,
         reasons: [],
         hasVulnerability: vulnerabilities.length > 0,
         vulnerabilities,
@@ -623,9 +629,9 @@ export default function AnalyzePage() {
                     {aiDetection.isAiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
                   </h2>
                   {aiDetection.confidence !== null && (
-                    <Badge variant={aiDetection.isAiGenerated ? 'warning' : 'success'}>
-                      확신도 {aiDetection.confidence}%
-                    </Badge>
+                    <span className={`confidence-pill confidence-pill--${getConfidenceLevel(aiDetection.confidence)}`}>
+                      {Math.round(aiDetection.confidence)}%
+                    </span>
                   )}
                   {detectElapsed !== null && (
                     <span className="ai-elapsed text-caption-md">
@@ -634,6 +640,12 @@ export default function AnalyzePage() {
                   )}
                 </div>
               </div>
+
+              {aiDetection.confidence !== null && aiDetection.confidence >= 70 && (
+                <div className="ui-banner ui-banner--error confidence-warning">
+                  <Icon name="bug" size={16} /> AI가 작성했을 가능성이 높은 코드입니다.
+                </div>
+              )}
 
               <ul className="ai-detect-card__reasons">
                 {aiDetection.reasons.map((r, i) => (
