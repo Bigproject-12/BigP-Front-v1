@@ -630,7 +630,7 @@ export default function AnalyzePage() {
                   </h2>
                   {aiDetection.confidence !== null && (
                     <span className={`confidence-pill confidence-pill--${getConfidenceLevel(aiDetection.confidence)}`}>
-                      {Math.round(aiDetection.confidence)}%
+                      AI가 작성했을 확률 : {Math.round(aiDetection.confidence)}%
                     </span>
                   )}
                   {detectElapsed !== null && (
@@ -647,11 +647,13 @@ export default function AnalyzePage() {
                 </div>
               )}
 
+            {aiDetection.reasons.length > 0 && (
               <ul className="ai-detect-card__reasons">
                 {aiDetection.reasons.map((r, i) => (
                   <li key={i} className="text-body-sm">{r}</li>
                 ))}
               </ul>
+          )}
 
               {aiDetection.isAiGenerated && (
                 <div className="prompt-section">
