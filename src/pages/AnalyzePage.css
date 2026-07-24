@@ -163,6 +163,10 @@
   line-height: 1.65;
   overflow-x: auto;
 }
+.diff-pane__code-inner {
+  display: inline-block;
+  min-width: 100%;
+}
 
 /* diff 줄 */
 .diff-line {
@@ -171,6 +175,7 @@
   gap: 0;
   white-space: pre;
   min-height: 21px;
+  width: 100%;
 }
 .diff-line--removed {
   background: rgba(239, 68, 68, 0.15);

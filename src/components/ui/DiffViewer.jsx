@@ -63,26 +63,30 @@ export default function DiffViewer({ original, improved }) {
       <div className="diff-pane diff-pane--left">
         <div className="diff-pane__label">원본</div>
         <div className="diff-pane__code">
-          {leftLines.map((line, idx) => (
-            <div key={idx} className={`diff-line diff-line--${line.type}`}>
-              <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
-              <span className="diff-line__marker">{line.type === 'removed' ? '-' : ' '}</span>
-              <span className="diff-line__text">{line.text}</span>
-            </div>
-          ))}
+          <div className="diff-pane__code-inner">
+            {leftLines.map((line, idx) => (
+              <div key={idx} className={`diff-line diff-line--${line.type}`}>
+                <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
+                <span className="diff-line__marker">{line.type === 'removed' ? '-' : ' '}</span>
+                <span className="diff-line__text">{line.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="diff-pane diff-pane--right">
         <div className="diff-pane__label">개선</div>
         <div className="diff-pane__code">
-          {rightLines.map((line, idx) => (
-            <div key={idx} className={`diff-line diff-line--${line.type}`}>
-              <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
-              <span className="diff-line__marker">{line.type === 'added' ? '+' : ' '}</span>
-              <span className="diff-line__text">{line.text}</span>
-            </div>
-          ))}
+          <div className="diff-pane__code-inner">
+            {rightLines.map((line, idx) => (
+              <div key={idx} className={`diff-line diff-line--${line.type}`}>
+                <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
+                <span className="diff-line__marker">{line.type === 'added' ? '+' : ' '}</span>
+                <span className="diff-line__text">{line.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
