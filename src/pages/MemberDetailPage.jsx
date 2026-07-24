@@ -150,7 +150,7 @@ export default function MemberDetailPage() {
           <InfoRow label="이름" value={member.name} />
           <InfoRow label="아이디" value={member.loginId} />
           <InfoRow label="기업명" value={member.companyName} />
-          <InfoRow label="Git ID" value={member.gitId} />
+          <InfoRow label="Git ID" value={member.gitName} />
           <InfoRow label="가입일" value={member.createdAt} />
         </div>
       </Card>
