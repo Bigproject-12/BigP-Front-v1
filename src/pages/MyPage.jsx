@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRepos } from '../context/RepoContext';
+import { useRouter } from '../router/RouterContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -21,8 +22,6 @@ function ChangePasswordModal({ onClose }) {
 
   const handleSave = async () => {
     setError('');
-    // 현재 비밀번호 불일치 -> 새/확인 불일치 -> 길이 -> 복잡도 -> 현재 비밀번호와 동일,
-    // 이 우선순위는 서버(UserService.changePassword)가 순서대로 검증해 그대로 내려준다.
     setSaving(true);
     try {
       await api.patch('/api/users/password', { currentPassword: current, newPassword: next, newPasswordConfirm: confirm });
@@ -77,7 +76,7 @@ function WithdrawModal({ onClose, onConfirm }) {
     if (!window.confirm('정말 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.')) return;
 
     setSubmitting(true);
-    await onConfirm(password); // 부모 컴포넌트의 API 호출 함수 실행
+    await onConfirm(password);
     setSubmitting(false);
   };
 
@@ -118,66 +117,61 @@ function WithdrawModal({ onClose, onConfirm }) {
 
 export default function MyPage() {
   const { user, persistUser } = useAuth();
-  const { refreshRepos } = useRepos();
+  const { repos, refreshRepos } = useRepos();
+  const { params, navigate } = useRouter();
+
   const [name, setName] = useState(user?.name || '');
   const [gitId, setGitId] = useState(user?.gitName || '');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
-  const {repos}=useRepos();
-
   const [org, setOrg] = useState('');
-  const [token, setToken] = useState('');
   const [initialOrg, setInitialOrg] = useState('');
-  const [showToken, setShowToken] = useState(false);
   const [tokenBanner, setTokenBanner] = useState(null);
+  const [connecting, setConnecting] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
-
-  //이미 등록된 조직명 있다면 화면에 표시하거나 초기값 세팅
+  // 이미 등록된 조직명 있다면 화면에 표시하거나 초기값 세팅
   useEffect(() => {
     if (repos && repos.length > 0 && repos[0].organization && !initialOrg) {
       const fetchedOrg = repos[0].organization;
       setInitialOrg(fetchedOrg);
-      setOrg(fetchedOrg); // 입력란의 초기값으로도 세팅
+      setOrg(fetchedOrg);
     }
-    }, [repos, initialOrg]);
+  }, [repos, initialOrg]);
 
-
-  const handleSaveToken = async () => {
-    const trimmedOrg = org.trim();
-    const trimmedToken = token.trim();
-    if (!trimmedToken || !trimmedOrg) {
-      setTokenBanner({ type: 'error', text: '조직명과 토큰을 모두 입력해주세요.' });
-      return;
+  // GitHub OAuth 콜백에서 리다이렉트되어 돌아왔을 때 결과 배너 표시 + 레포 목록 새로고침
+  useEffect(() => {
+    const githubResult = params.get('github');
+    if (githubResult === 'success') {
+      setTokenBanner({ type: 'success', text: 'GitHub 연동 및 레포지토리 가져오기가 완료되었습니다.' });
+      refreshRepos();
+      navigate('?page=mypage#github-section', { replace: true });
+    } else if (githubResult === 'partial') {
+      setTokenBanner({ type: 'error', text: 'GitHub 계정은 연동됐지만, 레포지토리 조회에 실패했습니다. 조직명을 확인해주세요.' });
+      navigate('?page=mypage#github-section', { replace: true });
+    } else if (githubResult === 'error') {
+      setTokenBanner({ type: 'error', text: 'GitHub 연동에 실패했습니다. 다시 시도해주세요.' });
+      navigate('?page=mypage#github-section', { replace: true });
     }
-    try {
-      await api.post('/api/repos', { githubToken: trimmedToken, orgName: trimmedOrg });
-      await refreshRepos();
-      setInitialOrg(trimmedOrg); // ✅ 저장이 성공하면 초기 연동 조직명도 갱신
-      setTokenBanner({ type: 'success', text: '연동되었습니다.' });
-    } catch (err) {
-      setTokenBanner({ type: 'error', text: err.message || '연동에 실패했습니다.' });
-    }
-    setTimeout(() => setTokenBanner(null), 3000);
-  };
+    if (githubResult) setTimeout(() => setTokenBanner(null), 4000);
+  }, [params]);
 
   useEffect(() => {
     setName(user?.name || '');
     setGitId(user?.gitName || '');
   }, [user]);
 
-  //깃허브 등록 부분까지 스크롤되는 기능 추가 
+  // 깃허브 등록 부분까지 스크롤되는 기능
   useEffect(() => {
-  if (window.location.hash.includes('github-section')) {
-    const el = document.getElementById('github-section');
-    if (el) {
-      // 부드럽게 스크롤 되도록 smooth 옵션 적용
-      el.scrollIntoView({ behavior: 'smooth' });
+    if (window.location.hash.includes('github-section')) {
+      const el = document.getElementById('github-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }
-}, []);
+  }, []);
 
   if (!user) return null;
 
@@ -202,28 +196,43 @@ export default function MyPage() {
     }
   };
 
-  //탈퇴 api 호출
+  // GitHub OAuth 인증 시작 — 입력된 조직명을 state에 함께 실어 보냄
+  // 콜백에서 토큰 저장 + 해당 조직의 레포지토리 조회까지 서버가 한 번에 처리한다.
+  const handleConnectGithub = async () => {
+    const trimmedOrg = org.trim();
+    if (!trimmedOrg) {
+      setTokenBanner({ type: 'error', text: '조직명을 먼저 입력해주세요.' });
+      return;
+    }
+    setConnecting(true);
+    setTokenBanner(null);
+    try {
+      const { url } = await api.get(`/api/github/oauth/authorize-url?orgName=${encodeURIComponent(trimmedOrg)}`);
+      window.location.href = url;
+    } catch (err) {
+      setTokenBanner({ type: 'error', text: err.message || 'GitHub 연동 시작에 실패했습니다.' });
+      setConnecting(false);
+    }
+  };
+
+  // 탈퇴 api 호출
   const executeWithdraw = async (password) => {
     try {
       await api.del('/api/users/me', { currentPassword: password });
 
-      // 테마만 남기고 로컬스토리지 정리
-      // 프로젝트의 테마 키로 맞출 것
       const currentTheme = localStorage.getItem('GuardrAil-theme');
       localStorage.clear();
       if (currentTheme) {
         localStorage.setItem('GuardrAil-theme', currentTheme);
       }
-      // 로그인 토큰/유저 정보는 sessionStorage에 저장되므로 별도로 정리
       sessionStorage.clear();
 
       alert('회원 탈퇴가 완료되었습니다.');
-      window.location.href = '?page=login'; 
+      window.location.href = '?page=login';
     } catch (error) {
       alert(error.message);
     }
   };
-
 
   return (
     <>
@@ -252,12 +261,10 @@ export default function MyPage() {
           {banner && <div className={`ui-banner ui-banner--${banner.type}`}>{banner.text}</div>}
 
           <div className="mypage-actions" style={{ justifyContent: 'space-between' }}>
-            {/* 위험 버튼은 눈에 띄지 않게 secondary나 빨간색 스타일(위험 강조)로 배치 */}
-            
-            {user.role!=='ADMIN'&&(
-            <Button variant="secondary" onClick={() => setShowWithdrawModal(true)} style={{ color: '#d32f2f', borderColor: '#d32f2f' }}>
-              회원 탈퇴
-            </Button>
+            {user.role !== 'ADMIN' && (
+              <Button variant="secondary" onClick={() => setShowWithdrawModal(true)} style={{ color: '#d32f2f', borderColor: '#d32f2f' }}>
+                회원 탈퇴
+              </Button>
             )}
             <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
               <Button variant="secondary" onClick={handleCancel} disabled={!isDirty}>
@@ -268,17 +275,13 @@ export default function MyPage() {
               </Button>
             </div>
           </div>
-          
         </div>
-
-        
       </Card>
 
       <Card id="github-section">
         <div className="mypage-form">
           <h2 className="text-body-md" style={{ fontWeight: 600 }}>GitHub 연동</h2>
 
-          {/* 등록 상태 안내 배너 추가 */}
           {initialOrg && (
             <div className="ui-banner ui-banner--success">
               현재 <strong>{initialOrg}</strong> 조직으로 GitHub가 연동되어 있습니다.
@@ -292,23 +295,12 @@ export default function MyPage() {
             placeholder="ex) Bigproject-12"
             hint="팀원 모두 동일한 조직명을 입력하면 같은 대시보드를 공유합니다."
           />
-          <div className="mypage-row">
-            <Input
-              label="Personal Access Token"
-              type={showToken ? 'text' : 'password'}
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              hint="GitHub Personal Access Token을 입력하세요. (repo 권한 필요)"
-            />
-            <Button variant="secondary" onClick={() => setShowToken((v) => !v)}>
-              {showToken ? '숨기기' : '보기'}
-            </Button>
-          </div>
+
           {tokenBanner && <div className={`ui-banner ui-banner--${tokenBanner.type}`}>{tokenBanner.text}</div>}
+
           <div className="mypage-actions">
-            <Button variant="primary" onClick={handleSaveToken}>
-              토큰 저장
+            <Button variant="primary" onClick={handleConnectGithub} disabled={connecting}>
+              {connecting ? '연동 페이지로 이동 중…' : 'GitHub 계정 연동하기'}
             </Button>
           </div>
         </div>
@@ -324,9 +316,9 @@ export default function MyPage() {
       )}
 
       {showWithdrawModal && (
-        <WithdrawModal 
-          onClose={() => setShowWithdrawModal(false)} 
-          onConfirm={executeWithdraw} 
+        <WithdrawModal
+          onClose={() => setShowWithdrawModal(false)}
+          onConfirm={executeWithdraw}
         />
       )}
     </>
