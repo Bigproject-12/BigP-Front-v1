@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
@@ -238,16 +239,24 @@ function SignupForm({ onSwitchTab }) {
 function FindPasswordForm({ onSwitchTab }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!EMAIL_RE.test(email)) {
       setError('올바른 이메일 형식(@)을 입력해주세요.');
       return;
     }
     setError('');
-    setSent(true);
+    setSubmitting(true);
+    try {
+      await api.post('/api/users/password/reset-code', { loginId: email });
+      onSwitchTab('reset-password', { email });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -255,47 +264,83 @@ function FindPasswordForm({ onSwitchTab }) {
       <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('login')} aria-label="로그인으로 돌아가기">
         <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
       </button>
-      <p className="text-body-sm">가입한 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
+      <p className="text-body-sm">가입한 이메일 주소를 입력하시면 인증 코드를 보내드립니다.</p>
       <Input label="이메일" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
-      {sent && <div className="ui-banner ui-banner--success">재설정 링크를 이메일로 전송했습니다.</div>}
-      <Button type="submit" variant="primary" block>
-        재설정 링크 전송
+      <Button type="submit" variant="primary" block disabled={submitting}>
+        {submitting ? '전송 중…' : '인증 코드 전송'}
       </Button>
     </form>
   );
 }
 
-function ResetPasswordForm() {
+function ResetPasswordForm({ email, onSwitchTab }) {
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.');
-    if (password !== confirm) return setError('비밀번호가 일치하지 않습니다.');
     setError('');
-    setDone(true);
+    setSubmitting(true);
+    try {
+      await api.post('/api/users/password/reset', {
+        loginId: email,
+        code,
+        newPassword: password,
+        newPasswordConfirm: confirm,
+      });
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (!email) {
+    return (
+      <div className="login-card__form">
+        <div className="ui-banner ui-banner--error">이메일 정보가 없습니다. 비밀번호 찾기를 다시 시도해주세요.</div>
+        <Button variant="primary" block onClick={() => onSwitchTab('find-password')}>
+          비밀번호 찾기로 돌아가기
+        </Button>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="login-card__form">
+        <div className="ui-banner ui-banner--success">비밀번호가 재설정되었습니다. 로그인해주세요.</div>
+        <Button variant="primary" block onClick={() => onSwitchTab('login')}>
+          로그인하러 가기
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
-      <p className="text-body-sm">새로운 비밀번호를 설정해주세요.</p>
+      <p className="text-body-sm">
+        <strong>{email}</strong>로 보낸 인증 코드와 새 비밀번호를 입력해주세요.
+      </p>
+      <Input label="인증 코드" value={code} onChange={(e) => setCode(e.target.value)} placeholder="6자리 코드" />
       <Input
         label="새 비밀번호"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="비밀번호 입력"
-        hint="8자 이상, 영문 대문자·소문자·숫자·특수문자를 각각 하나 이상 포함해주세요."
+        hint={PASSWORD_HINT}
       />
       <Input label="새 비밀번호 확인" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       {error && <div className="ui-banner ui-banner--error">{error}</div>}
-      {done && <div className="ui-banner ui-banner--success">비밀번호가 재설정되었습니다.</div>}
-      <Button type="submit" variant="primary" block>
-        비밀번호 재설정
+      <Button type="submit" variant="primary" block disabled={submitting}>
+        {submitting ? '변경 중…' : '비밀번호 재설정'}
       </Button>
     </form>
   );
@@ -304,9 +349,12 @@ function ResetPasswordForm() {
 export default function LoginPage() {
   const { params, navigate } = useRouter();
   const tab = params.get('tab');
-  const activeTab = ['login', 'signup', 'find-password'].includes(tab) ? tab : 'login';
+  const activeTab = ['login', 'signup', 'find-password', 'reset-password'].includes(tab) ? tab : 'login';
 
-  const switchTab = (key) => navigate(`?page=login&tab=${key}`);
+  const switchTab = (key, extraParams = {}) => {
+    const query = new URLSearchParams({ page: 'login', tab: key, ...extraParams });
+    navigate(`?${query.toString()}`);
+  };
 
   return (
     <div className="login-shell">
@@ -331,6 +379,7 @@ export default function LoginPage() {
           {activeTab === 'login' && <LoginForm onSwitchTab={switchTab} />}
           {activeTab === 'signup' && <SignupForm onSwitchTab={switchTab} />}
           {activeTab === 'find-password' && <FindPasswordForm onSwitchTab={switchTab} />}
+          {activeTab === 'reset-password' && <ResetPasswordForm email={params.get('email')} onSwitchTab={switchTab} />}
         </div>
       </div>
     </div>
