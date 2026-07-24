@@ -18,8 +18,8 @@ export function fetchNotice(noticeId) {
 }
 
 /** 공지 등록 (ADMIN) — 201 반환 */
-export function createNotice({ title, content, isPinned = false }) {
-  return api.post('/api/notices', { title, content, isPinned });
+export function createNotice(data) {
+  return api.post('/api/notices', data);
 }
 
 /**  공지 수정 (ADMIN) — 보낸 필드만 수정됨 */

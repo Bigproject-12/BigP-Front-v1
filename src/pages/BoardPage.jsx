@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../lib/format';
+import { API_BASE, TOKEN_KEY } from '../lib/api'; // API_BASE와 TOKEN_KEY 임포트 추가
 // api 직접 호출 대신 noticeApi 사용
 import {
   fetchNotices, fetchNotice, createNotice, updateNotice, deleteNotice,
@@ -59,7 +60,6 @@ function BoardList({ isAdmin, navigate }) {
         </div>
       </div>
 
-      {/* 🛠️ 검색바 툴바 영역에 관리자용 '게시글 작성' 버튼 통합 */}
       <div className="board-toolbar">
         <div className="board-toolbar__search">
           <Input
@@ -117,7 +117,6 @@ function BoardList({ isAdmin, navigate }) {
         )}
       </div>
 
-      {/* 페이지가 2개 이상일 때만 페이징 노출 */}
       {totalPages > 1 && (
         <div className="board-write-cta" style={{ gap: 12 }}>
           <Button variant="secondary" disabled={page === 0}
@@ -138,7 +137,6 @@ function BoardDetail({ postId, isAdmin, navigate }) {
 
   useEffect(() => {
     fetchNotice(postId).then(setPost);
-    // 조회수 증가는 서버가 처리하므로 PATCH 불필요 → viewedRef도 삭제됨
   }, [postId]);
 
   const handleDelete = async () => {
@@ -147,8 +145,45 @@ function BoardDetail({ postId, isAdmin, navigate }) {
     navigate('?page=board');
   };
 
+  // 📥 파일 다운로드 핸들러
+  const handleDownload = async (fileId, fileName) => {
+    try {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE}/api/notices/files/${fileId}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) throw new Error('파일 다운로드 실패');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   if (!post) return <div className="text-body-sm">불러오는 중…</div>;
 
+  const files = post.files || [];
+
+  // 🖼️ 파일 이름이 이미지 확장자로 끝나는지 판별하는 함수
+  const isImageFile = (fileName) => {
+    if (!fileName) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
+  };
+
+  // 🔑 이미지 미리보기용 URL 생성 함수 (인증 토큰을 포함할 수 없으므로 public 엔드가 아니라면 blob 처리가 필요할 수 있으나, 
+  // 만약 시큐리티에서 /files/** 경로가 인증을 요구한다면 토큰을 동적으로 넣기 위해 ObjectURL 방식을 쓰는 것이 안전합니다.)
+  // 아래는 안전하게 Fetch 후 Blob URL로 변환하여 이미지를 띄우는 컴포넌트 방식입니다.
   return (
     <>
       <div className="gr-page__header">
@@ -167,10 +202,47 @@ function BoardDetail({ postId, isAdmin, navigate }) {
             <span>조회 {post.viewCount}</span>
           </div>
         </div>
+        
         <p className="board-detail__body">{post.content}</p>
 
+        {/* 🖼️ 이미지 파일 미리보기 영역 */}
+        {files.filter(file => isImageFile(file.originalFileName)).length > 0 && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {files
+              .filter(file => isImageFile(file.originalFileName))
+              .map(file => (
+                <ImagePreview key={file.fileId} fileId={file.fileId} fileName={file.originalFileName} />
+              ))}
+          </div>
+        )}
+
+        {/* 📁 첨부파일 목록 및 다운로드 영역 */}
+        {files.length > 0 && (
+          <div style={{ marginTop: '24px', padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
+            <span className="text-body-sm" style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+              첨부파일 ({files.length})
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {files.map((file) => (
+                <div key={file.fileId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-body-sm" style={{ color: '#333' }}>
+                    📎 {file.originalFileName} 
+                  </span>
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => handleDownload(file.fileId, file.originalFileName)}
+                  >
+                    다운로드
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isAdmin && (
-          <div className="board-detail__actions">
+          <div className="board-detail__actions" style={{ marginTop: '24px' }}>
             <Button variant="secondary" icon={<Icon name="edit" size={14} />}
               onClick={() => navigate(`?page=board&postId=${postId}&mode=edit`)}>
               수정
@@ -186,11 +258,53 @@ function BoardDetail({ postId, isAdmin, navigate }) {
   );
 }
 
+// 🖼️ 인증 토큰을 동적으로 태워 이미지를 안전하게 불러오기 위한 서브 컴포넌트
+function ImagePreview({ fileId, fileName }) {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    let objectUrl = null;
+    const token = sessionStorage.getItem(TOKEN_KEY);
+
+    fetch(`${API_BASE}/api/notices/files/${fileId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('이미지 로드 실패');
+        return res.blob();
+      })
+      .then((blob) => {
+        objectUrl = window.URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      })
+      .catch(() => setImageUrl(null));
+
+    return () => {
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [fileId]);
+
+  if (!imageUrl) return null;
+
+  return (
+    <div style={{ maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' }}>
+      <img 
+        src={imageUrl} 
+        alt={fileName} 
+        style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain', maxHeight: '500px' }} 
+      />
+    </div>
+  );
+}
+
 function BoardEditor({ postId, navigate }) {
   const isEdit = Boolean(postId);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(false);
+  const [files, setFiles] = useState([]); 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(isEdit);
@@ -207,29 +321,44 @@ function BoardEditor({ postId, navigate }) {
     }
   }, [isEdit, postId]);
 
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       setError('제목과 내용을 모두 입력해주세요.');
       return;
     }
-    if (title.length > 255) {          // 서버 @Size 제약과 맞춤
+    if (title.length > 255) {          
       setError('제목은 255자를 넘을 수 없습니다.');
       return;
     }
     setSaving(true);
     setError('');
+
     try {
+      const formData = new FormData();
+      const requestDto = { title, content, isPinned };
+      formData.append(
+        'request',
+        new Blob([JSON.stringify(requestDto)], { type: 'application/json' })
+      );
+
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
       if (isEdit) {
-        await updateNotice(postId, { title, content, isPinned });
+        await updateNotice(postId, formData); 
         navigate(`?page=board&postId=${postId}`);
       } else {
-        // 작성자는 서버가 JWT에서 추출하므로 보내지 않음
-        const created = await createNotice({ title, content, isPinned });
-        navigate(`?page=board&postId=${created.boardId}`);   // id → boardId
+        const created = await createNotice(formData); 
+        navigate(`?page=board&postId=${created.boardId}`);   
       }
     } catch (err) {
-      setError(err.message);          // 실패 시 저장 버튼이 계속 잠기지 않도록
+      setError(err.message || '저장 중 오류가 명확하지 않습니다.');          
     } finally {
       setSaving(false);
     }
@@ -254,12 +383,29 @@ function BoardEditor({ postId, navigate }) {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="내용을 입력해주세요" />
             </div>
+
+            <div className="ui-field">
+              <label className="ui-field__label">첨부파일</label>
+              <input 
+                type="file" 
+                multiple 
+                onChange={handleFileChange} 
+                style={{ fontSize: '14px', padding: '4px 0' }}
+              />
+              {files.length > 0 && (
+                <span className="text-body-sm" style={{ color: '#666', marginTop: '4px' }}>
+                  선택된 파일: {files.map(f => f.name).join(', ')}
+                </span>
+              )}
+            </div>
+
             <label className="ui-field" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <input type="checkbox" checked={isPinned}
                 onChange={(e) => setIsPinned(e.target.checked)} />
               <span className="text-body-sm">상단 고정</span>
             </label>
             {error && <div className="ui-banner ui-banner--error">{error}</div>}
+            
             <div className="board-detail__actions">
               <Button type="button" variant="secondary"
                 onClick={() => navigate(isEdit ? `?page=board&postId=${postId}` : '?page=board')}>
@@ -279,7 +425,6 @@ function BoardEditor({ postId, navigate }) {
 export default function BoardPage() {
   const { params, navigate } = useRouter();
   const { user } = useAuth();
-  // ⚠️ 서버 role이 'ADMIN' 대문자이므로 대소문자 무시 비교
   const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
   const postId = params.get('postId');
   const mode = params.get('mode');
