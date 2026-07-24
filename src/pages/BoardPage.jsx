@@ -145,11 +145,10 @@ function BoardDetail({ postId, isAdmin, navigate }) {
     navigate('?page=board');
   };
 
-  // 📥 파일 다운로드 핸들러 (백엔드 파일 다운로드 엔드포인트 경로 확인 필요)
+  // 📥 파일 다운로드 핸들러
   const handleDownload = async (fileId, fileName) => {
     try {
       const token = sessionStorage.getItem(TOKEN_KEY);
-      // ⚠️ 백엔드 파일 다운로드 컨트롤러 주소가 다를 경우 이 경로를 맞춰주어야 합니다. (예: /api/files/... 등)
       const res = await fetch(`${API_BASE}/api/notices/files/${fileId}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -176,6 +175,15 @@ function BoardDetail({ postId, isAdmin, navigate }) {
 
   const files = post.files || [];
 
+  // 🖼️ 파일 이름이 이미지 확장자로 끝나는지 판별하는 함수
+  const isImageFile = (fileName) => {
+    if (!fileName) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
+  };
+
+  // 🔑 이미지 미리보기용 URL 생성 함수 (인증 토큰을 포함할 수 없으므로 public 엔드가 아니라면 blob 처리가 필요할 수 있으나, 
+  // 만약 시큐리티에서 /files/** 경로가 인증을 요구한다면 토큰을 동적으로 넣기 위해 ObjectURL 방식을 쓰는 것이 안전합니다.)
+  // 아래는 안전하게 Fetch 후 Blob URL로 변환하여 이미지를 띄우는 컴포넌트 방식입니다.
   return (
     <>
       <div className="gr-page__header">
@@ -197,6 +205,17 @@ function BoardDetail({ postId, isAdmin, navigate }) {
         
         <p className="board-detail__body">{post.content}</p>
 
+        {/* 🖼️ 이미지 파일 미리보기 영역 */}
+        {files.filter(file => isImageFile(file.originalFileName)).length > 0 && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {files
+              .filter(file => isImageFile(file.originalFileName))
+              .map(file => (
+                <ImagePreview key={file.fileId} fileId={file.fileId} fileName={file.originalFileName} />
+              ))}
+          </div>
+        )}
+
         {/* 📁 첨부파일 목록 및 다운로드 영역 */}
         {files.length > 0 && (
           <div style={{ marginTop: '24px', padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
@@ -207,7 +226,6 @@ function BoardDetail({ postId, isAdmin, navigate }) {
               {files.map((file) => (
                 <div key={file.fileId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className="text-body-sm" style={{ color: '#333' }}>
-                    {/* 🔍 DTO 필드명인 originalFileName으로 정확히 매핑 */}
                     📎 {file.originalFileName} 
                   </span>
                   <Button 
@@ -237,6 +255,47 @@ function BoardDetail({ postId, isAdmin, navigate }) {
         )}
       </Card>
     </>
+  );
+}
+
+// 🖼️ 인증 토큰을 동적으로 태워 이미지를 안전하게 불러오기 위한 서브 컴포넌트
+function ImagePreview({ fileId, fileName }) {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    let objectUrl = null;
+    const token = sessionStorage.getItem(TOKEN_KEY);
+
+    fetch(`${API_BASE}/api/notices/files/${fileId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('이미지 로드 실패');
+        return res.blob();
+      })
+      .then((blob) => {
+        objectUrl = window.URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      })
+      .catch(() => setImageUrl(null));
+
+    return () => {
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [fileId]);
+
+  if (!imageUrl) return null;
+
+  return (
+    <div style={{ maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' }}>
+      <img 
+        src={imageUrl} 
+        alt={fileName} 
+        style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain', maxHeight: '500px' }} 
+      />
+    </div>
   );
 }
 
