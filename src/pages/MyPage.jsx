@@ -120,7 +120,7 @@ export default function MyPage() {
   const { user, persistUser } = useAuth();
   const { refreshRepos } = useRepos();
   const [name, setName] = useState(user?.name || '');
-  const [gitId, setGitId] = useState(user?.gitId || '');
+  const [gitId, setGitId] = useState(user?.gitName || '');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
@@ -165,7 +165,7 @@ export default function MyPage() {
 
   useEffect(() => {
     setName(user?.name || '');
-    setGitId(user?.gitId || '');
+    setGitId(user?.gitName || '');
   }, [user]);
 
   //깃허브 등록 부분까지 스크롤되는 기능 추가 
@@ -181,11 +181,11 @@ export default function MyPage() {
 
   if (!user) return null;
 
-  const isDirty = name !== user.name || gitId !== user.gitId;
+  const isDirty = name !== user.name || gitId !== user.gitName;
 
   const handleCancel = () => {
     setName(user.name);
-    setGitId(user.gitId);
+    setGitId(user.gitName);
     setBanner(null);
   };
 
