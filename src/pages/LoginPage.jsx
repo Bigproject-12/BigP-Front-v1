@@ -253,7 +253,7 @@ function FindPasswordForm({ onSwitchTab }) {
       await api.post('/api/users/password/reset-code', { loginId: email });
       onSwitchTab('reset-password', { email });
     } catch (err) {
-      setError(err.message);
+      setError(err.code === 'USER_NOT_FOUND' ? '가입되지 않은 이메일입니다.' : err.message);
     } finally {
       setSubmitting(false);
     }
@@ -276,11 +276,29 @@ function FindPasswordForm({ onSwitchTab }) {
 
 function ResetPasswordForm({ email, onSwitchTab }) {
   const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
+
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setCodeError('');
+    setVerifying(true);
+    try {
+      await api.post('/api/users/password/verify-code', { loginId: email, code });
+      setVerified(true);
+    } catch (err) {
+      setCodeError(err.message);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -323,12 +341,30 @@ function ResetPasswordForm({ email, onSwitchTab }) {
     );
   }
 
+  if (!verified) {
+    return (
+      <form className="login-card__form" onSubmit={handleVerify}>
+        <p className="text-body-sm">
+          <strong>{email}</strong>로 보낸 인증 코드를 입력해주세요.
+        </p>
+        <Input
+          label="인증 코드"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="6자리 코드"
+          autoFocus
+        />
+        {codeError && <div className="ui-banner ui-banner--error">{codeError}</div>}
+        <Button type="submit" variant="primary" block disabled={verifying || !code}>
+          {verifying ? '확인 중…' : '인증 확인'}
+        </Button>
+      </form>
+    );
+  }
+
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
-      <p className="text-body-sm">
-        <strong>{email}</strong>로 보낸 인증 코드와 새 비밀번호를 입력해주세요.
-      </p>
-      <Input label="인증 코드" value={code} onChange={(e) => setCode(e.target.value)} placeholder="6자리 코드" />
+      <div className="ui-banner ui-banner--success">인증이 확인되었습니다. 새 비밀번호를 입력해주세요.</div>
       <Input
         label="새 비밀번호"
         type="password"

@@ -66,7 +66,9 @@ async function request(path, options = {}, isRetry = false) {
       throw new Error('로그인이 만료되었습니다. 다시 로그인해주세요.');
     }
 
-    throw new Error(body?.message ?? `요청에 실패했습니다 (${res.status})`);
+    const error = new Error(body?.message ?? `요청에 실패했습니다 (${res.status})`);
+    error.code = body?.code;
+    throw error;
   }
 
   if (res.status === 204) return null;
