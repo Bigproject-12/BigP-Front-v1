@@ -122,7 +122,7 @@ const handleNotificationClick = async (n) => {
       if (n.type === 'ANNOUNCEMENT' && n.boardId) {
         navigate(`?page=board&postId=${n.boardId}`);
       } else if (n.type === 'ANALYSIS_COMPLETE' && n.analysisId) {
-        navigate(`?page=analysis-detail&analysisId=${n.analysisId}`); 
+        navigate(`/Analyze?analysisId=${n.analysisId}`); // 👈 이 부분을 수정
       }
     };
 

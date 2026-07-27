@@ -581,7 +581,9 @@ export default function AnalyzePage() {
                   {improvedCode ? (
                     <pre className="code-view">{improvedCode}</pre>
                   ) : (
-                    <div className="code-view code-view--empty">분석하기를 실행하면 개선된 코드가 표시됩니다.</div>
+                    <div className="code-view code-view--empty">
+                      {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
+                    </div>
                   )}
                 </div>
               </Card>
