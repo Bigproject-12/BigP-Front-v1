@@ -35,7 +35,7 @@ function getConfidenceLevel(probability) {
   return 'low';
 }
 
-async function runAnalysis({ repoId, language, code,filePath,onStarted }) {
+async function runAnalysis({ repoId, language, code,filePath,branch,onStarted }) {
   const { analysis_id } = await api.post('/api/analysis', {
     code_content: code,
     // 'custom'인 경우 repoId를 null로 전송
@@ -43,6 +43,7 @@ async function runAnalysis({ repoId, language, code,filePath,onStarted }) {
     language,
     prompt: null,
     filePath: filePath || null,
+    branch: branch || null,
   });
 
   if (onStarted) onStarted(analysis_id);
@@ -82,6 +83,10 @@ export default function AnalyzePage() {
   const [improvementRate, setImprovementRate] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
+  const [pushAnalysisId, setPushAnalysisId] = useState(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushError, setPushError] = useState('');
+  const [pushed, setPushed] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [diffMode, setDiffMode] = useState(false);
@@ -230,6 +235,9 @@ export default function AnalyzePage() {
         });
         
         setAnalyzed(true);
+        setPushAnalysisId(Number(analysisId));
+        setPushed(false);
+        setPushError('');
       })
       .catch((err) => {
         console.error('분석 결과 조회 실패:', err);
@@ -267,9 +275,11 @@ export default function AnalyzePage() {
     setAiDetection(null);
     setDetectError('');
     setPromptResult(null);
+    setPushed(false);
+    setPushError('');
     try {
       const ext = activeFileName.includes('.') ? activeFileName.split('.').pop().toUpperCase() : 'JAVA';
-      const data = await runAnalysis({ repoId, language: ext, code: originalCode, filePath: filePath || fileNameOverride || null, onStarted: setCurrentAnalysisId });
+      const data = await runAnalysis({ repoId, language: ext, code: originalCode, filePath: filePath || fileNameOverride || null, branch: branch || null, onStarted: setCurrentAnalysisId });
       if (data.status === 'CANCELED') { setDetectError('분석이 취소되었습니다.'); return; }
       if (data.status === 'FAILED') throw new Error('분석에 실패했습니다.');
 
@@ -301,6 +311,7 @@ export default function AnalyzePage() {
         vulnerabilities,
       });
       setAnalyzed(true);
+      setPushAnalysisId(data.analysisId ?? null);
     } catch (e) {
       setDetectError(e.message || '분석 중 오류가 발생했습니다.');
     } finally {
@@ -315,6 +326,20 @@ export default function AnalyzePage() {
       await api.patch(`/api/analysis/${currentAnalysisId}`);
     } catch {
       /* 폴링 쪽에서 최종 상태를 다시 확인하니 여기선 무시해도 됨 */
+    }
+  };
+
+  const handlepush = async () => {
+    if (!pushAnalysisId) return;
+    setPushing(true);
+    setPushError('');
+    try {
+      await api.post(`/api/analysis/${pushAnalysisId}/push`);
+      setPushed(true);
+    } catch (e) {
+      setPushError(e.message || 'GitHub에 반영하지 못했습니다.');
+    } finally {
+      setPushing(false);
     }
   };
 
@@ -567,7 +592,7 @@ export default function AnalyzePage() {
                       setDiffMode(false);
                     }}
                     spellCheck={false}
-                    readOnly={compareMode}
+                    readOnly={compareMode || Boolean(filePath)}
                   />
                 </div>
               </Card>
@@ -608,6 +633,15 @@ export default function AnalyzePage() {
               <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
                 분석하기
               </Button>
+            )}
+
+            {analyzed && pushAnalysisId && branch && filePath && (
+              <>
+                <Button variant="primary" onClick={handlepush} disabled={pushing || pushed}>
+                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
+                </Button>
+                {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+              </>
             )}
           </div>
 
