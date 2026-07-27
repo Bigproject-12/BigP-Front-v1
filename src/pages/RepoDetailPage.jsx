@@ -8,6 +8,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import Select from '../components/ui/Select';
 import { api } from '../lib/api'; 
 import './RepoDetailPage.css';
 
@@ -33,6 +34,9 @@ export default function RepoDetailPage() {
   const [status, setStatus] = useState('all');
   const [query, setQuery] = useState('');
 
+  // 👈 이슈 필터 및 정렬 상태 변수
+  const [issueFilter, setIssueFilter] = useState('all'); 
+  const [sortBy, setSortBy] = useState('latest');
 
   useEffect(() => {
     if (!repoId) return;
@@ -42,16 +46,37 @@ export default function RepoDetailPage() {
   }, [repoId]);
 
 const visibleAnalyses = useMemo(() => {
-    return analyses.filter((a) => {
+    // 1. 먼저 필터링된 배열을 'filtered' 변수에 담습니다.
+    let filtered = analyses.filter((a) => {
       const matchesStatus =
         status === 'all' ||
         (status === 'done' && a.status === 'COMPLETED') ||
         (status === 'in_progress' && a.status === 'ANALYZING');
+        
       const fileName = a.filePath ? a.filePath.split('/').pop() : '';
       const matchesQuery = !query.trim() || fileName.toLowerCase().includes(query.toLowerCase());
-      return matchesStatus && matchesQuery;
+      
+      // 👈 이슈 유무 필터 로직 
+      const matchesIssue = issueFilter === 'all' || (issueFilter === 'has_issues' && a.issueCount > 0);
+      
+      return matchesStatus && matchesQuery && matchesIssue;
     });
-  }, [analyses, status, query]);
+
+    // 2. 만들어진 'filtered' 배열을 정렬합니다.
+    filtered.sort((a, b) => {
+      const timeA = new Date(a.analyzedAt || 0).getTime();
+      const timeB = new Date(b.analyzedAt || 0).getTime();
+      
+      if (sortBy === 'oldest') {
+        return timeA - timeB; // 과거 분석순 (오름차순)
+      }
+      // 기본값 (latest): 최신 분석순 (내림차순)
+      return timeB - timeA;
+    });
+
+    // 3. 최종 결과 반환
+    return filtered;
+  }, [analyses, status, query, issueFilter, sortBy]); // 👈 의존성 배열에 issueFilter, sortBy 추가
 
   const handleTabChange = (key) => {
     if (key === 'analyze') {
@@ -93,7 +118,24 @@ const visibleAnalyses = useMemo(() => {
       <div className="repo-detail__toolbar">
         <div className="repo-detail__toolbar-left">
           <Segment items={STATUS_FILTERS} active={status} onChange={setStatus} />
+        
+          {/* 👈 이슈 필터 드롭다운 */}
+          <div style={{ width: '130px' }}>
+            <Select value={issueFilter} onChange={(e) => setIssueFilter(e.target.value)}>
+              <option value="all">전체 히스토리</option>
+              <option value="has_issues">이슈 1건 이상</option>
+            </Select>
+          </div>
+
+          {/* 👈 정렬 드롭다운 */}
+          <div style={{ width: '130px' }}>
+            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="latest">최신순</option>
+              <option value="oldest">과거순</option>
+            </Select>
+          </div>
         </div>
+
         <div className="repo-detail__search">
           <Input
             placeholder="파일명 검색"
@@ -124,15 +166,18 @@ const visibleAnalyses = useMemo(() => {
                 </td>
               </tr>
             ) : (
-             visibleAnalyses.map((a) => {
+              visibleAnalyses.map((a) => {
                 const fileName = a.filePath ? a.filePath.split('/').pop() : '(파일 미지정)';
+                
+                // 진행중 상태를 'warning'에서 'info'로 변경[cite: 13]
                 const statusMap = {
                   COMPLETED: { label: '완료', variant: 'success' },
-                  ANALYZING: { label: '진행중', variant: 'warning' },
-                  FAILED: { label: '실패', variant: 'error' },
+                  ANALYZING: { label: '진행중', variant: 'info' }, 
+                  FAILED: { label: '실패', variant: 'warning' },
                   CANCELED: { label: '취소', variant: 'neutral' },
                 };
                 const st = statusMap[a.status] || { label: a.status, variant: 'neutral' };
+                
                 return (
                   <tr key={a.id}>
                     <td>
@@ -142,7 +187,18 @@ const visibleAnalyses = useMemo(() => {
                       </span>
                     </td>
                     <td>{formatDateTime(a.analyzedAt)}</td>
-                    <td>{a.issueCount != null ? `${a.issueCount}건` : '-'}</td>
+                    
+                    {/* 이슈 수 조건부 뱃지 렌더링[cite: 13] */}
+                    <td>
+                      {a.issueCount != null ? (
+                        <Badge variant={a.issueCount === 0 ? 'success' : 'warning'}>
+                          {a.issueCount}건
+                        </Badge>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    
                     <td>{a.improvementRate != null ? `${a.improvementRate}%` : '-'}</td>
                     <td>
                       <Badge variant={st.variant}>{st.label}</Badge>
