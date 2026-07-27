@@ -35,13 +35,14 @@ function getConfidenceLevel(probability) {
   return 'low';
 }
 
-async function runAnalysis({ repoId, language, code, onStarted }) {
+async function runAnalysis({ repoId, language, code,filePath,onStarted }) {
   const { analysis_id } = await api.post('/api/analysis', {
     code_content: code,
     // 'custom'인 경우 repoId를 null로 전송
     repoId: repoId === 'custom' || !repoId ? null : Number(repoId),
     language,
     prompt: null,
+    filePath: filePath || null,
   });
 
   if (onStarted) onStarted(analysis_id);
@@ -206,7 +207,7 @@ export default function AnalyzePage() {
     setPromptResult(null);
     try {
       const ext = activeFileName.includes('.') ? activeFileName.split('.').pop().toUpperCase() : 'JAVA';
-      const data = await runAnalysis({ repoId, language: ext, code: originalCode, onStarted: setCurrentAnalysisId });
+      const data = await runAnalysis({ repoId, language: ext, code: originalCode, filePath: filePath || fileNameOverride || null, onStarted: setCurrentAnalysisId });
       if (data.status === 'CANCELED') { setDetectError('분석이 취소되었습니다.'); return; }
       if (data.status === 'FAILED') throw new Error('분석에 실패했습니다.');
 
