@@ -358,6 +358,12 @@
   margin-top: 6px;
   flex: none;
 }
+.gr-notif-item__dot--failed {
+  background: var(--ps-warning);
+}
+.gr-notif-item__dot--announcement {
+  background: var(--ps-good);
+}
 .gr-notif-item__dot--read {
   background: transparent;
 }
