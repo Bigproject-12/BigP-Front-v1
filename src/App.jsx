@@ -15,11 +15,13 @@ import MyPage from './pages/MyPage';
 import BoardPage from './pages/BoardPage';
 import MembersPage from './pages/MembersPage';
 import MemberDetailPage from './pages/MemberDetailPage';
+import AnalysisDetailPage from './pages/AnalysisDetailPage';
 
 const PAGES = {
   dashboard: DashboardPage,
   myspace: MySpacePage,
   analyze: AnalyzePage,
+  'analysis-detail': AnalysisDetailPage,
   repolist: RepoListPage,
   'repo-detail': RepoDetailPage,
   mypage: MyPage,
