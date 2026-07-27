@@ -152,7 +152,7 @@ const visibleAnalyses = useMemo(() => {
                         variant="secondary"
                         size="sm"
                         icon={<Icon name="compare" size={14} />}
-                        onClick={() => navigate(`/Analyze?analysisId=${a.id}`)}
+                        onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
                       >
                         비교 보기
                       </Button>
