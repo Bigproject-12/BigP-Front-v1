@@ -152,7 +152,7 @@ export default function DashboardPage() {
                   <tr
                     key={a.analysisId}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/Analyze?analysisId=${a.analysisId}`)}
+                    onClick={() => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`)}
                   >
                     <td>
                       <span className="history-table__file">
