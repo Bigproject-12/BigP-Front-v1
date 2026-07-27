@@ -110,7 +110,7 @@ export default function Topbar() {
     }
   };
 
-  const handleNotificationClick = async (n) => {
+const handleNotificationClick = async (n) => {
     setOpen(false);
     setNotifications((prev) =>
       prev.map((item) => (item.notificationId === n.notificationId ? {
@@ -122,7 +122,7 @@ export default function Topbar() {
       if (n.type === 'ANNOUNCEMENT' && n.boardId) {
         navigate(`?page=board&postId=${n.boardId}`);
       } else if (n.type === 'ANALYSIS_COMPLETE' && n.analysisId) {
-        navigate(`/Analyze?analysisId=${n.analysisId}`);
+        navigate(`?page=analysis-detail&analysisId=${n.analysisId}`); 
       }
     };
 
