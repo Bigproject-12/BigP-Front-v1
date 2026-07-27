@@ -425,7 +425,6 @@ export default function AnalyzePage() {
               value={selectedExt}
               onChange={(e) => {
                 setSelectedExt(e.target.value);
-                setFilePath(''); // 필터 변경 시 선택된 파일 초기화
               }}
               disabled={!branch || analyzing}
               //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
