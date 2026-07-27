@@ -17,6 +17,12 @@ function timeAgo(iso) {
   return `${Math.round(hours / 24)}일 전`;
 }
 
+function getNotifVariant(type) {
+  if (type === 'ANALYSIS_FAILED') return 'failed';
+  if (type === 'ANNOUNCEMENT') return 'announcement';
+  return 'complete'; // ANALYSIS_COMPLETE 및 기본값
+}
+
 const NOTIFICATION_API = 'http://localhost:8081/api/notification';
 
 export default function Topbar() {
@@ -33,9 +39,9 @@ export default function Topbar() {
 
   const seenIdsRef = useRef(null);
   const [toasts, setToasts] = useState([]);
-  const showToast = (message) => {
+  const showToast = (message, variant = 'success') => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message }]);
+    setToasts((prev) => [...prev, { id, message, variant }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id ));
     }, 4000);
@@ -49,7 +55,10 @@ export default function Topbar() {
         if (seenIdsRef.current) {
           list.forEach((n) => {
             if (n.type === 'ANALYSIS_COMPLETE' && !seenIdsRef.current.has(n.notificationId)) {
-              showToast(n.message);
+              showToast(n.message, 'complete');
+            }
+            if (n.type === 'ANALYSIS_FAILED' && !seenIdsRef.current.has(n.notificationId)) {
+              showToast(n.message, 'failed');
             }
           });
         }
@@ -158,7 +167,7 @@ export default function Topbar() {
                   className={`gr-notif-item ${n.read ? 'gr-notif-item--read' : ''}`}
                   onClick={() => handleNotificationClick(n)}
                 >
-                  <span className={`gr-notif-item__dot ${n.read ? 'gr-notif-item__dot--read' : ''}`} />
+                  <span className={`gr-notif-item__dot gr-notif-item__dot--${getNotifVariant(n.type)} ${n.read ? 'gr-notif-item__dot--read' : ''}`} />
                   <div className="gr-notif-item__body">
                     <div className="text-body-sm">{n.message}</div>
                     <div className="text-caption-sm">{timeAgo(n.createdAt)}</div>
@@ -190,8 +199,8 @@ export default function Topbar() {
     
       <div className="toast-stack">
         {toasts.map((t) => (
-          <div key={t.id} className="toast-item">
-            <Icon name="check" size={16} className="toast-item__icon" />
+          <div key={t.id} className={`toast-item toast-item--${t.variant}`}>
+            <Icon name={t.variant === 'failed' ? 'close' : 'check'} size={16} className="toast-item__icon" />
             <span className="text-body-sm">{t.message}</span>
           </div>
         ))}
