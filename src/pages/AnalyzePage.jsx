@@ -178,6 +178,68 @@ export default function AnalyzePage() {
       .catch(() => {});
   }, [filePath, branch, selectedRepo?.fullName]);
 
+  // 히스토리에서 analysisId를 들고 들어왔을 때 기존 분석 결과 불러오기
+  useEffect(() => {
+    const analysisId = params.get('analysisId');
+    if (!analysisId) return;
+
+    setAnalyzing(true);
+    setCompareMode(true); // 비교 모드 활성화
+
+    api.get(`/api/analysis/${analysisId}`)
+      .then((data) => {
+        if (!data) return;
+        
+        // 백엔드 DTO 필드명(originCode, modifiedCode)에 맞춤[cite: 4]
+        setOriginalCode(data.originCode || '');
+        setImprovedCode(data.modifiedCode || '');
+        
+        // 파일 경로 설정
+        if (data.filePath) {
+          setFileNameOverride(data.filePath.split('/').pop());
+        }
+
+        // 이슈 파싱 (secuResult, inefficiencyResult)[cite: 4]
+        const vulnerabilities = parseJsonArray(data.secuResult);
+        const complexityDetails = parseJsonArray(data.inefficiencyResult);
+
+        setIssues([
+          ...vulnerabilities.map((v) => ({
+            type: '보안',
+            severity: 'high',
+            description: `${v.line}번째 줄 — ${v.message}`,
+            reason: v.rule_id,
+          })),
+          ...complexityDetails.map((c) => ({
+            type: '비효율',
+            severity: 'low',
+            description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
+            reason: c.message,
+          })),
+        ]);
+        
+        setIssueCount(data.totalIssues ?? 0);
+        setImprovementRate(data.modifiedCode ? 100 : 0);
+        
+        setAiDetection({
+          isAiGenerated: !!data.aiGenerated,
+          confidence: data.aiProbability ?? null,
+          reasons: [],
+          hasVulnerability: vulnerabilities.length > 0,
+          vulnerabilities,
+        });
+        
+        setAnalyzed(true);
+      })
+      .catch((err) => {
+        console.error('분석 결과 조회 실패:', err);
+        setDetectError('기존 분석 결과를 불러오는 데 실패했습니다.');
+      })
+      .finally(() => {
+        setAnalyzing(false);
+      });
+  }, [params]);
+
   const activeFileName = fileNameOverride || (filePath ? filePath.split('/').pop() : '');
 
   const handleUpload = (e) => {
@@ -425,6 +487,7 @@ export default function AnalyzePage() {
               value={selectedExt}
               onChange={(e) => {
                 setSelectedExt(e.target.value);
+                setFilePath(''); // 필터 변경 시 선택된 파일 초기화
               }}
               disabled={!branch || analyzing}
               //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
