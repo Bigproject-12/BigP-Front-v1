@@ -6,6 +6,7 @@ import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
 import './AnalyzePage.css';
+import './RepoDetailPage.css';
 
 const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
@@ -26,7 +27,7 @@ function getConfidenceLevel(probability) {
 }
 
 export default function AnalysisDetailPage() {
-  const { params, navigate } = useRouter();
+  const { params } = useRouter();
   const analysisId = params.get('analysisId');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,14 +94,16 @@ export default function AnalysisDetailPage() {
 
   return (
     <>
-      <div className="gr-page__header">
-        <div className="gr-page__header-text">
-          <h1 className="text-display-md">분석 결과</h1>
-          <span className="text-body-sm">분석 #{data.analysisId}</span>
+      <div className="repo-detail__head">
+        <div className="repo-detail__title">
+            <button className="ui-btn ui-btn--icon" onClick={() => window.history.back()} aria-label="뒤로가기">
+                <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+            <div>
+                <h1 className="text-display-md">분석 결과</h1>
+                <span className="text-body-sm">분석 #{data.analysisId}</span>
+            </div>
         </div>
-        <button className="ui-btn ui-btn--icon" onClick={() => navigate('?page=repolist')} aria-label="목록으로">
-          <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
-        </button>
       </div>
 
       <Card>
