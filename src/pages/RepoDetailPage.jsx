@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
-import { fetchRepo } from '../lib/github';
+import { useRepos } from '../context/RepoContext';
 import { formatDateTime, languageColor } from '../lib/format';
 import { Tabs, Segment } from '../components/ui/Tabs';
 import Card from '../components/ui/Card';
@@ -8,6 +8,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import { api } from '../lib/api'; 
 import './RepoDetailPage.css';
 
 const TOP_TABS = [
@@ -25,20 +26,29 @@ export default function RepoDetailPage() {
   const { params, navigate } = useRouter();
   const repoId = params.get('repoId');
 
-  const [repo, setRepo] = useState(null);
+  const { repos } = useRepos();
+  const repo = repos.find((r) => String(r.id) === repoId) || null;
+
   const [analyses, setAnalyses] = useState([]);
   const [status, setStatus] = useState('all');
   const [query, setQuery] = useState('');
 
+
   useEffect(() => {
     if (!repoId) return;
-    fetchRepo(repoId).then(setRepo).catch(() => setRepo(null));
+    api.get(`/api/repos/${repoId}/history`)
+      .then(setAnalyses)
+      .catch(() => setAnalyses([]));
   }, [repoId]);
 
-  const visibleAnalyses = useMemo(() => {
+const visibleAnalyses = useMemo(() => {
     return analyses.filter((a) => {
-      const matchesStatus = status === 'all' || a.status === status;
-      const matchesQuery = !query.trim() || a.fileName.toLowerCase().includes(query.toLowerCase());
+      const matchesStatus =
+        status === 'all' ||
+        (status === 'done' && a.status === 'COMPLETED') ||
+        (status === 'in_progress' && a.status === 'ANALYZING');
+      const fileName = a.filePath ? a.filePath.split('/').pop() : '';
+      const matchesQuery = !query.trim() || fileName.toLowerCase().includes(query.toLowerCase());
       return matchesStatus && matchesQuery;
     });
   }, [analyses, status, query]);
@@ -114,34 +124,42 @@ export default function RepoDetailPage() {
                 </td>
               </tr>
             ) : (
-              visibleAnalyses.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <span className="history-table__file">
-                      <Icon name="code" size={15} />
-                      {a.fileName}
-                    </span>
-                  </td>
-                  <td>{formatDateTime(a.analyzedAt)}</td>
-                  <td>{a.issueCount}건</td>
-                  <td>{a.improvementRate}%</td>
-                  <td>
-                    <Badge variant={a.status === 'done' ? 'success' : 'warning'}>
-                      {a.status === 'done' ? '완료' : '진행중'}
-                    </Badge>
-                  </td>
-                  <td>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      icon={<Icon name="compare" size={14} />}
-                      onClick={() => navigate(`/Analyze?analysisId=${a.id}`)}
-                    >
-                      비교 보기
-                    </Button>
-                  </td>
-                </tr>
-              ))
+             visibleAnalyses.map((a) => {
+                const fileName = a.filePath ? a.filePath.split('/').pop() : '(파일 미지정)';
+                const statusMap = {
+                  COMPLETED: { label: '완료', variant: 'success' },
+                  ANALYZING: { label: '진행중', variant: 'warning' },
+                  FAILED: { label: '실패', variant: 'error' },
+                  CANCELED: { label: '취소', variant: 'neutral' },
+                };
+                const st = statusMap[a.status] || { label: a.status, variant: 'neutral' };
+                return (
+                  <tr key={a.id}>
+                    <td>
+                      <span className="history-table__file">
+                        <Icon name="code" size={15} />
+                        {fileName}
+                      </span>
+                    </td>
+                    <td>{formatDateTime(a.analyzedAt)}</td>
+                    <td>{a.issueCount != null ? `${a.issueCount}건` : '-'}</td>
+                    <td>{a.improvementRate != null ? `${a.improvementRate}%` : '-'}</td>
+                    <td>
+                      <Badge variant={st.variant}>{st.label}</Badge>
+                    </td>
+                    <td>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<Icon name="compare" size={14} />}
+                        onClick={() => navigate(`/Analyze?analysisId=${a.id}`)}
+                      >
+                        비교 보기
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
