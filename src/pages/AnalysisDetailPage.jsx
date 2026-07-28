@@ -63,6 +63,7 @@ export default function AnalysisDetailPage() {
   }, [analysisId]);
 
   const handlePush = async () => {
+    if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
     setPushing(true);
     setPushError('');
     try {
