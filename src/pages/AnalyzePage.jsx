@@ -506,23 +506,33 @@ export default function AnalyzePage() {
           </div>
 
           {/* 4. 확장자 필터 선택 (맨 끝으로 이동) */}
-          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
-            <label>확장자 필터</label>
-            <Select
-              value={selectedExt}
-              onChange={(e) => {
-                setSelectedExt(e.target.value);
-                setFilePath(''); // 필터 변경 시 선택된 파일 초기화
-              }}
-              disabled={!branch || analyzing}
-              //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
-            >
-              <option value="">모든 확장자</option>
-              {availableExtensions.map((ext) => (
-                <option key={ext} value={ext}>*.{ext}</option>
-              ))}
-            </Select>
-          </div>
+<div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
+  <label>확장자 필터</label>
+  <Select
+    value={selectedExt}
+    onChange={(e) => {
+      const nextExt = e.target.value;
+      setSelectedExt(nextExt);
+
+      // 선택된 파일이 새 필터에서 탈락할 때만 초기화
+      if (filePath && nextExt) {
+        const fileName = filePath.split('/').pop();
+        const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+        if (ext !== nextExt) {
+          setFilePath('');
+          setOriginalCode('');
+          setAnalyzed(false);
+        }
+      }
+    }}
+    disabled={!branch || analyzing}
+  >
+    <option value="">모든 확장자</option>
+    {availableExtensions.map((ext) => (
+      <option key={ext} value={ext}>*.{ext}</option>
+    ))}
+  </Select>
+</div>
           </>
           )}
 
