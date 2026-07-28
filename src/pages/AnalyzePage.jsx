@@ -638,7 +638,7 @@ export default function AnalyzePage() {
                       setDiffMode(false);
                     }}
                     spellCheck={false}
-                    readOnly={compareMode || Boolean(filePath)}
+                    readOnly={compareMode}
                   />
                 </div>
               </Card>
