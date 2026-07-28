@@ -32,6 +32,9 @@ export default function AnalysisDetailPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pushing, setPushing] = useState(false);
+  const [pushError, setPushError] = useState('');
+  const [pushed, setPushed] = useState(false);
 
   useEffect(() => {
     if (!analysisId) return;
@@ -58,6 +61,19 @@ export default function AnalysisDetailPage() {
 
     return () => { cancelled = true; };
   }, [analysisId]);
+
+  const handlePush = async () => {
+    setPushing(true);
+    setPushError('');
+    try {
+        await api.post(`/api/analysis/${analysisId}/push`);
+        setPushed(true);
+    }   catch (e) {
+        setPushError(e.message || 'GitHub에 반영하지 못했습니다.');
+    }   finally {
+        setPushing(false);
+    }
+  };
 
   if (!analysisId) {
     return <div className="ui-banner ui-banner--error">분석 ID가 없습니다.</div>;
@@ -136,6 +152,17 @@ export default function AnalysisDetailPage() {
 
       {data.status === 'COMPLETED' && (
         <>
+          <div className="analyze-toolbar" style={{ justifyContent: 'flex-end', gap:'12px' }}>
+            {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+            <button
+                className="ui-btn ui-btn--primary ui-btn--md"
+                onClick={handlePush}
+                disabled={pushing || pushed}
+            >
+                {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
+            </button>
+          </div>
+
           <Card className="diff-card">
             <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
           </Card>
