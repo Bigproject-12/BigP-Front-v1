@@ -66,6 +66,7 @@ export default function AnalysisDetailPage() {
   }, [analysisId]);
 
   const handlePush = async () => {
+    if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
     setPushing(true);
     setPushError('');
     try {
@@ -130,6 +131,10 @@ export default function AnalysisDetailPage() {
           <div className="analyze-toolbar__field">
             <label>Repository</label>
             <div className="text-body-md">{data.repoName ?? '-'}</div>
+          </div>
+          <div className="analyze-toolbar__field">
+            <label>Branch</label>
+            <div className="text-body-md">{data.branch ?? '-'}</div>
           </div>
           <div className="analyze-toolbar__field">
             <label>파일</label>
