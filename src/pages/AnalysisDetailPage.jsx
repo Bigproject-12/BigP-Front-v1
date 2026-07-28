@@ -35,6 +35,9 @@ export default function AnalysisDetailPage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
+  
+  // 탭 상태 추가: 'result' (분석 결과) 또는 'code' (코드 비교)
+  const [activeTab, setActiveTab] = useState('result');
 
   useEffect(() => {
     if (!analysisId) return;
@@ -152,55 +155,80 @@ export default function AnalysisDetailPage() {
 
       {data.status === 'COMPLETED' && (
         <>
-          <div className="analyze-toolbar" style={{ justifyContent: 'flex-end', gap:'12px' }}>
-            {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-            <button
-                className="ui-btn ui-btn--primary ui-btn--md"
-                onClick={handlePush}
-                disabled={pushing || pushed}
-            >
-                {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
-            </button>
-          </div>
-
-          <Card className="diff-card">
-            <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
-          </Card>
-
-          <div className="result-section">
-            <div className="gr-page__header">
-              <h2 className="text-heading-lg">분석 결과 및 설명</h2>
-              <span className="text-body-sm">총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.</span>
+          <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '24px', marginBottom: '16px' }}>
+            
+            {/* 탭 네비게이션 */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`ui-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
+                onClick={() => setActiveTab('result')}
+              >
+                분석 결과 및 설명
+              </button>
+              <button
+                className={`ui-btn ${activeTab === 'code' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
+                onClick={() => setActiveTab('code')}
+              >
+                원본 / 개선 코드 비교
+              </button>
             </div>
-            <div className="result-grid">
-              {issues.map((issue, i) => (
-                <Card key={i} className="result-card">
-                  <div className="result-card__head">
-                    <span className={`result-card__severity result-card__severity--${issue.severity}`} />
-                    <Badge variant={TYPE_VARIANT[issue.type] || 'neutral'}>{issue.type}</Badge>
-                  </div>
-                  <p className="text-body-sm">{issue.description}</p>
-                  <p className="text-caption-md result-card__reason">
-                    <strong>개선 사유</strong><br />{issue.reason}
-                  </p>
-                </Card>
-              ))}
 
-              {data.aiProbability != null && (
-                <Card className="result-card">
-                  <div className="result-card__head">
-                    <Icon name={data.aiGenerated ? 'spark' : 'check'} size={15} />
-                    <span className={`confidence-pill confidence-pill--${getConfidenceLevel(data.aiProbability)}`}>
-                      {Math.round(data.aiProbability)}%
-                    </span>
-                  </div>
-                  <p className="text-body-sm">
-                    {data.aiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
-                  </p>
-                </Card>
-              )}
+            {/* GitHub 반영 버튼 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
+              <button
+                  className="ui-btn ui-btn--primary ui-btn--md"
+                  onClick={handlePush}
+                  disabled={pushing || pushed}
+              >
+                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
+              </button>
             </div>
           </div>
+
+          {/* 탭 1: 분석 결과 및 설명 영역 */}
+          {activeTab === 'result' && (
+            <div className="result-section">
+              <div className="gr-page__header" style={{ marginBottom: '16px' }}>
+                <span className="text-body-sm">총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.</span>
+              </div>
+              <div className="result-grid">
+                {issues.map((issue, i) => (
+                  <Card key={i} className="result-card">
+                    <div className="result-card__head">
+                      <span className={`result-card__severity result-card__severity--${issue.severity}`} />
+                      <Badge variant={TYPE_VARIANT[issue.type] || 'neutral'}>{issue.type}</Badge>
+                    </div>
+                    <p className="text-body-sm">{issue.description}</p>
+                    <p className="text-caption-md result-card__reason">
+                      <strong>개선 사유</strong><br />{issue.reason}
+                    </p>
+                  </Card>
+                ))}
+
+                {data.aiProbability != null && (
+                  <Card className="result-card">
+                    <div className="result-card__head">
+                      <Icon name={data.aiGenerated ? 'spark' : 'check'} size={15} />
+                      <span className={`confidence-pill confidence-pill--${getConfidenceLevel(data.aiProbability)}`}>
+                        {Math.round(data.aiProbability)}%
+                      </span>
+                    </div>
+                    <p className="text-body-sm">
+                      {data.aiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
+                    </p>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 탭 2: 코드 뷰어 영역 */}
+          {activeTab === 'code' && (
+            <Card className="diff-card">
+              <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
+            </Card>
+          )}
         </>
       )}
     </>

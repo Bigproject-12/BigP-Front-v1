@@ -211,7 +211,7 @@ function SignupForm({ onSwitchTab }) {
       {showPolicyModal && (
         <div className="privacy-modal-overlay">
           <div className="privacy-modal">
-            <h3>GuardrAil 개인정보 처리방침</h3>
+            <h3>GuardrAil 개인정보 처리방침 (예시)</h3>
             <div className="privacy-modal-content">
             <h1>GuardrAil 개인정보 처리방침</h1>
               <p>
