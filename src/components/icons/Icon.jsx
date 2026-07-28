@@ -29,6 +29,8 @@ const PATHS = {
   compare: 'M8 3v18M16 3v18M4 8l4-4M12 8l4-4M4 19l4-4M12 19l4-4',
   star: 'M12 3.5 14.6 9.2 20.8 9.9 16.2 14.1 17.5 20.3 12 17.1 6.5 20.3 7.8 14.1 3.2 9.9 9.4 9.2Z',
   grip: 'M8 5h.01M8 12h.01M8 19h.01M16 5h.01M16 12h.01M16 19h.01',
+  refresh: 'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
+  calendar: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4',
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 1.7, className, filled = false, ...rest }) {
