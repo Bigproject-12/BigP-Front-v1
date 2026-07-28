@@ -19,6 +19,12 @@ import './AnalyzePage.css';
 
 const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
+// 👈 히스토리 페이지와 동일한 상단 탭 메뉴 추가
+const TOP_TABS = [
+  { key: 'history', label: '히스토리' },
+  { key: 'analyze', label: '코드 분석' },
+];
+
 function parseJsonArray(str) {
   if (!str) return [];
   try {
@@ -194,6 +200,11 @@ export default function AnalyzePage() {
     api.get(`/api/analysis/${analysisId}`)
       .then((data) => {
         if (!data) return;
+
+        // 🚨 새로고침 등으로 repoId가 비어있을 경우, 백엔드 데이터로 복구
+        if (data.repoId) {
+          setRepoId(String(data.repoId));
+        }
         
         // 백엔드 DTO 필드명(originCode, modifiedCode)에 맞춤[cite: 4]
         setOriginalCode(data.originCode || '');
@@ -265,6 +276,26 @@ export default function AnalyzePage() {
       setPromptResult(null);
     };
     reader.readAsText(file);
+  };
+
+  // 👈 상단 탭 클릭 시 히스토리(RepoDetailPage)로 돌아가는 기능 추가
+  const handleTopTabChange = (key) => {
+    if (key === 'history') {
+      // 💡 코드가 입력되어 있거나, 이미 분석을 돌린 상태라면 경고창을 띄움
+      if (originalCode.trim() || analyzed) {
+        const confirmLeave = window.confirm(
+          "화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n히스토리로 이동하시겠습니까?"
+        );
+        if (!confirmLeave) return; // 사용자가 '취소'를 누르면 탭 이동을 막음
+      }
+
+      // '확인'을 누르거나 초기 상태일 때만 이동 허용
+      if (repoId && repoId !== 'custom') {
+        navigate(`/?page=repo-detail&repoId=${repoId}`);
+      } else {
+        navigate('/?page=repolist');
+      }
+    }
   };
 
   const handleAnalyze = async () => {
@@ -412,6 +443,11 @@ export default function AnalyzePage() {
           </span>
         </div>
       </div>
+
+      {/* 👈 여기에 상단 탭 렌더링 (현재 위치는 'analyze'로 활성화) */}
+      {repoId && repoId !== 'custom' && (
+        <Tabs items={TOP_TABS} active="analyze" onChange={handleTopTabChange} />
+      )}
 
       {/* 파일 선택 툴바 — 탭 공통 영역 */}
 <Card>
