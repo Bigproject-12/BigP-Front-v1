@@ -1,3 +1,28 @@
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dashboard-date-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 12px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+.dashboard-date-range input[type='date'] {
+  border: none;
+  background: transparent;
+  color: var(--text-body);
+  font: inherit;
+}
+.dashboard-date-range input[type='date']:focus {
+  outline: none;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -34,9 +34,13 @@ export default function RepoDetailPage() {
   const [status, setStatus] = useState('all');
   const [query, setQuery] = useState('');
 
-  // 👈 이슈 필터 및 정렬 상태 변수
+  // 이슈 필터 및 정렬 상태 변수
   const [issueFilter, setIssueFilter] = useState('all'); 
   const [sortBy, setSortBy] = useState('latest');
+
+  // 👈 페이지네이션을 위한 상태 추가 (기본 1페이지, 페이지당 10개)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15; 
 
   useEffect(() => {
     if (!repoId) return;
@@ -45,7 +49,7 @@ export default function RepoDetailPage() {
       .catch(() => setAnalyses([]));
   }, [repoId]);
 
-const visibleAnalyses = useMemo(() => {
+  const visibleAnalyses = useMemo(() => {
     // 1. 먼저 필터링된 배열을 'filtered' 변수에 담습니다.
     let filtered = analyses.filter((a) => {
       const matchesStatus =
@@ -56,7 +60,6 @@ const visibleAnalyses = useMemo(() => {
       const fileName = a.filePath ? a.filePath.split('/').pop() : '';
       const matchesQuery = !query.trim() || fileName.toLowerCase().includes(query.toLowerCase());
       
-      // 👈 이슈 유무 필터 로직 
       const matchesIssue = issueFilter === 'all' || (issueFilter === 'has_issues' && a.issueCount > 0);
       
       return matchesStatus && matchesQuery && matchesIssue;
@@ -70,13 +73,23 @@ const visibleAnalyses = useMemo(() => {
       if (sortBy === 'oldest') {
         return timeA - timeB; // 과거 분석순 (오름차순)
       }
-      // 기본값 (latest): 최신 분석순 (내림차순)
-      return timeB - timeA;
+      return timeB - timeA; // 최신 분석순 (내림차순)
     });
 
-    // 3. 최종 결과 반환
     return filtered;
-  }, [analyses, status, query, issueFilter, sortBy]); // 👈 의존성 배열에 issueFilter, sortBy 추가
+  }, [analyses, status, query, issueFilter, sortBy]);
+
+  // 👈 검색어나 필터가 변경되면 무조건 1페이지로 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [status, query, issueFilter, sortBy]);
+
+  // 👈 현재 페이지에 표시할 데이터만 잘라내기 (Slice)
+  const totalPages = Math.ceil(visibleAnalyses.length / itemsPerPage);
+  const paginatedAnalyses = visibleAnalyses.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleTabChange = (key) => {
     if (key === 'analyze') {
@@ -119,7 +132,6 @@ const visibleAnalyses = useMemo(() => {
         <div className="repo-detail__toolbar-left">
           <Segment items={STATUS_FILTERS} active={status} onChange={setStatus} />
         
-          {/* 👈 이슈 필터 드롭다운 */}
           <div style={{ width: '130px' }}>
             <Select value={issueFilter} onChange={(e) => setIssueFilter(e.target.value)}>
               <option value="all">전체 히스토리</option>
@@ -127,7 +139,6 @@ const visibleAnalyses = useMemo(() => {
             </Select>
           </div>
 
-          {/* 👈 정렬 드롭다운 */}
           <div style={{ width: '130px' }}>
             <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="latest">최신순</option>
@@ -159,17 +170,17 @@ const visibleAnalyses = useMemo(() => {
             </tr>
           </thead>
           <tbody>
-            {visibleAnalyses.length === 0 ? (
+            {paginatedAnalyses.length === 0 ? (
               <tr>
                 <td colSpan={6}>
                   <div className="ui-empty">분석 이력이 없습니다.</div>
                 </td>
               </tr>
             ) : (
-              visibleAnalyses.map((a) => {
+              // 👈 전체 목록(visibleAnalyses) 대신 잘라낸 목록(paginatedAnalyses)을 순회합니다.
+              paginatedAnalyses.map((a) => {
                 const fileName = a.filePath ? a.filePath.split('/').pop() : '(파일 미지정)';
                 
-                // 진행중 상태를 'warning'에서 'info'로 변경[cite: 13]
                 const statusMap = {
                   COMPLETED: { label: '완료', variant: 'success' },
                   ANALYZING: { label: '진행중', variant: 'info' }, 
@@ -188,7 +199,6 @@ const visibleAnalyses = useMemo(() => {
                     </td>
                     <td>{formatDateTime(a.analyzedAt)}</td>
                     
-                    {/* 이슈 수 조건부 뱃지 렌더링[cite: 13] */}
                     <td>
                       {a.issueCount != null ? (
                         <Badge variant={a.issueCount === 0 ? 'success' : 'warning'}>
@@ -219,6 +229,31 @@ const visibleAnalyses = useMemo(() => {
             )}
           </tbody>
         </table>
+        
+        {/* 👈 하단 페이지네이션 UI 추가 */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', padding: '16px', borderTop: '1px solid var(--border-hairline)' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
+              이전
+            </Button>
+            <span style={{ fontSize: 'var(--fs-body-sm)', color: 'var(--text-muted)' }}>
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              다음
+            </Button>
+          </div>
+        )}
       </Card>
     </>
   );

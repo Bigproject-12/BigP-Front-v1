@@ -4,11 +4,26 @@ import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
 import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
 import LineChart from '../components/charts/LineChart';
 import DonutChart from '../components/charts/DonutChart';
 import Icon from '../components/icons/Icon';
 import './dashboard.css';
 import './RepoDetailPage.css';
+
+function toISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// 조회 기간은 항상 7일 고정 — 기준일(to)만 고르면 from은 자동으로 6일 전으로 계산된다.
+function rangeEndingAt(to) {
+  const from = new Date(`${to}T00:00:00`);
+  from.setDate(from.getDate() - 6);
+  return { from: toISODate(from), to };
+}
 
 const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
 const STATUS_LABEL = {
@@ -29,27 +44,63 @@ function deltaProps(rate) {
 
 export default function DashboardPage() {
   const { navigate } = useRouter();
+  const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const fetchDashboard = () => {
     setLoading(true);
     setError('');
-    api.get('/api/dashboard')
+    api.get(`/api/dashboard?from=${range.from}&to=${range.to}`)
       .then(setData)
       .catch((e) => setError(e.message || '대시보드 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  if (loading) {
-    return <div className="ui-empty">불러오는 중…</div>;
+  useEffect(fetchDashboard, [range.from, range.to]);
+
+  const header = (
+    <div className="gr-page__header">
+      <div className="gr-page__header-text">
+        <h1 className="text-display-md">HOME</h1>
+        <span className="text-body-sm">전체 프로젝트의 코드 품질 현황을 확인하세요.</span>
+      </div>
+      <div className="dashboard-controls">
+        <label className="dashboard-date-range">
+          <Icon name="calendar" size={16} />
+          <span>{range.from} ~</span>
+          <input
+            type="date"
+            value={range.to}
+            max={toISODate(new Date())}
+            onChange={(e) => e.target.value && setRange(rangeEndingAt(e.target.value))}
+          />
+        </label>
+        <Button variant="secondary" onClick={fetchDashboard} disabled={loading}>
+          <Icon name="refresh" size={16} />
+          새로고침
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (loading && !data) {
+    return (
+      <>
+        {header}
+        <div className="ui-empty">불러오는 중…</div>
+      </>
+    );
   }
   if (error) {
     return (
-      <div className="ui-banner ui-banner--error">
-        <Icon name="close" size={16} /> {error}
-      </div>
+      <>
+        {header}
+        <div className="ui-banner ui-banner--error">
+          <Icon name="close" size={16} /> {error}
+        </div>
+      </>
     );
   }
   if (!data) return null;
@@ -67,12 +118,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="gr-page__header">
-        <div className="gr-page__header-text">
-          <h1 className="text-display-md">HOME</h1>
-          <span className="text-body-sm">전체 프로젝트의 코드 품질 현황을 확인하세요.</span>
-        </div>
-      </div>
+      {header}
 
       <div className="stat-grid">
         <StatCard icon="repo" label="연동 레포지토리" value={`${data.repositoryCount}개`} />
