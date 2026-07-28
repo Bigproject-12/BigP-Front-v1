@@ -133,6 +133,10 @@ export default function AnalysisDetailPage() {
             <div className="text-body-md">{data.repoName ?? '-'}</div>
           </div>
           <div className="analyze-toolbar__field">
+            <label>Branch</label>
+            <div className="text-body-md">{data.branch ?? '-'}</div>
+          </div>
+          <div className="analyze-toolbar__field">
             <label>파일</label>
             <div className="text-body-md">{fileName}</div>
           </div>
