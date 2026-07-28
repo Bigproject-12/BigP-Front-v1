@@ -126,7 +126,7 @@
   background-color: var(--surface-canvas, #ffffff);
   border-radius: var(--radius-md, 8px);
   width: 90%;
-  max-width: 400px;
+  max-width: 700px;
   padding: var(--space-xl, 24px);
   display: flex;
   flex-direction: column;
@@ -144,12 +144,12 @@
   background-color: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 4px;
-  padding: 12px;
-  max-height: 200px;
+  padding: 20px; /* 패딩을 약간 늘려 여백 확보 (선택사항) */
+  max-height: 50vh; 
   overflow-y: auto;
   font-size: var(--fs-body-sm, 14px);
   color: #495057;
-  line-height: 1.5;
+  line-height: 1.6; /* 줄간격을 살짝 넓혀 가독성 향상 (선택사항) */
 }
 
 .privacy-modal-agree {
