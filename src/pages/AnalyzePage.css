@@ -230,7 +230,7 @@
 .ui-spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid var(--border-hairline-strong);
+  border: 4px solid var(--border-hairline-strong);
   border-top-color: var(--ps-primary);
   border-radius: 50%;
   animation: ui-spin 0.7s linear infinite;
@@ -244,6 +244,13 @@
   flex-direction: column;
   gap: var(--space-md);
 }
+
+/* 분석 결과 상세 페이지: 탭 전환 버튼 20% 확대 */
+.detail-tab-btn {
+  height: 43px;
+  padding: 0 19px;
+  font-size: 16px;
+}
 .result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -253,6 +260,14 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* 분석 결과 상세 페이지 전용: 이슈 카드 조금 더 크게 */
+.result-section--detail .result-grid {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+.result-section--detail .result-card {
+  padding: 28px;
 }
 .result-card__head {
   display: flex;
