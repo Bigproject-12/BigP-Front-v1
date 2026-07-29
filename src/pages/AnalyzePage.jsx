@@ -365,6 +365,7 @@ export default function AnalyzePage() {
   };
 
   const handlepush = async () => {
+    if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
     if (!pushAnalysisId) return;
     setPushing(true);
     setPushError('');
@@ -690,7 +691,7 @@ export default function AnalyzePage() {
             {analyzed && pushAnalysisId && branch && filePath && (
               <>
                 <Button variant="primary" onClick={handlepush} disabled={pushing || pushed}>
-                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
+                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중 …' : 'GitHub에 Push'}
                 </Button>
                 {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
               </>
