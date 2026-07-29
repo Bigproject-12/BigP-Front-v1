@@ -38,8 +38,6 @@ export default function AnalysisDetailPage() {
   
   const [activeTab, setActiveTab] = useState('result');
   const [isDiffExpanded, setIsDiffExpanded] = useState(false);
-  
-  // 스크롤 이동을 위한 타겟 상태 (줄 번호 또는 함수명)
   const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
 
   useEffect(() => {
@@ -68,11 +66,9 @@ export default function AnalysisDetailPage() {
     return () => { cancelled = true; };
   }, [analysisId]);
 
-  // 탭이 'code'로 전환되고 타겟이 있을 때 스크롤 및 하이라이트 로직 수행
   useEffect(() => {
     if (activeTab === 'code' && targetSearch.type) {
       const timer = setTimeout(() => {
-        // DiffViewer 내의 텍스트가 담긴 요소들을 가져옵니다.
         const elements = document.querySelectorAll('.diff-card td, .diff-card span, .diff-card div');
         
         for (let el of elements) {
@@ -85,22 +81,19 @@ export default function AnalysisDetailPage() {
           }
 
           if (match) {
-            // 해당 요소 위치로 부드럽게 스크롤
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // 가능한 경우 부모 <tr>(줄 전체)에 하이라이트를 주고, 없으면 자기 자신에게 줍니다.
             const highlightTarget = el.closest('tr') || el;
             const originalBg = highlightTarget.style.backgroundColor;
             
-            highlightTarget.style.backgroundColor = '#fff3cd'; // 노란색 하이라이트
-            setTimeout(() => { highlightTarget.style.backgroundColor = originalBg; }, 2000); // 2초 뒤 원상복구
+            highlightTarget.style.backgroundColor = '#fff3cd'; 
+            setTimeout(() => { highlightTarget.style.backgroundColor = originalBg; }, 2000); 
             break;
           }
         }
         
-        // 탐색이 끝난 후 상태 초기화
         setTargetSearch({ type: null, value: null });
-      }, 100); // 렌더링 완료 대기 시간
+      }, 100); 
       
       return () => clearTimeout(timer);
     }
@@ -154,9 +147,11 @@ export default function AnalysisDetailPage() {
       functionName: c.function_name, 
     })),
   ];
-  const fileName = data.filePath ? data.filePath.split('/').pop() : '(파일 미지정)';
 
-  // 이슈 클릭 핸들러 (타겟 타입 분기)
+// --- 기존의 폴더/파일명 분리 로직은 삭제하셔도 됩니다 ---
+  // 파일 경로를 슬래시(/) 단위로 잘라내기 위해 곧바로 사용합니다.
+  const pathParts = data.filePath ? data.filePath.split('/') : [];
+
   const handleIssueClick = (issue) => {
     if (issue.line) {
       setTargetSearch({ type: 'line', value: issue.line });
@@ -181,24 +176,50 @@ export default function AnalysisDetailPage() {
         </div>
       </div>
 
-      <Card>
-        <div className="analyze-toolbar">
-          <div className="analyze-toolbar__field">
-            <label>Repository</label>
-            <div className="text-body-md">{data.repoName ?? '-'}</div>
+      {/* GitHub 스타일로 변경된 상단 정보 카드 */}
+      <Card style={{ padding: '20px' }}>
+        {/* 1. 경로 Breadcrumb (Repo / folder / file.jsx) */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
+          <span style={{ color: '#0969da', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          <span style={{ color: '#8c959f' }}>/</span>
+          
+          {pathParts.length > 0 ? (
+            pathParts.map((part, index) => (
+              <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ 
+                  color: index === pathParts.length - 1 ? '#24292f' : '#0969da', 
+                  fontWeight: index === pathParts.length - 1 ? '600' : 'normal' 
+                }}>
+                  {part}
+                </span>
+                {index < pathParts.length - 1 && <span style={{ color: '#8c959f' }}>/</span>}
+              </span>
+            ))
+          ) : (
+            <span style={{ color: '#24292f', fontWeight: '600' }}>(파일 미지정)</span>
+          )}
+        </div>
+
+        {/* 2. 하단 부가 정보 (브랜치, 확장자) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#57606a' }}>
+          {/* 브랜치 뱃지 스타일 */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            backgroundColor: '#f6f8fa', 
+            padding: '4px 10px', 
+            borderRadius: '2em', 
+            border: '1px solid #d0d7de',
+            fontWeight: '500'
+          }}>
+            <span style={{ color: '#57606a' }}>Branch:</span>
+            <span style={{ color: '#24292f' }}>{data.branch ?? 'main'}</span>
           </div>
-          <div className="analyze-toolbar__field">
-            <label>Branch</label>
-            <div className="text-body-md">{data.branch ?? '-'}</div>
-          </div>
-          <div className="analyze-toolbar__field">
-            <label>파일</label>
-            <div className="text-body-md">{fileName}</div>
-          </div>
-          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
-            <label>확장자</label>
-            <div className="text-body-md">{data.language ?? '-'}</div>
-          </div>
+          
+          <span>•</span>
+          
+          <span>확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
 
@@ -255,7 +276,7 @@ export default function AnalysisDetailPage() {
                     key={i} 
                     className="result-card" 
                     onClick={() => handleIssueClick(issue)}
-                    style={{ cursor: (issue.line || issue.functionName) ? 'pointer' : 'default' }} // 커서 모양 변경 로직 추가
+                    style={{ cursor: (issue.line || issue.functionName) ? 'pointer' : 'default' }}
                   >
                     <div className="result-card__head">
                       <span className={`result-card__severity result-card__severity--${issue.severity}`} />
