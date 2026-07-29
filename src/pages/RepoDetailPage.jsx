@@ -164,7 +164,7 @@ export default function RepoDetailPage() {
               <th>프로젝트 (파일명)</th>
               <th>분석일시</th>
               <th>이슈 수</th>
-              <th>개선율</th>
+              <th>개선 가능률</th>
               <th>상태</th>
               <th></th>
             </tr>
@@ -209,7 +209,11 @@ export default function RepoDetailPage() {
                       )}
                     </td>
                     
-                    <td>{a.improvementRate != null ? `${a.improvementRate}%` : '-'}</td>
+                    <td>
+                      {typeof a.improvableRatio === 'number'
+                        ? `${a.improvableRatio.toFixed(1)}%`
+                        : '-'}
+                    </td>
                     <td>
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </td>
