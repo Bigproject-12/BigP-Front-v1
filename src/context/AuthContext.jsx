@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const me = await api.get('/users/me');
+        const me = await api.get('/api/users/me');
         if (!cancelled) setUser((prev) => (prev ? { ...prev, ...me } : prev));
       } catch {
         // 네트워크 오류 등 토큰과 무관한 실패는 로그인 상태를 유지한다.
@@ -125,12 +125,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const persistUser = useCallback(
-    async (updates) => {
-      if (!user) return;
-      const saved = await api.patch(`/users/${user.id}`, updates);
-      setUser(toPublicUser(saved));
-    },
-    [user],
+      async (updates) => {
+        if (!user) return;
+        const saved = await api.patch(`/api/users/me`, updates);
+        setUser(toPublicUser(saved));
+      },
+      [user],
   );
 
   return (

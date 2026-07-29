@@ -54,6 +54,14 @@ export default function AnalysisDetailPage() {
   const [promptElapsed, setPromptElapsed] = useState(null);
   // -------------------------------------
 
+  // --- 원본 프롬프트 재구성을 위한 상태 추가 ---
+  const [originalPrompt, setOriginalPrompt] = useState('');
+  const [reconstructing, setReconstructing] = useState(false);
+  const [reconstructError, setReconstructError] = useState('');
+  const [reconstructResult, setReconstructResult] = useState(null);
+  const [reconstructCopied, setReconstructCopied] = useState(false);
+  // -------------------------------------------
+
   useEffect(() => {
     if (!analysisId) return;
     let cancelled = false;
@@ -153,6 +161,34 @@ export default function AnalysisDetailPage() {
       setTimeout(() => setPromptCopied(false), 2000);
     });
   };
+
+  // --- 원본 프롬프트 재구성 핸들러 ---
+  const handleReconstructPrompt = async () => {
+    if (!originalPrompt.trim()) return;
+    setReconstructing(true);
+    setReconstructError('');
+    setReconstructResult(null);
+    setReconstructCopied(false);
+    try {
+      const result = await api.post(`/api/analysis/${analysisId}/reconstruct-prompt`, {
+        originalPrompt: originalPrompt,
+      });
+      setReconstructResult(result);
+    } catch (e) {
+      setReconstructError(e.message || '프롬프트 재구성 중 오류가 발생했습니다.');
+    } finally {
+      setReconstructing(false);
+    }
+  };
+
+  const handleCopyReconstructedPrompt = () => {
+    const text = reconstructResult?.reconstructedPrompt ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      setReconstructCopied(true);
+      setTimeout(() => setReconstructCopied(false), 2000);
+    });
+  };
+
   // ---------------------------------
 
   if (!analysisId) {
@@ -371,64 +407,45 @@ export default function AnalysisDetailPage() {
                     </div>
                   </Card>
 
-                  {/* AI 생성 코드일 경우 프롬프트 추천 UI 노출 */}
+                  {/* AI 생성 코드일 경우, 원본 프롬프트 재구성 UI 노출 */}
                   {data.aiGenerated && (
                     <Card className="prompt-section" style={{ backgroundColor: 'var(--surface-default)' }}>
                       <div className="prompt-section__header" style={{ marginBottom: '12px' }}>
                         <Icon name="edit" size={16} />
-                        <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>더 나은 프롬프트 추천</h3>
+                        <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>원본 프롬프트 재구성</h3>
                       </div>
                       <p className="prompt-section__desc text-body-sm" style={{ marginBottom: '16px' }}>
-                        원하는 방향을 입력하면 맞춤 프롬프트를 추천해드립니다. 비워두면 AI가 코드를 보고 자동으로 작성합니다.
+                        이 코드를 생성할 때 실제로 사용했던 프롬프트를 입력하면, 발견된 문제가 재발하지 않도록 프롬프트를 개선해드립니다.
                       </p>
                       <div className="prompt-section__input-row">
                         <textarea
                           className="prompt-section__textarea"
-                          placeholder="예: 성능 최적화에 집중해줘 / 보안 취약점을 제거해줘 / 가독성을 높여줘"
-                          value={userPrompt}
-                          onChange={(e) => setUserPrompt(e.target.value)}
+                          placeholder="이 코드를 생성할 때 AI에게 실제로 입력했던 프롬프트를 붙여넣어 주세요."
+                          value={originalPrompt}
+                          onChange={(e) => setOriginalPrompt(e.target.value)}
                           rows={2}
                         />
-                        <Button variant="primary" onClick={handleRecommendPrompt} disabled={recommending}>
-                          {recommending ? '추천 중…' : '프롬프트 추천받기'}
+                        <Button variant="primary" onClick={handleReconstructPrompt} disabled={reconstructing || !originalPrompt.trim()}>
+                          {reconstructing ? '재구성 중…' : '프롬프트 재구성받기'}
                         </Button>
                       </div>
 
-                      {promptError && <div className="ui-banner ui-banner--error">{promptError}</div>}
+                      {reconstructError && <div className="ui-banner ui-banner--error">{reconstructError}</div>}
 
-                      {promptResult && (
+                      {reconstructResult && (
                         <div className="prompt-result" style={{ marginTop: '16px' }}>
-                          <div className="prompt-result__tabs">
-                            <button
-                              className={`prompt-result__tab ${promptTab === 'improve' ? 'prompt-result__tab--active' : ''}`}
-                              onClick={() => { setPromptTab('improve'); setPromptCopied(false); }}
-                            >
-                              <Icon name="edit" size={14} /> 코드 개선 프롬프트
-                            </button>
-                            <button
-                              className={`prompt-result__tab ${promptTab === 'generate' ? 'prompt-result__tab--active' : ''}`}
-                              onClick={() => { setPromptTab('generate'); setPromptCopied(false); }}
-                            >
-                              <Icon name="spark" size={14} /> 신규 생성 프롬프트
-                            </button>
-                            {promptElapsed !== null && (
-                              <span className="ai-elapsed ai-elapsed--right text-caption-md">
-                                <Icon name="spark" size={12} /> {promptElapsed >= 1000 ? `${(promptElapsed / 1000).toFixed(2)}s` : `${promptElapsed}ms`}
-                              </span>
-                            )}
-                          </div>
                           <div className="prompt-result__body">
                             <div className="prompt-result__header">
                               <span className="text-caption-md prompt-result__label">
-                                {promptTab === 'improve' ? '기존 코드를 AI에게 개선 요청할 때 사용하세요.' : '같은 기능을 AI에게 처음부터 생성 요청할 때 사용하세요.'}
+                                발견된 문제가 반영된 개선된 프롬프트입니다.
                               </span>
-                              <Button variant="ghost" size="sm" icon={<Icon name={promptCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyPrompt}>
-                                {promptCopied ? '복사됨' : '복사'}
+                              <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
+                                {reconstructCopied ? '복사됨' : '복사'}
                               </Button>
                             </div>
-                            <pre className="prompt-result__text">{promptResult[promptTab].prompt}</pre>
+                            <pre className="prompt-result__text">{reconstructResult.reconstructedPrompt}</pre>
                             <p className="text-caption-md prompt-result__explanation">
-                              <strong>추천 이유</strong><br />{promptResult[promptTab].explanation}
+                              <strong>재구성 이유</strong><br />{reconstructResult.explanation}
                             </p>
                           </div>
                         </div>
