@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { api } from '../lib/api';
+// 프롬프트 추천 함수 및 버튼 컴포넌트 추가
+import { recommendPrompt } from '../lib/aiService';
+import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
@@ -39,6 +42,16 @@ export default function AnalysisDetailPage() {
   const [activeTab, setActiveTab] = useState('result');
   const [isDiffExpanded, setIsDiffExpanded] = useState(false);
   const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
+
+  // --- 프롬프트 추천을 위한 상태 추가 ---
+  const [userPrompt, setUserPrompt] = useState('');
+  const [recommending, setRecommending] = useState(false);
+  const [promptError, setPromptError] = useState('');
+  const [promptResult, setPromptResult] = useState(null);
+  const [promptTab, setPromptTab] = useState('improve');
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [promptElapsed, setPromptElapsed] = useState(null);
+  // -------------------------------------
 
   useEffect(() => {
     if (!analysisId) return;
@@ -113,6 +126,34 @@ export default function AnalysisDetailPage() {
     }
   };
 
+  // --- 프롬프트 추천 핸들러 함수 ---
+  const handleRecommendPrompt = async () => {
+    if (!data || !data.originCode) return;
+    setRecommending(true);
+    setPromptError('');
+    setPromptResult(null);
+    setPromptCopied(false);
+    setPromptElapsed(null);
+    try {
+      const { result, elapsedMs } = await recommendPrompt(data.originCode, userPrompt);
+      setPromptResult(result);
+      setPromptElapsed(elapsedMs);
+    } catch (e) {
+      setPromptError(e.message || '프롬프트 추천 중 오류가 발생했습니다.');
+    } finally {
+      setRecommending(false);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    const text = promptResult?.[promptTab]?.prompt ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
+    });
+  };
+  // ---------------------------------
+
   if (!analysisId) {
     return <div className="ui-banner ui-banner--error">분석 ID가 없습니다.</div>;
   }
@@ -148,8 +189,6 @@ export default function AnalysisDetailPage() {
     })),
   ];
 
-// --- 기존의 폴더/파일명 분리 로직은 삭제하셔도 됩니다 ---
-  // 파일 경로를 슬래시(/) 단위로 잘라내기 위해 곧바로 사용합니다.
   const pathParts = data.filePath ? data.filePath.split('/') : [];
 
   const handleIssueClick = (issue) => {
@@ -176,9 +215,7 @@ export default function AnalysisDetailPage() {
         </div>
       </div>
 
-      {/* GitHub 스타일로 변경된 상단 정보 카드 */}
       <Card style={{ padding: '20px' }}>
-        {/* 1. 경로 Breadcrumb (Repo / folder / file.jsx) */}
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
           <span style={{ color: 'var(--link)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
           <span style={{ color: 'var(--text-muted)' }}>/</span>
@@ -200,9 +237,7 @@ export default function AnalysisDetailPage() {
           )}
         </div>
 
-        {/* 2. 하단 부가 정보 (브랜치, 확장자) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'var(--text-muted)' }}>
-          {/* 브랜치 뱃지 스타일 */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -216,9 +251,7 @@ export default function AnalysisDetailPage() {
             <span style={{ color: 'var(--text-muted)' }}>Branch:</span>
             <span style={{ color: 'var(--text-primary)' }}>{data.branch ?? 'main'}</span>
           </div>
-
           <span>•</span>
-
           <span>확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
@@ -267,42 +300,172 @@ export default function AnalysisDetailPage() {
 
           {activeTab === 'result' && (
             <div className="result-section result-section--detail">
-              <div className="gr-page__header" style={{ marginBottom: '16px' }}>
-                <span className="text-body-sm">총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.</span>
-              </div>
-              <div className="result-grid">
-                {issues.map((issue, i) => (
+              
+              {data.aiProbability != null && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                  {/* AI 판별 상태 배너 */}
                   <Card 
-                    key={i} 
-                    className="result-card" 
-                    onClick={() => handleIssueClick(issue)}
-                    style={{ cursor: (issue.line || issue.functionName) ? 'pointer' : 'default' }}
+                    className={`ai-banner ${data.aiProbability >= 50 ? 'ai-banner--ai' : 'ai-banner--human'}`}
+                    style={{ padding: '20px' }}
                   >
-                    <div className="result-card__head">
-                      <span className={`result-card__severity result-card__severity--${issue.severity}`} />
-                      <Badge variant={TYPE_VARIANT[issue.type] || 'neutral'}>{issue.type}</Badge>
+                    <div className="ai-banner__content" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div className="ai-banner__icon-wrapper">
+                        <Icon 
+                          name={data.aiGenerated ? 'spark' : 'user'} 
+                          size={24} 
+                          className="ai-banner__icon" 
+                        />
+                      </div>
+                      <div>
+                        <h3 className="ai-banner__title" style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
+                          {data.aiGenerated ? 'AI 생성 코드로 판별됨' : '인간이 작성한 코드로 판별됨'}
+                        </h3>
+                        <p className="ai-banner__desc" style={{ margin: 0, fontSize: '14px' }}>
+                          AI 작성 확률: <strong>{Math.round(data.aiProbability)}%</strong> <br/>
+                          {data.aiGenerated 
+                            ? 'AI가 작성한 코드는 예상치 못한 논리적 오류나 취약점이 포함될 수 있으므로 아래 분석 결과를 주의 깊게 검토하세요.' 
+                            : '사람이 작성한 코드입니다. 식별된 보안 및 비효율 이슈를 확인해 보세요.'}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-body-sm">{issue.description}</p>
-                    <p className="text-caption-md result-card__reason">
-                      <strong>개선 사유</strong><br />{issue.reason}
-                    </p>
                   </Card>
-                ))}
 
-                {data.aiProbability != null && (
-                  <Card className="result-card">
-                    <div className="result-card__head">
-                      <Icon name={data.aiGenerated ? 'spark' : 'check'} size={15} />
-                      <span className={`confidence-pill confidence-pill--${getConfidenceLevel(data.aiProbability)}`}>
-                        {Math.round(data.aiProbability)}%
-                      </span>
-                    </div>
-                    <p className="text-body-sm">
-                      {data.aiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
-                    </p>
-                  </Card>
-                )}
+                  {/* AI 생성 코드일 경우 프롬프트 추천 UI 노출 */}
+                  {data.aiGenerated && (
+                    <Card className="prompt-section" style={{ backgroundColor: 'var(--surface-default)' }}>
+                      <div className="prompt-section__header" style={{ marginBottom: '12px' }}>
+                        <Icon name="edit" size={16} />
+                        <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>더 나은 프롬프트 추천</h3>
+                      </div>
+                      <p className="prompt-section__desc text-body-sm" style={{ marginBottom: '16px' }}>
+                        원하는 방향을 입력하면 맞춤 프롬프트를 추천해드립니다. 비워두면 AI가 코드를 보고 자동으로 작성합니다.
+                      </p>
+                      <div className="prompt-section__input-row">
+                        <textarea
+                          className="prompt-section__textarea"
+                          placeholder="예: 성능 최적화에 집중해줘 / 보안 취약점을 제거해줘 / 가독성을 높여줘"
+                          value={userPrompt}
+                          onChange={(e) => setUserPrompt(e.target.value)}
+                          rows={2}
+                        />
+                        <Button variant="primary" onClick={handleRecommendPrompt} disabled={recommending}>
+                          {recommending ? '추천 중…' : '프롬프트 추천받기'}
+                        </Button>
+                      </div>
+
+                      {promptError && <div className="ui-banner ui-banner--error">{promptError}</div>}
+
+                      {promptResult && (
+                        <div className="prompt-result" style={{ marginTop: '16px' }}>
+                          <div className="prompt-result__tabs">
+                            <button
+                              className={`prompt-result__tab ${promptTab === 'improve' ? 'prompt-result__tab--active' : ''}`}
+                              onClick={() => { setPromptTab('improve'); setPromptCopied(false); }}
+                            >
+                              <Icon name="edit" size={14} /> 코드 개선 프롬프트
+                            </button>
+                            <button
+                              className={`prompt-result__tab ${promptTab === 'generate' ? 'prompt-result__tab--active' : ''}`}
+                              onClick={() => { setPromptTab('generate'); setPromptCopied(false); }}
+                            >
+                              <Icon name="spark" size={14} /> 신규 생성 프롬프트
+                            </button>
+                            {promptElapsed !== null && (
+                              <span className="ai-elapsed ai-elapsed--right text-caption-md">
+                                <Icon name="spark" size={12} /> {promptElapsed >= 1000 ? `${(promptElapsed / 1000).toFixed(2)}s` : `${promptElapsed}ms`}
+                              </span>
+                            )}
+                          </div>
+                          <div className="prompt-result__body">
+                            <div className="prompt-result__header">
+                              <span className="text-caption-md prompt-result__label">
+                                {promptTab === 'improve' ? '기존 코드를 AI에게 개선 요청할 때 사용하세요.' : '같은 기능을 AI에게 처음부터 생성 요청할 때 사용하세요.'}
+                              </span>
+                              <Button variant="ghost" size="sm" icon={<Icon name={promptCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyPrompt}>
+                                {promptCopied ? '복사됨' : '복사'}
+                              </Button>
+                            </div>
+                            <pre className="prompt-result__text">{promptResult[promptTab].prompt}</pre>
+                            <p className="text-caption-md prompt-result__explanation">
+                              <strong>추천 이유</strong><br />{promptResult[promptTab].explanation}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              <div className="gr-page__header" style={{ marginBottom: '24px' }}>
+                <h2 className="text-heading-lg" style={{ margin: 0 }}>상세 분석 리포트</h2>
+                <span className="text-body-sm" style={{ color: '#57606a' }}>
+                  총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.
+                </span>
               </div>
+
+              {vulnerabilities && vulnerabilities.length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#cf222e' }}></span>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>보안 취약점 ({vulnerabilities.length}건)</h3>
+                  </div>
+                  <div className="result-grid">
+                    {vulnerabilities.map((v, i) => (
+                      <Card 
+                        key={`sec-${i}`} 
+                        className="result-card" 
+                        onClick={() => handleIssueClick({ line: v.line })}
+                        style={{ cursor: 'pointer', borderLeft: '4px solid #cf222e' }}
+                      >
+                        <div className="result-card__head">
+                          <span className="result-card__severity result-card__severity--high" />
+                          <Badge variant="warning">보안</Badge>
+                        </div>
+                        <p className="text-body-sm">{v.line}번째 줄 — {v.message}</p>
+                        <p className="text-caption-md result-card__reason">
+                          <strong>관련 규칙:</strong><br />{v.rule_id}
+                        </p>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {complexityDetails && complexityDetails.length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0969da' }}></span>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>코드 비효율 ({complexityDetails.length}건)</h3>
+                  </div>
+                  <div className="result-grid">
+                    {complexityDetails.map((c, i) => (
+                      <Card 
+                        key={`ineff-${i}`} 
+                        className="result-card" 
+                        onClick={() => handleIssueClick({ functionName: c.function_name })}
+                        style={{ cursor: 'pointer', borderLeft: '4px solid #0969da' }}
+                      >
+                        <div className="result-card__head">
+                          <span className="result-card__severity result-card__severity--low" />
+                          <Badge variant="info">비효율</Badge>
+                        </div>
+                        <p className="text-body-sm">{c.function_name} 함수 (복잡도 {c.complexity_score})</p>
+                        <p className="text-caption-md result-card__reason">
+                          <strong>개선 사유:</strong><br />{c.message}
+                        </p>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!vulnerabilities?.length && !complexityDetails?.length) && (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#57606a', backgroundColor: 'var(--surface-soft)', borderRadius: '6px' }}>
+                  발견된 보안 취약점이나 비효율 요소가 없습니다.
+                </div>
+              )}
+
             </div>
           )}
 

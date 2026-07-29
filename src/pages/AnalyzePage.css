@@ -480,3 +480,118 @@
 .prompt-result__explanation strong {
   color: var(--text-body);
 }
+
+/* =========================================
+   AI 판별 배너 스타일 (다크모드 지원)
+   ========================================= */
+
+.ai-banner {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.ai-banner__icon-wrapper {
+  background-color: var(--surface-default, #ffffff);
+  padding: 12px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-banner {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.ai-banner__icon-wrapper {
+  background-color: var(--surface-default, #ffffff);
+  padding: 12px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* -----------------------------------------
+   라이트 모드 (기본)
+   ----------------------------------------- */
+.ai-banner--ai {
+  background-color: rgba(239, 68, 68, 0.1); 
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.ai-banner--ai .ai-banner__title {
+  color: #991b1b;
+}
+.ai-banner--ai .ai-banner__desc {
+  color: #7f1d1d;
+}
+.ai-banner--ai .ai-banner__icon {
+  color: #ef4444; 
+}
+
+.ai-banner--human {
+  background-color: rgba(14, 165, 233, 0.1); 
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+.ai-banner--human .ai-banner__title {
+  color: #075985;
+}
+.ai-banner--human .ai-banner__desc {
+  color: #0369a1;
+}
+.ai-banner--human .ai-banner__icon {
+  color: #0ea5e9;
+}
+
+/* -----------------------------------------
+   다크 모드 대응
+   다크 모드 스위치 클릭 시 변경되는 클래스를 포괄적으로 감지합니다.
+   ----------------------------------------- */
+html.dark .ai-banner--ai,
+body.dark .ai-banner--ai,
+[data-theme='dark'] .ai-banner--ai,
+.dark-theme .ai-banner--ai {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+html.dark .ai-banner--ai .ai-banner__title,
+body.dark .ai-banner--ai .ai-banner__title,
+[data-theme='dark'] .ai-banner--ai .ai-banner__title,
+.dark-theme .ai-banner--ai .ai-banner__title {
+  color: #fca5a5 !important;
+}
+html.dark .ai-banner--ai .ai-banner__desc,
+body.dark .ai-banner--ai .ai-banner__desc,
+[data-theme='dark'] .ai-banner--ai .ai-banner__desc,
+.dark-theme .ai-banner--ai .ai-banner__desc {
+  color: #f87171 !important;
+}
+
+html.dark .ai-banner--human,
+body.dark .ai-banner--human,
+[data-theme='dark'] .ai-banner--human,
+.dark-theme .ai-banner--human {
+  background-color: rgba(14, 165, 233, 0.1) !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+}
+html.dark .ai-banner--human .ai-banner__title,
+body.dark .ai-banner--human .ai-banner__title,
+[data-theme='dark'] .ai-banner--human .ai-banner__title,
+.dark-theme .ai-banner--human .ai-banner__title {
+  color: #7dd3fc !important;
+}
+html.dark .ai-banner--human .ai-banner__desc,
+body.dark .ai-banner--human .ai-banner__desc,
+[data-theme='dark'] .ai-banner--human .ai-banner__desc,
+.dark-theme .ai-banner--human .ai-banner__desc {
+  color: #38bdf8 !important;
+}
+
+html.dark .ai-banner__icon-wrapper,
+body.dark .ai-banner__icon-wrapper,
+[data-theme='dark'] .ai-banner__icon-wrapper,
+.dark-theme .ai-banner__icon-wrapper {
+  background-color: var(--surface-input, #1f2937) !important;
+  box-shadow: none !important;
+}
