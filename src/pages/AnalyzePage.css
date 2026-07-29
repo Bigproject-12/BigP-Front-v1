@@ -410,8 +410,9 @@
 }
 .prompt-section__input-row {
   display: flex;
+  align-items: flex-end;
   gap: var(--space-md);
-  align-items: flex-start;
+  padding-right: var(--space-md);
 }
 .prompt-section__textarea {
   flex: 1;
@@ -423,7 +424,9 @@
   font-family: var(--font-body);
   font-size: var(--fs-body-sm);
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
+  height: 120px;
+  overflow-y: auto;
 }
 .prompt-section__textarea:focus {
   border-color: var(--ps-primary);
