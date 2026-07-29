@@ -180,45 +180,45 @@ export default function AnalysisDetailPage() {
       <Card style={{ padding: '20px' }}>
         {/* 1. 경로 Breadcrumb (Repo / folder / file.jsx) */}
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-          <span style={{ color: '#0969da', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
-          <span style={{ color: '#8c959f' }}>/</span>
-          
+          <span style={{ color: 'var(--link)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          <span style={{ color: 'var(--text-muted)' }}>/</span>
+
           {pathParts.length > 0 ? (
             pathParts.map((part, index) => (
               <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  color: index === pathParts.length - 1 ? '#24292f' : '#0969da', 
-                  fontWeight: index === pathParts.length - 1 ? '600' : 'normal' 
+                <span style={{
+                  color: index === pathParts.length - 1 ? 'var(--text-primary)' : 'var(--link)',
+                  fontWeight: index === pathParts.length - 1 ? '600' : 'normal'
                 }}>
                   {part}
                 </span>
-                {index < pathParts.length - 1 && <span style={{ color: '#8c959f' }}>/</span>}
+                {index < pathParts.length - 1 && <span style={{ color: 'var(--text-muted)' }}>/</span>}
               </span>
             ))
           ) : (
-            <span style={{ color: '#24292f', fontWeight: '600' }}>(파일 미지정)</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>(파일 미지정)</span>
           )}
         </div>
 
         {/* 2. 하단 부가 정보 (브랜치, 확장자) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#57606a' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'var(--text-muted)' }}>
           {/* 브랜치 뱃지 스타일 */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            backgroundColor: '#f6f8fa', 
-            padding: '4px 10px', 
-            borderRadius: '2em', 
-            border: '1px solid #d0d7de',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'var(--surface-soft)',
+            padding: '4px 10px',
+            borderRadius: '2em',
+            border: '1px solid var(--border-hairline-strong)',
             fontWeight: '500'
           }}>
-            <span style={{ color: '#57606a' }}>Branch:</span>
-            <span style={{ color: '#24292f' }}>{data.branch ?? 'main'}</span>
+            <span style={{ color: 'var(--text-muted)' }}>Branch:</span>
+            <span style={{ color: 'var(--text-primary)' }}>{data.branch ?? 'main'}</span>
           </div>
-          
+
           <span>•</span>
-          
+
           <span>확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
