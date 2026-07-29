@@ -36,8 +36,9 @@ export default function AnalysisDetailPage() {
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
   
-  // 탭 상태 추가: 'result' (분석 결과) 또는 'code' (코드 비교)
   const [activeTab, setActiveTab] = useState('result');
+  const [isDiffExpanded, setIsDiffExpanded] = useState(false);
+  const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
 
   useEffect(() => {
     if (!analysisId) return;
@@ -64,6 +65,39 @@ export default function AnalysisDetailPage() {
 
     return () => { cancelled = true; };
   }, [analysisId]);
+
+  useEffect(() => {
+    if (activeTab === 'code' && targetSearch.type) {
+      const timer = setTimeout(() => {
+        const elements = document.querySelectorAll('.diff-card td, .diff-card span, .diff-card div');
+        
+        for (let el of elements) {
+          let match = false;
+          
+          if (targetSearch.type === 'line' && el.textContent.trim() === String(targetSearch.value)) {
+            match = true;
+          } else if (targetSearch.type === 'function' && el.textContent.includes(targetSearch.value)) {
+            match = true;
+          }
+
+          if (match) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            const highlightTarget = el.closest('tr') || el;
+            const originalBg = highlightTarget.style.backgroundColor;
+            
+            highlightTarget.style.backgroundColor = '#fff3cd'; 
+            setTimeout(() => { highlightTarget.style.backgroundColor = originalBg; }, 2000); 
+            break;
+          }
+        }
+        
+        setTargetSearch({ type: null, value: null });
+      }, 100); 
+      
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, targetSearch]);
 
   const handlePush = async () => {
     if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
@@ -96,21 +130,37 @@ export default function AnalysisDetailPage() {
 
   const vulnerabilities = parseJsonArray(data.secuResult);
   const complexityDetails = parseJsonArray(data.inefficiencyResult);
+  
   const issues = [
     ...vulnerabilities.map((v) => ({
       type: '보안',
       severity: 'high',
       description: `${v.line}번째 줄 — ${v.message}`,
       reason: v.rule_id,
+      line: v.line, 
     })),
     ...complexityDetails.map((c) => ({
       type: '비효율',
       severity: 'low',
       description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
       reason: c.message,
+      functionName: c.function_name, 
     })),
   ];
-  const fileName = data.filePath ? data.filePath.split('/').pop() : '(파일 미지정)';
+
+// --- 기존의 폴더/파일명 분리 로직은 삭제하셔도 됩니다 ---
+  // 파일 경로를 슬래시(/) 단위로 잘라내기 위해 곧바로 사용합니다.
+  const pathParts = data.filePath ? data.filePath.split('/') : [];
+
+  const handleIssueClick = (issue) => {
+    if (issue.line) {
+      setTargetSearch({ type: 'line', value: issue.line });
+      setActiveTab('code');
+    } else if (issue.functionName) {
+      setTargetSearch({ type: 'function', value: issue.functionName });
+      setActiveTab('code');
+    }
+  };
 
   return (
     <>
@@ -126,24 +176,50 @@ export default function AnalysisDetailPage() {
         </div>
       </div>
 
-      <Card>
-        <div className="analyze-toolbar">
-          <div className="analyze-toolbar__field">
-            <label>Repository</label>
-            <div className="text-body-md">{data.repoName ?? '-'}</div>
+      {/* GitHub 스타일로 변경된 상단 정보 카드 */}
+      <Card style={{ padding: '20px' }}>
+        {/* 1. 경로 Breadcrumb (Repo / folder / file.jsx) */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
+          <span style={{ color: '#0969da', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          <span style={{ color: '#8c959f' }}>/</span>
+          
+          {pathParts.length > 0 ? (
+            pathParts.map((part, index) => (
+              <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ 
+                  color: index === pathParts.length - 1 ? '#24292f' : '#0969da', 
+                  fontWeight: index === pathParts.length - 1 ? '600' : 'normal' 
+                }}>
+                  {part}
+                </span>
+                {index < pathParts.length - 1 && <span style={{ color: '#8c959f' }}>/</span>}
+              </span>
+            ))
+          ) : (
+            <span style={{ color: '#24292f', fontWeight: '600' }}>(파일 미지정)</span>
+          )}
+        </div>
+
+        {/* 2. 하단 부가 정보 (브랜치, 확장자) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#57606a' }}>
+          {/* 브랜치 뱃지 스타일 */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            backgroundColor: '#f6f8fa', 
+            padding: '4px 10px', 
+            borderRadius: '2em', 
+            border: '1px solid #d0d7de',
+            fontWeight: '500'
+          }}>
+            <span style={{ color: '#57606a' }}>Branch:</span>
+            <span style={{ color: '#24292f' }}>{data.branch ?? 'main'}</span>
           </div>
-          <div className="analyze-toolbar__field">
-            <label>Branch</label>
-            <div className="text-body-md">{data.branch ?? '-'}</div>
-          </div>
-          <div className="analyze-toolbar__field">
-            <label>파일</label>
-            <div className="text-body-md">{fileName}</div>
-          </div>
-          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
-            <label>확장자</label>
-            <div className="text-body-md">{data.language ?? '-'}</div>
-          </div>
+          
+          <span>•</span>
+          
+          <span>확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
 
@@ -162,7 +238,6 @@ export default function AnalysisDetailPage() {
         <>
           <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '24px', marginBottom: '16px' }}>
             
-            {/* 탭 네비게이션 */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 className={`ui-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
@@ -178,7 +253,6 @@ export default function AnalysisDetailPage() {
               </button>
             </div>
 
-            {/* GitHub 반영 버튼 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
               <button
@@ -191,7 +265,6 @@ export default function AnalysisDetailPage() {
             </div>
           </div>
 
-          {/* 탭 1: 분석 결과 및 설명 영역 */}
           {activeTab === 'result' && (
             <div className="result-section">
               <div className="gr-page__header" style={{ marginBottom: '16px' }}>
@@ -199,7 +272,12 @@ export default function AnalysisDetailPage() {
               </div>
               <div className="result-grid">
                 {issues.map((issue, i) => (
-                  <Card key={i} className="result-card">
+                  <Card 
+                    key={i} 
+                    className="result-card" 
+                    onClick={() => handleIssueClick(issue)}
+                    style={{ cursor: (issue.line || issue.functionName) ? 'pointer' : 'default' }}
+                  >
                     <div className="result-card__head">
                       <span className={`result-card__severity result-card__severity--${issue.severity}`} />
                       <Badge variant={TYPE_VARIANT[issue.type] || 'neutral'}>{issue.type}</Badge>
@@ -228,11 +306,28 @@ export default function AnalysisDetailPage() {
             </div>
           )}
 
-          {/* 탭 2: 코드 뷰어 영역 */}
           {activeTab === 'code' && (
-            <Card className="diff-card">
-              <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
-            </Card>
+            <>
+              <div className="diff-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h2 className="text-heading-lg">원본 / 개선 코드 비교</h2>
+                <button 
+                  className="ui-btn ui-btn--outline ui-btn--sm"
+                  onClick={() => setIsDiffExpanded(!isDiffExpanded)}
+                >
+                  {isDiffExpanded ? '스크롤 모드로 보기' : '전체 보기'}
+                </button>
+              </div>
+
+              <Card 
+                className="diff-card" 
+                style={{ 
+                  maxHeight: isDiffExpanded ? 'none' : '800px', 
+                  overflowY: isDiffExpanded ? 'visible' : 'auto' 
+                }}
+              >
+                <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
+              </Card>
+            </>
           )}
         </>
       )}
