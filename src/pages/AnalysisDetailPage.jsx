@@ -39,7 +39,8 @@ export default function AnalysisDetailPage() {
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
   
-  const [activeTab, setActiveTab] = useState('result');
+  // 기본 탭을 코드 비교(code)로 설정
+  const [activeTab, setActiveTab] = useState('code');
   const [isDiffExpanded, setIsDiffExpanded] = useState(false);
   const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
 
@@ -271,18 +272,19 @@ export default function AnalysisDetailPage() {
         <>
           <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '24px', marginBottom: '16px' }}>
             
+            {/* 탭 순서 변경: 원본/개선 코드 비교가 먼저 오도록 수정 */}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`ui-btn detail-tab-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
-                onClick={() => setActiveTab('result')}
-              >
-                분석 결과 및 설명
-              </button>
               <button
                 className={`ui-btn detail-tab-btn ${activeTab === 'code' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
                 onClick={() => setActiveTab('code')}
               >
                 원본 / 개선 코드 비교
+              </button>
+              <button
+                className={`ui-btn detail-tab-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
+                onClick={() => setActiveTab('result')}
+              >
+                분석 결과 및 설명
               </button>
             </div>
 
@@ -298,6 +300,45 @@ export default function AnalysisDetailPage() {
             </div>
           </div>
 
+          {/* 원본/개선 코드 비교 탭 내용 */}
+          {activeTab === 'code' && (
+            <>
+              <div className="diff-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h2 className="text-heading-lg">원본 / 개선 코드 비교</h2>
+                <button 
+                  className="ui-btn ui-btn--outline ui-btn--sm"
+                  onClick={() => setIsDiffExpanded(!isDiffExpanded)}
+                >
+                  {isDiffExpanded ? '스크롤 모드로 보기' : '전체 보기'}
+                </button>
+              </div>
+
+              <Card 
+                className="diff-card" 
+                style={{ 
+                  maxHeight: isDiffExpanded ? 'none' : '800px', 
+                  overflowY: isDiffExpanded ? 'visible' : 'auto' 
+                }}
+              >
+                <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
+              </Card>
+
+              {/* 코드 확인란 아래에 '분석 결과 및 설명 보기'로 이동하는 버튼 추가 */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setActiveTab('result');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  상세 분석 결과 및 설명 보기 ↓
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* 분석 결과 및 설명 탭 내용 */}
           {activeTab === 'result' && (
             <div className="result-section result-section--detail">
               
@@ -467,30 +508,6 @@ export default function AnalysisDetailPage() {
               )}
 
             </div>
-          )}
-
-          {activeTab === 'code' && (
-            <>
-              <div className="diff-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h2 className="text-heading-lg">원본 / 개선 코드 비교</h2>
-                <button 
-                  className="ui-btn ui-btn--outline ui-btn--sm"
-                  onClick={() => setIsDiffExpanded(!isDiffExpanded)}
-                >
-                  {isDiffExpanded ? '스크롤 모드로 보기' : '전체 보기'}
-                </button>
-              </div>
-
-              <Card 
-                className="diff-card" 
-                style={{ 
-                  maxHeight: isDiffExpanded ? 'none' : '800px', 
-                  overflowY: isDiffExpanded ? 'visible' : 'auto' 
-                }}
-              >
-                <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
-              </Card>
-            </>
           )}
         </>
       )}
