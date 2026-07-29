@@ -86,7 +86,7 @@ export default function AnalyzePage() {
   const [improvedCode, setImprovedCode] = useState('');
   const [issues, setIssues] = useState([]);
   const [issueCount, setIssueCount] = useState(null);
-  const [improvementRate, setImprovementRate] = useState(null);
+  const [improvableRatio, setImprovableRatio] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
   const [pushAnalysisId, setPushAnalysisId] = useState(null);
@@ -235,7 +235,9 @@ export default function AnalyzePage() {
         ]);
         
         setIssueCount(data.totalIssues ?? 0);
-        setImprovementRate(data.modifiedCode ? 100 : 0);
+        setImprovableRatio(
+          typeof data.improvableRatio === 'number' ? data.improvableRatio : null
+        );
         
         setAiDetection({
           isAiGenerated: !!data.aiGenerated,
@@ -333,7 +335,9 @@ export default function AnalyzePage() {
         })),
       ]);
       setIssueCount(data.totalIssues ?? 0);
-      setImprovementRate(data.modifiedCode ? 100 : 0);
+      setImprovableRatio(
+        typeof data.improvableRatio === 'number' ? data.improvableRatio : null
+      );
       setAiDetection({
         isAiGenerated: !!data.aiGenerated,
         confidence: data.aiProbability ?? null,
@@ -513,7 +517,36 @@ export default function AnalyzePage() {
             </Select>
           </div>
 
-          {/* 3. 폴더/파일 선택 */}
+          {/* 3. 확장자 필터 선택 (파일 선택보다 앞으로 이동) */}
+          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
+            <label>확장자 필터</label>
+            <Select
+              value={selectedExt}
+              onChange={(e) => {
+                const nextExt = e.target.value;
+                setSelectedExt(nextExt);
+
+                // 이미 선택된 파일이 새 필터에서 탈락할 때만 초기화
+                if (filePath && nextExt) {
+                  const fileName = filePath.split('/').pop();
+                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+                  if (ext !== nextExt) {
+                    setFilePath('');
+                    setOriginalCode('');
+                    setAnalyzed(false);
+                  }
+                }
+              }}
+              disabled={!branch || analyzing}
+            >
+              <option value="">모든 확장자</option>
+              {availableExtensions.map((ext) => (
+                <option key={ext} value={ext}>*.{ext}</option>
+              ))}
+            </Select>
+          </div>
+
+          {/* 4. 폴더/파일 선택 (확장자 필터 뒤로 이동) */}
           <div className="analyze-toolbar__field">
             <label>폴더 / 파일</label>
             <Select
@@ -525,11 +558,11 @@ export default function AnalyzePage() {
                 setAnalyzed(false);
               }}
               disabled={!branch || analyzing}
-              //disabled={!branch || repoId === 'custom'} // 👈 'custom'일 때 비활성화
             >
               <option value="">파일 선택</option>
               {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
-              
+
+              {/* groupedFiles는 selectedExt가 이미 반영된 결과 */}
               {Object.entries(groupedFiles).map(([folder, fileList]) => (
                 <optgroup key={folder} label={`📂 ${folder}`}>
                   {fileList.map((file) => (
@@ -541,35 +574,6 @@ export default function AnalyzePage() {
               ))}
             </Select>
           </div>
-
-          {/* 4. 확장자 필터 선택 (맨 끝으로 이동) */}
-<div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
-  <label>확장자 필터</label>
-  <Select
-    value={selectedExt}
-    onChange={(e) => {
-      const nextExt = e.target.value;
-      setSelectedExt(nextExt);
-
-      // 선택된 파일이 새 필터에서 탈락할 때만 초기화
-      if (filePath && nextExt) {
-        const fileName = filePath.split('/').pop();
-        const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
-        if (ext !== nextExt) {
-          setFilePath('');
-          setOriginalCode('');
-          setAnalyzed(false);
-        }
-      }
-    }}
-    disabled={!branch || analyzing}
-  >
-    <option value="">모든 확장자</option>
-    {availableExtensions.map((ext) => (
-      <option key={ext} value={ext}>*.{ext}</option>
-    ))}
-  </Select>
-</div>
           </>
           )}
 
@@ -647,7 +651,9 @@ export default function AnalyzePage() {
               <Card className="code-pane">
                 <div className="code-pane__header">
                   <h2 className="text-heading-md">개선 코드</h2>
-                  {analyzed && improvementRate !== null && <Badge variant="success">개선율 {improvementRate}%</Badge>}
+                 {analyzed && improvableRatio !== null && (
+                  <Badge variant="neutral">개선 가능률 {improvableRatio.toFixed(1)}%</Badge>
+                  )}
                 </div>
                 <div className="code-pane__body">
                   {improvedCode ? (
