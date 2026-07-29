@@ -121,7 +121,7 @@ export default function AnalysisDetailPage() {
             </button>
             <div>
                 <h1 className="text-display-md">분석 결과</h1>
-                <span className="text-body-sm">분석 #{data.analysisId}</span>
+                <span className="text-body-sm">분석 ID: {data.analysisId}</span>
             </div>
         </div>
       </div>
@@ -165,13 +165,13 @@ export default function AnalysisDetailPage() {
             {/* 탭 네비게이션 */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                className={`ui-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
+                className={`ui-btn detail-tab-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
                 onClick={() => setActiveTab('result')}
               >
                 분석 결과 및 설명
               </button>
               <button
-                className={`ui-btn ${activeTab === 'code' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
+                className={`ui-btn detail-tab-btn ${activeTab === 'code' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
                 onClick={() => setActiveTab('code')}
               >
                 원본 / 개선 코드 비교
@@ -193,7 +193,7 @@ export default function AnalysisDetailPage() {
 
           {/* 탭 1: 분석 결과 및 설명 영역 */}
           {activeTab === 'result' && (
-            <div className="result-section">
+            <div className="result-section result-section--detail">
               <div className="gr-page__header" style={{ marginBottom: '16px' }}>
                 <span className="text-body-sm">총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.</span>
               </div>

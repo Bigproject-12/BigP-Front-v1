@@ -56,7 +56,7 @@
 .ui-btn--danger {
   background: transparent;
   color: var(--ps-warning);
-  border: 1px solid var(--ps-warning);
+  border: 3px solid var(--ps-warning);
 }
 .ui-btn--danger:hover:not(:disabled) {
   background: rgba(200, 27, 58, 0.1);
