@@ -43,9 +43,17 @@ function resolveTitle(issue) {
 
 /* AI 확률을 한 문장으로 해석 */
 function aiVerdict(p) {
-  if (p >= 70) return 'AI 생성 가능성이 높습니다. 리뷰를 꼼꼼히 하세요.';
-  if (p >= 40) return '일부 구간에서 AI 생성 패턴이 보입니다.';
-  return '사람이 작성한 코드에 가깝습니다.';
+  if (p >= 50) return 'AI 생성 코드로 의심됩니다.';
+  if (p >= 25) return '일부 구간에서 AI 생성 패턴이 보입니다.';
+  return '사람이 작성한 코드입니다.';
+}
+
+/* AI 확률 구간별 색상 (게이지 + 퍼센트 텍스트 공용) */
+function aiColor(p) {
+  if (p >= 70) return '#E11D48';
+  if (p >= 50) return '#F59E0B';
+  if (p >= 25) return '#EAB308';
+  return '#10B981';
 }
 
 /* ── 이슈 한 줄 ──────────────────────────────────── */
@@ -159,7 +167,7 @@ export default function AnalysisResult({
         {aiProbability != null && (
           <>
             <div className="ar-divider" />
-            <div className="ar-summary-right">
+            <div className="ar-summary-right" style={{ '--ai-color': aiColor(aiProbability) }}>
               <div className="ar-ai-label">AI 생성 확률</div>
               <div className="ar-ai-value">{Math.round(aiProbability)}%</div>
               <div className="ar-gauge">

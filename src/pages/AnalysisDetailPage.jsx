@@ -11,6 +11,7 @@ import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';  
 import './AnalyzePage.css';
 import './RepoDetailPage.css';
+import { Tabs } from '../components/ui/Tabs';
 
 const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
@@ -42,7 +43,6 @@ export default function AnalysisDetailPage() {
   
   // 기본 탭을 코드 비교(code)로 설정
   const [activeTab, setActiveTab] = useState('code');
-  const [isDiffExpanded, setIsDiffExpanded] = useState(false);
   const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
 
   // --- 프롬프트 추천을 위한 상태 추가 ---
@@ -313,20 +313,14 @@ export default function AnalysisDetailPage() {
           <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '24px', marginBottom: '16px' }}>
             
             {/* 탭 순서 변경: 원본/개선 코드 비교가 먼저 오도록 수정 */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`ui-btn detail-tab-btn ${activeTab === 'code' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
-                onClick={() => setActiveTab('code')}
-              >
-                원본 / 개선 코드 비교
-              </button>
-              <button
-                className={`ui-btn detail-tab-btn ${activeTab === 'result' ? 'ui-btn--primary' : 'ui-btn--ghost'}`}
-                onClick={() => setActiveTab('result')}
-              >
-                분석 결과 및 설명
-              </button>
-            </div>
+            <Tabs
+              items={[
+                { key: 'code', label: '원본 / 개선 코드 비교' },
+                { key: 'result', label: '분석 결과 및 설명' },
+              ]}
+              active={activeTab}
+              onChange={setActiveTab}
+            />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
@@ -343,23 +337,15 @@ export default function AnalysisDetailPage() {
           {/* 원본/개선 코드 비교 탭 내용 */}
           {activeTab === 'code' && (
             <>
-              <div className="diff-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h2 className="text-heading-lg">원본 / 개선 코드 비교</h2>
-                <button 
-                  className="ui-btn ui-btn--outline ui-btn--sm"
-                  onClick={() => setIsDiffExpanded(!isDiffExpanded)}
-                >
-                  {isDiffExpanded ? '스크롤 모드로 보기' : '전체 보기'}
-                </button>
+              <div className="diff-header" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '7px'
+                }}>
               </div>
 
-              <Card 
-                className="diff-card" 
-                style={{ 
-                  maxHeight: isDiffExpanded ? 'none' : '800px', 
-                  overflowY: isDiffExpanded ? 'visible' : 'auto' 
-                }}
-              >
+              <Card className="diff-card">
                 <DiffViewer original={data.originCode} improved={data.modifiedCode || data.originCode} />
               </Card>
 
@@ -383,9 +369,7 @@ export default function AnalysisDetailPage() {
             <div className="result-section result-section--detail">
 
               {/* 1. 종합 → 2. 개별 (AnalysisResult가 둘 다 담당) */}
-              <div className="gr-page__header" style={{ marginBottom: '20px' }}>
-                <h2 className="text-heading-lg" style={{ margin: 0 }}>상세 분석 리포트</h2>
-              </div>
+              <div className="gr-page__header" style={{ marginBottom: '20px' }}></div>
 
               <AnalysisResult
                 issues={issues}
@@ -393,9 +377,17 @@ export default function AnalysisDetailPage() {
                 aiProbability={data.aiProbability}
               />
 
-              {/* 3. 행동 — AI 생성 코드일 때만 프롬프트 재구성 노출 */}
-              {data.aiGenerated && (
-                <Card className="prompt-section" style={{ marginTop: '32px', backgroundColor: 'var(--surface-default)' }}>
+              {/* 3. 행동 — 원본 프롬프트 재구성 (항상 노출) */}
+              <Card style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+                {data.aiProbability >= 70 && (
+                  <div className="ui-banner ui-banner--error confidence-warning">
+                    <Icon name="bug" size={16} /> AI가 작성했을 가능성이 높은 코드입니다.
+                  </div>
+                )}
+                <div
+                  className="prompt-section"
+                  style={!(data.aiProbability >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
+                >
                   <div className="prompt-section__header" style={{ marginBottom: '12px' }}>
                     <Icon name="edit" size={16} />
                     <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>원본 프롬프트 재구성</h3>
@@ -436,8 +428,8 @@ export default function AnalysisDetailPage() {
                       </div>
                     </div>
                   )}
-                </Card>
-              )}
+                </div>
+              </Card>
 
             </div>
           )}

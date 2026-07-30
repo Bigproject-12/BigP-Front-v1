@@ -224,7 +224,7 @@ export default function RepoDetailPage() {
                         icon={<Icon name="compare" size={14} />}
                         onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
                       >
-                        비교 보기
+                        상세 결과
                       </Button>
                     </td>
                   </tr>
