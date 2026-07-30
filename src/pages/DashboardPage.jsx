@@ -126,7 +126,7 @@ export default function DashboardPage() {
       {header}
 
       <div className="stat-grid">
-        <StatCard icon="repo" label="연동 레포지토리" value={`${data.repositoryCount}개`} />
+        <StatCard icon="repo" label="연동 Repository" value={`${data.repositoryCount}개`} />
         <StatCard
           icon="code"
           label="전체 분석 건수"
@@ -191,7 +191,7 @@ export default function DashboardPage() {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th>레포</th>
+                  <th>Repository</th>
                   <th>언어</th>
                   <th>상태</th>
                   <th>이슈</th>
@@ -235,7 +235,7 @@ export default function DashboardPage() {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th>레포</th>
+                  <th>Repository</th>
                   <th>제목</th>
                   <th>상태</th>
                 </tr>

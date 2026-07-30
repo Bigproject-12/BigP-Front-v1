@@ -148,7 +148,7 @@ export default function RepoListPage() {
       <div className="repo-toolbar">
         <div className="repo-toolbar__search">
           <Input
-            placeholder="레포명 또는 설명 검색"
+            placeholder="Repository명 또는 설명 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Icon name="search" size={16} />}
@@ -239,7 +239,7 @@ export default function RepoListPage() {
           }}
         >
           <Icon name="repo" size={28} />
-          <span style={{ color: 'var(--text-muted)' }}>조건에 맞는 레포지토리가 없습니다.</span>
+          <span style={{ color: 'var(--text-muted)' }}>조건에 맞는 Repository가 없습니다.</span>
         </div>
       ) : (
         <div className="repo-groups">

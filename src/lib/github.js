@@ -21,7 +21,7 @@ function mapRepo(r) {
   };
 }
 
-// 레포지토리의 브랜치 목록을 가져옵니다.(추가)
+// Repository의 브랜치 목록을 가져옵니다.(추가)
 export async function fetchBranches(fullName) {
   const res = await fetch(`${BASE}/repos/${fullName}/branches`, { headers: headers() });
 

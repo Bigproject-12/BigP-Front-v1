@@ -141,15 +141,15 @@ export default function MyPage() {
     }
   }, [repos, initialOrg]);
 
-  // GitHub OAuth 콜백에서 리다이렉트되어 돌아왔을 때 결과 배너 표시 + 레포 목록 새로고침
+  // GitHub OAuth 콜백에서 리다이렉트되어 돌아왔을 때 결과 배너 표시 + Repository 목록 새로고침
   useEffect(() => {
     const githubResult = params.get('github');
     if (githubResult === 'success') {
-      setTokenBanner({ type: 'success', text: 'GitHub 연동 및 레포지토리 가져오기가 완료되었습니다.' });
+      setTokenBanner({ type: 'success', text: 'GitHub 연동 및 Repository 가져오기가 완료되었습니다.' });
       refreshRepos();
       navigate('?page=mypage#github-section', { replace: true });
     } else if (githubResult === 'partial') {
-      setTokenBanner({ type: 'error', text: 'GitHub 계정은 연동됐지만, 레포지토리 조회에 실패했습니다. 조직명을 확인해주세요.' });
+      setTokenBanner({ type: 'error', text: 'GitHub 계정은 연동됐지만, Repository 조회에 실패했습니다. 조직명을 확인해주세요.' });
       navigate('?page=mypage#github-section', { replace: true });
     } else if (githubResult === 'error') {
       setTokenBanner({ type: 'error', text: 'GitHub 연동에 실패했습니다. 다시 시도해주세요.' });
@@ -197,7 +197,7 @@ export default function MyPage() {
   };
 
   // GitHub OAuth 인증 시작 — 입력된 조직명을 state에 함께 실어 보냄
-  // 콜백에서 토큰 저장 + 해당 조직의 레포지토리 조회까지 서버가 한 번에 처리한다.
+  // 콜백에서 토큰 저장 + 해당 조직의 Repository 조회까지 서버가 한 번에 처리한다.
   const handleConnectGithub = async () => {
     const trimmedOrg = org.trim();
     if (!trimmedOrg) {

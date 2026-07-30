@@ -327,7 +327,7 @@ export default function AnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
-    if (!repoId) { setDetectError('먼저 분석할 레포지토리를 선택하거나 직접 입력을 선택해 주세요'); return; }
+    if (!repoId) { setDetectError('먼저 분석할 Repository를 선택하거나 직접 입력을 선택해 주세요'); return; }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
@@ -534,7 +534,7 @@ export default function AnalyzePage() {
             </div>
           ) : (
             <>
-              {/* 1. 레포지토리 선택 (정상적으로 repos 목록 출력) */}
+              {/* 1. Repository 선택 (정상적으로 repos 목록 출력) */}
               <div className="analyze-toolbar__field">
                 <label>Repository</label>
                 <Select
@@ -551,7 +551,7 @@ export default function AnalyzePage() {
                   }}
                   disabled={analyzing}
                 >
-                  <option value="">레포 선택</option>
+                  <option value="">Repository 선택</option>
                   {/*<option value="custom">✍️ 코드 직접 입력</option>*/}
                   {repos.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
