@@ -61,9 +61,9 @@
 .ar-chip--clean { --chip-color: #10B981; }
 
 .ar-ai-label   { font-size: 12px; color: #64748B; }
-.ar-ai-value   { font-size: 26px; font-weight: 700; color: #4F46E5; line-height: 1.1; }
+.ar-ai-value   { font-size: 26px; font-weight: 700; color: var(--ai-color, #4F46E5); line-height: 1.1; }
 .ar-gauge      { height: 6px; background: #E2E8F0; border-radius: 999px; overflow: hidden; }
-.ar-gauge-fill { height: 100%; background: #4F46E5; transition: width .4s ease; }
+.ar-gauge-fill { height: 100%; background: var(--ai-color, #4F46E5); transition: width .4s ease, background-color .3s ease; }
 .ar-ai-verdict { font-size: 12px; color: #475569; line-height: 1.45; }
 
 @media (max-width: 720px) {
