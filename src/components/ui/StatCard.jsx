@@ -5,7 +5,7 @@ export default function StatCard({ icon, label, value, delta, deltaDirection = '
   return (
     <div className="ui-stat">
       <div className="ui-stat__top">
-        <span className="ui-stat__icon">
+        <span className={`ui-stat__icon ui-stat__icon--${icon}`}>
           <Icon name={icon} size={18} />
         </span>
         {delta && (

@@ -77,3 +77,65 @@
   color: var(--text-body);
   line-height: 1.7;
 }
+
+/* 공통 아이콘 박스 기본 스타일 */
+.ui-stat__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+/* 1. 연동 레포지토리 (repo) - 파란색 계열 */
+.ui-stat__icon--repo {
+  background-color: #D6E8F8;
+  color: #1865B8;
+}
+
+/* 2. 전체 분석 건수 (code) - 초록색 계열 */
+.ui-stat__icon--code {
+  background-color: #DAF2EA;
+  color: #35B69C;
+}
+
+/* 3. 전체 이슈 건수 (bug) - 빨간색 계열 */
+.ui-stat__icon--bug {
+  background-color: #F7DFE3;
+  color: #BF2C53;
+}
+
+/* 4. 평균 품질 점수 (spark) - 보라색 계열 */
+.ui-stat__icon--score {
+  background-color: #EDE7F6;
+  color: #7C3AED;
+}
+
+/*다크모드일 경우 색상*/
+
+[data-theme='dark'] .ui-stat__icon--repo,
+.dark .ui-stat__icon--repo {
+  background-color: rgba(24, 101, 184, 0.25);
+  color: #60A5FA; /* 밝은 파랑 */
+}
+
+[data-theme='dark'] .ui-stat__icon--code,
+.dark .ui-stat__icon--code {
+  background-color: rgba(53, 182, 156, 0.25);
+  color: #4ADE80; /* 밝은 초록 */
+}
+
+[data-theme='dark'] .ui-stat__icon--bug,
+.dark .ui-stat__icon--bug {
+  background-color: rgba(191, 44, 83, 0.25);
+  color: #F87171; /* 밝은 빨강 */
+}
+
+[data-theme='dark'] .ui-stat__icon--spark,
+.dark .ui-stat__icon--spark {
+  background-color: rgba(124, 58, 237, 0.25);
+  color: #C084FC; /* 밝은 보라 */
+}
+
