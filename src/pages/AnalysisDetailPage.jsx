@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
+import AnalysisResult from '../components/analysis/AnalysisResult';  
 import './AnalyzePage.css';
 import './RepoDetailPage.css';
 
@@ -209,20 +210,23 @@ export default function AnalysisDetailPage() {
   const vulnerabilities = parseJsonArray(data.secuResult);
   const complexityDetails = parseJsonArray(data.inefficiencyResult);
   
+// AnalysisResult 컴포넌트가 기대하는 형태로 변환
   const issues = [
     ...vulnerabilities.map((v) => ({
-      type: '보안',
-      severity: 'high',
-      description: `${v.line}번째 줄 — ${v.message}`,
-      reason: v.rule_id,
-      line: v.line, 
+      category: 'SECURITY',
+      line: v.line ?? null,
+      title: null,                    // 백엔드에 없음 → 규칙 사전이 채움
+      message: v.message ?? '',
+      ruleId: v.rule_id ?? null,
+      functionName: null,             // 보안 이슈는 줄 번호로 점프
     })),
     ...complexityDetails.map((c) => ({
-      type: '비효율',
-      severity: 'low',
-      description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
-      reason: c.message,
-      functionName: c.function_name, 
+      category: 'PERFORMANCE',
+      line: c.line ?? null,
+      title: `${c.function_name} 함수 복잡도 ${c.complexity_score}`,
+      message: c.message ?? '',
+      ruleId: null,                   // lizard는 rule_id 없음
+      functionName: c.function_name ?? null,   // 비효율은 함수명으로 점프
     })),
   ];
 
@@ -374,154 +378,65 @@ export default function AnalysisDetailPage() {
             </>
           )}
 
-          {/* 분석 결과 및 설명 탭 내용 */}
+        {/* 분석 결과 및 설명 탭 내용 */}
           {activeTab === 'result' && (
             <div className="result-section result-section--detail">
-              
-              {data.aiProbability != null && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                  {/* AI 판별 상태 배너 */}
-                  <Card 
-                    className={`ai-banner ${data.aiProbability >= 50 ? 'ai-banner--ai' : 'ai-banner--human'}`}
-                    style={{ padding: '20px' }}
-                  >
-                    <div className="ai-banner__content" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div className="ai-banner__icon-wrapper">
-                        <Icon 
-                          name={data.aiGenerated ? 'spark' : 'user'} 
-                          size={24} 
-                          className="ai-banner__icon" 
-                        />
-                      </div>
-                      <div>
-                        <h3 className="ai-banner__title" style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
-                          {data.aiGenerated ? 'AI 생성 코드로 판별됨' : '인간이 작성한 코드로 판별됨'}
-                        </h3>
-                        <p className="ai-banner__desc" style={{ margin: 0, fontSize: '14px' }}>
-                          AI 작성 확률: <strong>{Math.round(data.aiProbability)}%</strong> <br/>
-                          {data.aiGenerated 
-                            ? 'AI가 작성한 코드는 예상치 못한 논리적 오류나 취약점이 포함될 수 있으므로 아래 분석 결과를 주의 깊게 검토하세요.' 
-                            : '사람이 작성한 코드입니다. 식별된 보안 및 비효율 이슈를 확인해 보세요.'}
+
+              {/* 1. 종합 → 2. 개별 (AnalysisResult가 둘 다 담당) */}
+              <div className="gr-page__header" style={{ marginBottom: '20px' }}>
+                <h2 className="text-heading-lg" style={{ margin: 0 }}>상세 분석 리포트</h2>
+              </div>
+
+              <AnalysisResult
+                issues={issues}
+                onIssueClick={handleIssueClick}
+                aiProbability={data.aiProbability}
+              />
+
+              {/* 3. 행동 — AI 생성 코드일 때만 프롬프트 재구성 노출 */}
+              {data.aiGenerated && (
+                <Card className="prompt-section" style={{ marginTop: '32px', backgroundColor: 'var(--surface-default)' }}>
+                  <div className="prompt-section__header" style={{ marginBottom: '12px' }}>
+                    <Icon name="edit" size={16} />
+                    <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>원본 프롬프트 재구성</h3>
+                  </div>
+                  <p className="prompt-section__desc text-body-sm" style={{ marginBottom: '16px' }}>
+                    이 코드를 생성할 때 실제로 사용했던 프롬프트를 입력하면, 발견된 문제가 재발하지 않도록 프롬프트를 개선해드립니다.
+                  </p>
+                  <div className="prompt-section__input-row">
+                    <textarea
+                      className="prompt-section__textarea"
+                      placeholder="이 코드를 생성할 때 AI에게 실제로 입력했던 프롬프트를 붙여넣어 주세요."
+                      value={originalPrompt}
+                      onChange={(e) => setOriginalPrompt(e.target.value)}
+                      rows={2}
+                    />
+                    <Button variant="primary" onClick={handleReconstructPrompt} disabled={reconstructing || !originalPrompt.trim()}>
+                      {reconstructing ? '재구성 중…' : '프롬프트 재구성받기'}
+                    </Button>
+                  </div>
+
+                  {reconstructError && <div className="ui-banner ui-banner--error">{reconstructError}</div>}
+
+                  {reconstructResult && (
+                    <div className="prompt-result" style={{ marginTop: '16px' }}>
+                      <div className="prompt-result__body">
+                        <div className="prompt-result__header">
+                          <span className="text-caption-md prompt-result__label">
+                            발견된 문제가 반영된 개선된 프롬프트입니다.
+                          </span>
+                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
+                            {reconstructCopied ? '복사됨' : '복사'}
+                          </Button>
+                        </div>
+                        <pre className="prompt-result__text">{reconstructResult.reconstructedPrompt}</pre>
+                        <p className="text-caption-md prompt-result__explanation">
+                          <strong>재구성 이유</strong><br />{reconstructResult.explanation}
                         </p>
                       </div>
                     </div>
-                  </Card>
-
-                  {/* AI 생성 코드일 경우, 원본 프롬프트 재구성 UI 노출 */}
-                  {data.aiGenerated && (
-                    <Card className="prompt-section" style={{ backgroundColor: 'var(--surface-default)' }}>
-                      <div className="prompt-section__header" style={{ marginBottom: '12px' }}>
-                        <Icon name="edit" size={16} />
-                        <h3 className="text-heading-md" style={{ margin: 0, marginLeft: '8px' }}>원본 프롬프트 재구성</h3>
-                      </div>
-                      <p className="prompt-section__desc text-body-sm" style={{ marginBottom: '16px' }}>
-                        이 코드를 생성할 때 실제로 사용했던 프롬프트를 입력하면, 발견된 문제가 재발하지 않도록 프롬프트를 개선해드립니다.
-                      </p>
-                      <div className="prompt-section__input-row">
-                        <textarea
-                          className="prompt-section__textarea"
-                          placeholder="이 코드를 생성할 때 AI에게 실제로 입력했던 프롬프트를 붙여넣어 주세요."
-                          value={originalPrompt}
-                          onChange={(e) => setOriginalPrompt(e.target.value)}
-                          rows={2}
-                        />
-                        <Button variant="primary" onClick={handleReconstructPrompt} disabled={reconstructing || !originalPrompt.trim()}>
-                          {reconstructing ? '재구성 중…' : '프롬프트 재구성받기'}
-                        </Button>
-                      </div>
-
-                      {reconstructError && <div className="ui-banner ui-banner--error">{reconstructError}</div>}
-
-                      {reconstructResult && (
-                        <div className="prompt-result" style={{ marginTop: '16px' }}>
-                          <div className="prompt-result__body">
-                            <div className="prompt-result__header">
-                              <span className="text-caption-md prompt-result__label">
-                                발견된 문제가 반영된 개선된 프롬프트입니다.
-                              </span>
-                              <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
-                                {reconstructCopied ? '복사됨' : '복사'}
-                              </Button>
-                            </div>
-                            <pre className="prompt-result__text">{reconstructResult.reconstructedPrompt}</pre>
-                            <p className="text-caption-md prompt-result__explanation">
-                              <strong>재구성 이유</strong><br />{reconstructResult.explanation}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </Card>
                   )}
-                </div>
-              )}
-
-              <div className="gr-page__header" style={{ marginBottom: '24px' }}>
-                <h2 className="text-heading-lg" style={{ margin: 0 }}>상세 분석 리포트</h2>
-                <span className="text-body-sm" style={{ color: '#57606a' }}>
-                  총 {data.totalIssues ?? 0}건의 이슈가 발견되었습니다.
-                </span>
-              </div>
-
-              {vulnerabilities && vulnerabilities.length > 0 && (
-                <div style={{ marginBottom: '32px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#cf222e' }}></span>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>보안 취약점 ({vulnerabilities.length}건)</h3>
-                  </div>
-                  <div className="result-grid">
-                    {vulnerabilities.map((v, i) => (
-                      <Card 
-                        key={`sec-${i}`} 
-                        className="result-card" 
-                        onClick={() => handleIssueClick({ line: v.line })}
-                        style={{ cursor: 'pointer', borderLeft: '4px solid #cf222e' }}
-                      >
-                        <div className="result-card__head">
-                          <span className="result-card__severity result-card__severity--high" />
-                          <Badge variant="warning">보안</Badge>
-                        </div>
-                        <p className="text-body-sm">{v.line}번째 줄 — {v.message}</p>
-                        <p className="text-caption-md result-card__reason">
-                          <strong>관련 규칙:</strong><br />{v.rule_id}
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {complexityDetails && complexityDetails.length > 0 && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0969da' }}></span>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>코드 비효율 ({complexityDetails.length}건)</h3>
-                  </div>
-                  <div className="result-grid">
-                    {complexityDetails.map((c, i) => (
-                      <Card 
-                        key={`ineff-${i}`} 
-                        className="result-card" 
-                        onClick={() => handleIssueClick({ functionName: c.function_name })}
-                        style={{ cursor: 'pointer', borderLeft: '4px solid #0969da' }}
-                      >
-                        <div className="result-card__head">
-                          <span className="result-card__severity result-card__severity--low" />
-                          <Badge variant="info">비효율</Badge>
-                        </div>
-                        <p className="text-body-sm">{c.function_name} 함수 (복잡도 {c.complexity_score})</p>
-                        <p className="text-caption-md result-card__reason">
-                          <strong>개선 사유:</strong><br />{c.message}
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(!vulnerabilities?.length && !complexityDetails?.length) && (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#57606a', backgroundColor: 'var(--surface-soft)', borderRadius: '6px' }}>
-                  발견된 보안 취약점이나 비효율 요소가 없습니다.
-                </div>
+                </Card>
               )}
 
             </div>
