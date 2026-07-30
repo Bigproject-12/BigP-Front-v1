@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
-import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
+import { fetchBranches, fetchRepoTree, fetchFileContent, fetchRepoBranches } from '../lib/github';
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
@@ -93,6 +93,11 @@ export default function AnalyzePage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
+  const [creatingPr, setCreatingPr] = useState(false);
+  const [prError, setPrError] = useState('');
+  const [prUrl, setPrUrl] = useState(null);
+  const [prBranches, setPrBranches] = useState([]);
+  const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [diffMode, setDiffMode] = useState(false);
@@ -170,6 +175,18 @@ export default function AnalyzePage() {
     }
     fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
+
+  // Push 성공 후 PR 대상(base) 브랜치 선택지 불러오기
+  useEffect(() => {
+    if (!pushed || !repoId) return;
+    fetchRepoBranches(Number(repoId))
+      .then((list) => {
+        setPrBranches(list ?? []);
+        const defaultBranch = (list ?? []).find((b) => b.isDefault);
+        if (defaultBranch) setPrBaseBranch(defaultBranch.name);
+      })
+      .catch(() => setPrBranches([]));
+  }, [pushed, repoId]);
 
   useEffect(()=>{
     if (!selectedRepo || !branch){
@@ -384,6 +401,20 @@ export default function AnalyzePage() {
       setPushError(e.message || 'GitHub에 반영하지 못했습니다.');
     } finally {
       setPushing(false);
+    }
+  };
+
+  const handleCreatePr = async () => {
+    if (!pushAnalysisId) return;
+    setCreatingPr(true);
+    setPrError('');
+    try {
+      const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, { baseBranch: prBaseBranch });
+      setPrUrl(result.prUrl);
+    } catch (e) {
+      setPrError(e.message || 'PR 생성에 실패했습니다.');
+    } finally {
+      setCreatingPr(false);
     }
   };
 
@@ -708,18 +739,20 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          <div className="analyze-actions">
-            {analyzing ? (
-              <>
-                <span className="ui-spinner" aria-hidden="true" />
-                <Button variant="danger" onClick={handleStopAnalysis}>
-                  분석 중지
+          <div className="analyze-actions" style={pushed ? { flexDirection: 'column' } : undefined}>
+            {!pushed && (
+              analyzing ? (
+                <>
+                  <span className="ui-spinner" aria-hidden="true" />
+                  <Button variant="danger" onClick={handleStopAnalysis}>
+                    분석 중지
+                  </Button>
+                </>
+              ) : (
+                <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
+                  분석하기
                 </Button>
-              </>
-            ) : (
-              <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
-                분석하기
-              </Button>
+              )
             )}
 
             {analyzed && pushAnalysisId && branch && filePath && (
@@ -728,6 +761,45 @@ export default function AnalyzePage() {
                   {pushed ? '반영 완료 ✓' : pushing ? '반영 중 …' : 'GitHub에 Push'}
                 </Button>
                 {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+
+                {pushed && (
+                  prUrl ? (
+                    <Button variant="secondary" onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}>
+                      GitHub에서 PR 확인
+                    </Button>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-lg)' }}>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>base:</span>
+                        <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
+                          {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
+                          {prBranches.map((b) => (
+                            <option key={b.name} value={b.name}>
+                              {b.name}{b.isDefault ? ' (default)' : ''}
+                            </option>
+                          ))}
+                        </Select>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>←</span>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>compare:</span>
+                        <span
+                          className="text-body-sm"
+                          style={{
+                            backgroundColor: 'var(--surface-soft)',
+                            border: '1px solid var(--border-hairline-strong)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '4px 10px',
+                          }}
+                        >
+                          {branch}
+                        </span>
+                      </div>
+                      <Button variant="primary" onClick={handleCreatePr} disabled={creatingPr || !prBaseBranch}>
+                        {creatingPr ? 'PR 생성 중…' : 'Pull Request 생성'}
+                      </Button>
+                      {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
+                    </>
+                  )
+                )}
               </>
             )}
           </div>
