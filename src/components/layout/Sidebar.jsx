@@ -151,7 +151,7 @@ export default function Sidebar() {
                     className="gr-nav-row__chevron-btn"
                     onClick={() => setFavOpen((v) => !v)}
                     aria-expanded={favOpen}
-                    aria-label="즐겨찾기 레포 목록"
+                    aria-label="즐겨찾기 Repository 목록"
                   >
                     <Icon
                       name="chevronDown"
@@ -162,7 +162,7 @@ export default function Sidebar() {
                 )}
               </div>
 
-              {/* 사이드바가 열려있고, 레포 목록이고, 팝업이 열렸을 때만 렌더링 */}
+              {/* 사이드바가 열려있고, Repository 목록이고, 팝업이 열렸을 때만 렌더링 */}
               {isExpanded && isRepoList && favOpen && (
                 <div className="gr-fav-dropdown">
                   {favorites.length === 0 ? (
