@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { api } from '../lib/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -211,7 +212,7 @@ function SignupForm({ onSwitchTab }) {
       {showPolicyModal && (
         <div className="privacy-modal-overlay">
           <div className="privacy-modal">
-            <h3>GuardrAil 개인정보 처리방침 (예시)</h3>
+            <h3>GuardrAil 개인정보 처리방침</h3>
             <div className="privacy-modal-content">
             <h1>GuardrAil 개인정보 처리방침</h1>
               <p>
@@ -461,6 +462,7 @@ function ResetPasswordForm({ email, onSwitchTab }) {
 
 export default function LoginPage() {
   const { params, navigate } = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const tab = params.get('tab');
   const activeTab = ['login', 'signup', 'find-password', 'reset-password'].includes(tab) ? tab : 'login';
 
@@ -471,6 +473,14 @@ export default function LoginPage() {
 
   return (
     <div className="login-shell">
+      <Button
+        variant="icon"
+        className="login-shell__theme-toggle"
+        aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+        onClick={toggleTheme}
+      >
+        <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+      </Button>
       <div className="login-intro">
         <span className="login-intro__mark">
           <Icon name="spark" size={24} />
