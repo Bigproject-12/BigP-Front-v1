@@ -40,7 +40,8 @@ export default function AnalysisDetailPage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
-  
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   // 기본 탭을 코드 비교(code)로 설정
   const [activeTab, setActiveTab] = useState('code');
   const [targetSearch, setTargetSearch] = useState({ type: null, value: null });
@@ -88,6 +89,12 @@ export default function AnalysisDetailPage() {
 
     return () => { cancelled = true; };
   }, [analysisId]);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'code' && targetSearch.type) {
@@ -434,6 +441,17 @@ export default function AnalysisDetailPage() {
             </div>
           )}
         </>
+      )}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top-btn"
+          aria-label="맨 위로 이동"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Icon name="arrowUp" size={18} />
+        </button>
       )}
     </>
   );
