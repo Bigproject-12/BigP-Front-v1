@@ -73,7 +73,7 @@ export default function DashboardPage() {
       </div>
       <div className="dashboard-controls">
         <label className="dashboard-date-range">
-          <Icon name="calendar" size={16} />
+          {/*<Icon name="calendar" size={16} />*/}
           <span>{range.from} ~</span>
           <input
             type="date"
@@ -121,6 +121,21 @@ export default function DashboardPage() {
   const qualityScore = Math.round(data.averageQualityScore * 10) / 10;
   const qualityChange = Math.round(data.comparison.qualityScoreChange * 10) / 10;
 
+  // 타이틀 문자열에서 파일명과 이슈 건수를 추출하는 함수
+const parsePrTitle = (title) => {
+  if (!title) return { fileName: '', issueText: '' };
+
+  // 예: "GuardrAil: JavaTestCode.java 코드 개선 (이슈 2건)"
+  // 정규식으로 파일명(파일명.확장자 형태)과 (이슈 X건) 부분을 추출합니다.
+  const fileMatch = title.match(/:\s*(.*?)\s*코드 개선/);
+  const issueMatch = title.match(/\(이슈\s*\d+건\)/);
+
+  return {
+    fileName: fileMatch ? fileMatch[1] : title, // 추출 실패 시 원본 타이틀 반환
+    issueText: issueMatch ? issueMatch[0] : '',  // 예: "(이슈 2건)"
+  };
+};
+
   return (
     <>
       {header}
@@ -162,9 +177,10 @@ export default function DashboardPage() {
 
       <div className="chart-grid">
         <Card className="chart-card">
-          <div className="chart-card__header">
-            <h2 className="text-heading-md">품질 점수 추이</h2>
-            <span className="text-caption-md">최근 기간</span>
+
+<div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Icon name="score" size={18} />
+            <h2 className="text-heading-md" style={{ margin: 0 }}>품질 점수 추이</h2>
           </div>
           {qualityTrend.length > 0 ? (
             <LineChart data={qualityTrend} valueSuffix="점" />
@@ -174,8 +190,9 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="chart-card">
-          <div className="chart-card__header">
-            <h2 className="text-heading-md">이슈 유형 분포</h2>
+          <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Icon name="bug" size={18} />
+            <h2 className="text-heading-md" style={{ margin: 0 }}>이슈 유형 분포</h2>
           </div>
           {issueDistribution.length > 0 ? (
             <DonutChart data={issueDistribution} />
@@ -187,8 +204,9 @@ export default function DashboardPage() {
 
       <div className="recent-grid">
         <Card style={{ padding: 0 }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0' }}>
-            <h2 className="text-heading-md">최근 분석</h2>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Icon name="code" size={18} />
+            <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
           {data.recentAnalyses.length === 0 ? (
             <div className="ui-empty">최근 분석 이력이 없습니다.</div>
@@ -231,8 +249,9 @@ export default function DashboardPage() {
         </Card>
 
         <Card style={{ padding: 0 }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0' }}>
-            <h2 className="text-heading-md">최근 PR</h2>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Icon name="pullrequest" size={18} />
+            <h2 className="text-heading-md" style={{ margin: 0 }}>최근 PR</h2>
           </div>
           {data.recentPullRequests.length === 0 ? (
             <div className="ui-empty">최근 생성된 PR이 없습니다.</div>
@@ -241,13 +260,14 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>Repository</th>
-                  <th>제목</th>
+                  <th>파일명</th>
                   <th>상태</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recentPullRequests.map((pr) => {
                   const st = PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' };
+                  const {fileName,issueText}=parsePrTitle(pr.title);
                   return (
                     <tr
                       key={pr.pullRequestId}
@@ -260,7 +280,18 @@ export default function DashboardPage() {
                           {pr.repoName}
                         </span>
                       </td>
-                      <td>#{pr.githubPrNumber} {pr.title}</td>
+                      <td>
+                        {/* 원하는 조합과 볼드체 적용 */}
+                        {/*
+                        <span style={{ color: 'var(--text-muted)', marginRight: '6px' }}>
+                          #{pr.githubPrNumber}
+                        </span>
+                        */}
+                        <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                        {fileName}
+                        </span>
+                       
+                      </td>
                       <td>
                         <Badge variant={st.variant}>{st.label}</Badge>
                       </td>
