@@ -4,6 +4,29 @@
   gap: var(--space-xl);
 }
 
+.scroll-top-btn {
+  position: fixed;
+  right: var(--space-xl);
+  bottom: var(--space-xl);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--surface-card);
+  color: var(--text-body);
+  border: 1px solid var(--border-hairline-strong);
+  box-shadow: var(--shadow-active);
+  cursor: pointer;
+  z-index: 100;
+  transition: background .15s, color .15s;
+}
+.scroll-top-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
 .analyze-toolbar {
   display: flex;
   align-items: flex-end;
@@ -70,6 +93,10 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+.code-editor .code-view {
+  flex: 1;
+  width: auto;
+}
 .code-view--empty {
   display: flex;
   align-items: center;
@@ -113,48 +140,58 @@
   line-height: 1.65;
 }
 
-/* diff 줄 */
-.diff-line {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
-  white-space: pre-wrap;
-  word-break: break-all;
+/* 분석 결과 비교(DiffViewer) — 원본/개선을 같은 grid row에 그려서 줄바꿈이 생겨도 줄번호가 어긋나지 않게 함 */
+.diff-compare__labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.diff-compare__labels > :first-child {
+  border-right: 1px solid var(--border-hairline);
+}
+.diff-grid {
+  display: grid;
+  grid-template-columns: 40px 20px 1fr 40px 20px 1fr;
+}
+.diff-row {
+  display: contents;
+}
+.diff-cell {
   min-height: 21px;
-  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
 }
-.diff-line--removed {
-  background: rgba(239, 68, 68, 0.15);
-}
-.diff-line--added {
-  background: rgba(34, 197, 94, 0.15);
-}
-.diff-line--empty {
-  background: var(--surface-input);
-  opacity: 0.4;
-}
-.diff-line__num {
-  min-width: 40px;
+.diff-cell--num {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   padding: 0 8px;
-  text-align: right;
-  color: var(--text-muted);
+  color: var(--text-primary);
   user-select: none;
   border-right: 1px solid var(--border-hairline);
   font-size: 11px;
 }
-.diff-line__marker {
-  width: 20px;
-  text-align: center;
+.diff-cell--marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   user-select: none;
   font-weight: 700;
 }
-.diff-line--removed .diff-line__marker { color: #ef4444; }
-.diff-line--added   .diff-line__marker { color: #22c55e; }
-.diff-line__text {
-  padding-right: 16px;
-  flex: 1;
+.diff-cell--text {
+  padding: 2px 16px 2px 0;
   color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
+.diff-cell--divider {
+  border-right: 1px solid var(--border-hairline);
+}
+.diff-line--removed { background: rgba(239, 68, 68, 0.15); }
+.diff-line--added { background: rgba(34, 197, 94, 0.15); }
+.diff-line--empty { background: var(--surface-input); opacity: 0.4; }
+.diff-cell--marker.diff-line--removed { color: #ef4444; }
+.diff-cell--marker.diff-line--added { color: #22c55e; }
 
 @media (max-width: 720px) {
   .diff-viewer {

@@ -4,6 +4,7 @@ import { diffLines } from 'diff';
 /**
  * 원본 코드와 개선 코드를 나란히 비교합니다.
  * 삭제된 줄은 왼쪽 빨간 배경, 추가된 줄은 오른쪽 초록 배경으로 표시합니다.
+ * 좌우를 한 줄씩 같은 grid row에 그려서, 긴 줄이 줄바꿈되어도 양쪽 줄번호가 어긋나지 않게 합니다.
  */
 export default function DiffViewer({ original, improved }) {
   const { leftLines, rightLines } = useMemo(() => {
@@ -53,41 +54,33 @@ export default function DiffViewer({ original, improved }) {
       }
     }
 
+    // 같은 행에서는 원본/개선 양쪽에 같은 번호가 보이도록 병합 배열 위치를 그대로 씀
+    left.forEach((line, idx) => { line.num = idx + 1; });
+    right.forEach((line, idx) => { line.num = idx + 1; });
+
     return { leftLines: left, rightLines: right };
   }, [original, improved]);
 
-  const lineCount = leftLines.length;
-
   return (
-    <div className="diff-viewer">
-      <div className="diff-pane diff-pane--left">
+    <div className="diff-compare">
+      <div className="diff-compare__labels">
         <div className="diff-pane__label">원본</div>
-        <div className="diff-pane__code">
-          <div className="diff-pane__code-inner">
-            {leftLines.map((line, idx) => (
-              <div key={idx} className={`diff-line diff-line--${line.type}`}>
-                <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
-                <span className="diff-line__marker">{line.type === 'removed' ? '-' : ' '}</span>
-                <span className="diff-line__text">{line.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="diff-pane diff-pane--right">
         <div className="diff-pane__label">개선</div>
-        <div className="diff-pane__code">
-          <div className="diff-pane__code-inner">
-            {rightLines.map((line, idx) => (
-              <div key={idx} className={`diff-line diff-line--${line.type}`}>
-                <span className="diff-line__num">{line.type !== 'empty' ? idx + 1 : ''}</span>
-                <span className="diff-line__marker">{line.type === 'added' ? '+' : ' '}</span>
-                <span className="diff-line__text">{line.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      </div>
+      <div className="diff-grid">
+        {leftLines.map((line, idx) => {
+          const r = rightLines[idx];
+          return (
+            <div className="diff-row" key={idx}>
+              <span className={`diff-cell diff-cell--num diff-line--${line.type}`}>{line.num ?? ''}</span>
+              <span className={`diff-cell diff-cell--marker diff-line--${line.type}`}>{line.type === 'removed' ? '-' : ' '}</span>
+              <span className={`diff-cell diff-cell--text diff-cell--divider diff-line--${line.type}`}>{line.text}</span>
+              <span className={`diff-cell diff-cell--num diff-line--${r.type}`}>{r.num ?? ''}</span>
+              <span className={`diff-cell diff-cell--marker diff-line--${r.type}`}>{r.type === 'added' ? '+' : ' '}</span>
+              <span className={`diff-cell diff-cell--text diff-line--${r.type}`}>{r.text}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -92,11 +92,16 @@ export default function AnalyzePage() {
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const fileInputRef = useRef(null);
   const originalTextareaRef = useRef(null);
   const originalLineCount = useMemo(
     () => (originalCode ? originalCode.split('\n').length : 1),
     [originalCode]
+  );
+  const improvedLineCount = useMemo(
+    () => (improvedCode ? improvedCode.split('\n').length : 1),
+    [improvedCode]
   );
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
@@ -120,6 +125,13 @@ export default function AnalyzePage() {
     setPrBranches([]);
     setPrBaseBranch('');
   };
+
+  // 페이지가 일정 이상 스크롤되면 맨 위로 버튼 노출
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // 내부 스크롤바 대신 페이지 스크롤을 쓰도록 입력창 높이를 내용에 맞춰 늘림
   useEffect(() => {
@@ -799,7 +811,14 @@ export default function AnalyzePage() {
                   </div>
                   <div className="diff-pane__code">
                     {improvedCode ? (
-                      <pre className="code-view">{improvedCode}</pre>
+                      <div className="code-editor">
+                        <div className="code-editor__gutter">
+                          {Array.from({ length: improvedLineCount }, (_, i) => (
+                            <div key={i + 1}>{i + 1}</div>
+                          ))}
+                        </div>
+                        <pre className="code-view">{improvedCode}</pre>
+                      </div>
                     ) : (
                       <div className="code-view code-view--empty">
                         {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
@@ -923,6 +942,17 @@ export default function AnalyzePage() {
             </Card>
           )}
         </>
+      )}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top-btn"
+          aria-label="맨 위로 이동"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Icon name="arrowUp" size={18} />
+        </button>
       )}
     </div>
   );
