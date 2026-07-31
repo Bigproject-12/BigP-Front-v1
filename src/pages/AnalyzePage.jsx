@@ -844,7 +844,10 @@ export default function AnalyzePage() {
           )}
 
               {aiDetection.isAiGenerated && pushAnalysisId && (
-                <div className="prompt-section">
+                <div
+                  className="prompt-section"
+                  style={!(aiDetection.confidence !== null && aiDetection.confidence >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
+                >
                   <div className="prompt-section__header">
                     <Icon name="edit" size={16} />
                     <h3 className="text-heading-md">원본 프롬프트 재구성</h3>
