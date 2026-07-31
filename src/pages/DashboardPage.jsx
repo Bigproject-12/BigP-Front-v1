@@ -126,7 +126,12 @@ export default function DashboardPage() {
       {header}
 
       <div className="stat-grid">
-        <StatCard icon="repo" label="연동 Repository" value={`${data.repositoryCount}개`} />
+
+        
+        <StatCard icon="repo" 
+          label="연동 레포지토리" 
+          value={`${data.repositoryCount}개`} 
+        />
         <StatCard
           icon="code"
           label="전체 분석 건수"
@@ -140,7 +145,7 @@ export default function DashboardPage() {
           {...deltaProps(data.comparison.issueChangeRate)}
         />
         <StatCard
-          icon="spark"
+          icon="score"
           label="평균 품질 점수"
           value={`${qualityScore}점`}
           delta={`${qualityChange > 0 ? '+' : ''}${qualityChange}점`}
