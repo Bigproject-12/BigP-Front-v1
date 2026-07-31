@@ -415,6 +415,9 @@ function ResetPasswordForm({ email, onSwitchTab }) {
   if (!verified) {
     return (
       <form className="login-card__form" onSubmit={handleVerify}>
+        <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('find-password')} aria-label="이전으로 돌아가기">
+          <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+        </button>
         <p className="text-body-sm">
           <strong>{email}</strong>로 보낸 인증 코드를 입력해주세요.
         </p>
@@ -435,6 +438,9 @@ function ResetPasswordForm({ email, onSwitchTab }) {
 
   return (
     <form className="login-card__form" onSubmit={handleSubmit}>
+      <button type="button" className="ui-btn ui-btn--icon" onClick={() => onSwitchTab('find-password')} aria-label="이전으로 돌아가기">
+        <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+      </button>
       <div className="ui-banner ui-banner--success">인증이 확인되었습니다. 새 비밀번호를 입력해주세요.</div>
       <Input
         label="새 비밀번호"

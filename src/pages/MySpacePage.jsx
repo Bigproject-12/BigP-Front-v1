@@ -16,7 +16,7 @@ export default function MySpacePage() {
       <div className="gr-page__header">
         <div className="gr-page__header-text">
           <h1 className="text-display-md">My Space</h1>
-          <span className="text-body-sm">즐겨찾기한 레포지토리 {favorites.length}개</span>
+          <span className="text-body-sm">즐겨찾기한 Repository {favorites.length}개</span>
         </div>
       </div>
 
@@ -26,7 +26,7 @@ export default function MySpacePage() {
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '60px 0' }}
         >
           <Icon name="star" size={28} />
-          <span style={{ color: 'var(--text-muted)' }}>즐겨찾기한 레포지토리가 없습니다.</span>
+          <span style={{ color: 'var(--text-muted)' }}>즐겨찾기한 Repository가 없습니다.</span>
           <Button variant="primary" onClick={() => navigate('?page=repolist')}>
             Repository 목록으로 가기
           </Button>

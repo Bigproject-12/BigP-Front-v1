@@ -21,15 +21,20 @@ function mapRepo(r) {
   };
 }
 
-// 레포지토리의 브랜치 목록을 가져옵니다.(추가)
+// Repository의 브랜치 목록을 가져옵니다.(추가)
 export async function fetchBranches(fullName) {
   const res = await fetch(`${BASE}/repos/${fullName}/branches`, { headers: headers() });
-  
+
   if (!res.ok) throw new Error(`GitHub API 오류 (${res.status})`);
-  
+
   const data = await res.json();
   // data는 [{ name: 'main', commit: {...} }, { name: 'dev', ... }] 형태이므로 이름만 추출
   return data.map((branch) => branch.name);
+}
+
+// PR 생성용 브랜치 목록 (우리 백엔드를 통해 가져옴, isDefault 포함)
+export async function fetchRepoBranches(repoId) {
+  return api.get(`/api/repos/${repoId}/branches`);
 }
 
 // 기존 fetchRepoTree 함수를 아래와 같이 수정하세요.

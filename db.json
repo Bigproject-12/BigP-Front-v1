@@ -330,7 +330,7 @@
     {
       "id": 1,
       "userId": 2,
-      "message": "GuardrAil-web 레포의 useAuth.ts 분석이 완료되었습니다.",
+      "message": "GuardrAil-web Repository의 useAuth.ts 분석이 완료되었습니다.",
       "read": true,
       "createdAt": "2026-07-07T15:42:00+09:00"
     },
@@ -344,7 +344,7 @@
     {
       "id": 3,
       "userId": 2,
-      "message": "자동 생성 PR #128 이 GuardrAil-core-api 레포에 열렸습니다.",
+      "message": "자동 생성 PR #128 이 GuardrAil-core-api Repository에 열렸습니다.",
       "read": true,
       "createdAt": "2026-07-04T09:00:00+09:00"
     },

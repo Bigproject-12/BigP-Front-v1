@@ -32,6 +32,11 @@ const STATUS_LABEL = {
   FAILED: { label: '실패', variant: 'warning' },
   CANCELED: { label: '취소', variant: 'neutral' },
 };
+const PR_STATUS_LABEL = {
+  OPEN: { label: '열림', variant: 'info' },
+  MERGED: { label: '병합됨', variant: 'success' },
+  CLOSED: { label: '닫힘', variant: 'neutral' },
+};
 
 function deltaProps(rate) {
   const rounded = Math.round(rate * 10) / 10;
@@ -121,6 +126,7 @@ export default function DashboardPage() {
       {header}
 
       <div className="stat-grid">
+
         
         <StatCard icon="repo" 
           label="연동 레포지토리" 
@@ -179,49 +185,93 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card style={{ padding: 0 }}>
-        <div className="chart-card__header" style={{ padding: '16px 16px 0' }}>
-          <h2 className="text-heading-md">최근 분석</h2>
-        </div>
-        {data.recentAnalyses.length === 0 ? (
-          <div className="ui-empty">최근 분석 이력이 없습니다.</div>
-        ) : (
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th>레포</th>
-                <th>언어</th>
-                <th>상태</th>
-                <th>이슈</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentAnalyses.map((a) => {
-                const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
-                return (
-                  <tr
-                    key={a.analysisId}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`)}
-                  >
-                    <td>
-                      <span className="history-table__file">
-                        <Icon name="repo" size={15} />
-                        {a.repoName}
-                      </span>
-                    </td>
-                    <td>{a.language}</td>
-                    <td>
-                      <Badge variant={st.variant}>{st.label}</Badge>
-                    </td>
-                    <td>{a.totalIssueCount}건</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Card>
+      <div className="recent-grid">
+        <Card style={{ padding: 0 }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0' }}>
+            <h2 className="text-heading-md">최근 분석</h2>
+          </div>
+          {data.recentAnalyses.length === 0 ? (
+            <div className="ui-empty">최근 분석 이력이 없습니다.</div>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Repository</th>
+                  <th>언어</th>
+                  <th>상태</th>
+                  <th>이슈</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentAnalyses.map((a) => {
+                  const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
+                  return (
+                    <tr
+                      key={a.analysisId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`)}
+                    >
+                      <td>
+                        <span className="history-table__file">
+                          <Icon name="repo" size={15} />
+                          {a.repoName}
+                        </span>
+                      </td>
+                      <td>{a.language}</td>
+                      <td>
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                      </td>
+                      <td>{a.totalIssueCount}건</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+
+        <Card style={{ padding: 0 }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0' }}>
+            <h2 className="text-heading-md">최근 PR</h2>
+          </div>
+          {data.recentPullRequests.length === 0 ? (
+            <div className="ui-empty">최근 생성된 PR이 없습니다.</div>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Repository</th>
+                  <th>제목</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentPullRequests.map((pr) => {
+                  const st = PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' };
+                  return (
+                    <tr
+                      key={pr.pullRequestId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => window.open(pr.prUrl, '_blank', 'noopener,noreferrer')}
+                    >
+                      <td>
+                        <span className="history-table__file">
+                          <Icon name="repo" size={15} />
+                          {pr.repoName}
+                        </span>
+                      </td>
+                      <td>#{pr.githubPrNumber} {pr.title}</td>
+                      <td>
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      </div>
     </>
   );
 }

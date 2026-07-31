@@ -1,0 +1,174 @@
+.ar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 14px;
+  color: #1E293B;
+}
+
+.ar-empty {
+  padding: 32px;
+  text-align: center;
+  color: #64748B;
+  background: #F8FAFC;
+  border-radius: 10px;
+}
+
+/* ── 종합 요약 카드 ──────────────────────── */
+.ar-summary {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+}
+.ar-summary-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.ar-summary-right {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ar-divider { width: 1px; background: #E2E8F0; }
+
+.ar-total { display: flex; align-items: baseline; gap: 6px; }
+.ar-total strong {
+  font-size: 30px;
+  font-weight: 700;
+  color: #4F46E5;
+  line-height: 1;
+}
+.ar-total span { font-size: 14px; color: #475569; }
+
+.ar-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ar-chip {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--chip-color);
+  background: color-mix(in srgb, var(--chip-color) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--chip-color) 25%, #fff);
+  border-radius: 999px;
+}
+.ar-chip--clean { --chip-color: #10B981; }
+
+.ar-ai-label   { font-size: 12px; color: #64748B; }
+.ar-ai-value   { font-size: 26px; font-weight: 700; color: var(--ai-color, #4F46E5); line-height: 1.1; }
+.ar-gauge      { height: 6px; background: #E2E8F0; border-radius: 999px; overflow: hidden; }
+.ar-gauge-fill { height: 100%; background: var(--ai-color, #4F46E5); transition: width .4s ease, background-color .3s ease; }
+.ar-ai-verdict { font-size: 12px; color: #475569; line-height: 1.45; }
+
+@media (max-width: 720px) {
+  .ar-summary { flex-direction: column; }
+  .ar-divider { width: auto; height: 1px; }
+  .ar-summary-right { flex: none; }
+}
+
+/* ── 카테고리 그룹 ───────────────────────── */
+.ar-group {
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-left: 3px solid var(--group-color);  /* 왼쪽 컬러바 */
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ar-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+.ar-group-head h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.ar-count {
+  min-width: 20px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  background: var(--group-color);
+  border-radius: 999px;
+}
+
+/* ── 이슈 행 ─────────────────────────────── */
+.ar-row + .ar-row { border-top: 1px solid #F1F5F9; }
+
+/* 핵심: grid 열 폭 고정 → 제목 길이와 무관하게 세로 정렬 유지 */
+.ar-row-head {
+  display: grid;
+  grid-template-columns: 8px 40px 1fr 20px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background .15s;
+}
+.ar-row-head:hover { background: #F8FAFC; }
+
+.ar-dot  { width: 8px; height: 8px; border-radius: 50%; }
+.ar-line {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  color: #64748B;
+}
+.ar-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ar-caret { color: #94A3B8; font-size: 12px; transition: transform .2s; }
+.ar-row.is-open .ar-caret { transform: rotate(180deg); }
+
+/* ── 펼침 영역 ───────────────────────────── */
+/* 왼쪽 76px = 16(패딩) + 8(점) + 12(gap) + 40(줄번호) → 제목과 x좌표 일치 */
+.ar-row-body {
+  padding: 0 16px 16px 76px;
+  animation: ar-fade .18s ease;
+}
+@keyframes ar-fade {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ar-desc { margin: 0 0 10px; color: #334155; line-height: 1.7; }
+.ar-rule { margin: 0; font-size: 12px; color: #94A3B8; }
+.ar-rule code {
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  padding: 1px 5px;
+  background: #F1F5F9;
+  border-radius: 4px;
+  color: #64748B;
+}
+
+/* ── 코드 점프 버튼 ──────────────────────── */
+.ar-jump {
+  margin-top: 10px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4F46E5;
+  background: #EEF2FF;
+  border: 1px solid #C7D2FE;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.ar-jump:hover { background: #E0E7FF; }

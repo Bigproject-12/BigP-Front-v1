@@ -98,7 +98,7 @@ export default function RepoDetailPage() {
   };
 
   if (!repoId) {
-    return <div className="ui-banner ui-banner--error">레포지토리를 찾을 수 없습니다.</div>;
+    return <div className="ui-banner ui-banner--error">Repository를 찾을 수 없습니다.</div>;
   }
 
   return (
@@ -224,7 +224,7 @@ export default function RepoDetailPage() {
                         icon={<Icon name="compare" size={14} />}
                         onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
                       >
-                        비교 보기
+                        상세 결과
                       </Button>
                     </td>
                   </tr>

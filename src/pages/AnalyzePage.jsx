@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
-import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
+import { fetchBranches, fetchRepoTree, fetchFileContent, fetchRepoBranches } from '../lib/github';
 
 import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
@@ -14,10 +14,9 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
+import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
 import './AnalyzePage.css';
-
-const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
 
 // 👈 히스토리 페이지와 동일한 상단 탭 메뉴 추가
 const TOP_TABS = [
@@ -33,12 +32,6 @@ function parseJsonArray(str) {
   } catch {
     return [];
   }
-}
-
-function getConfidenceLevel(probability) {
-  if (probability >= 70) return 'high';
-  if (probability >= 40) return 'medium';
-  return 'low';
 }
 
 async function runAnalysis({ repoId, language, code,filePath,branch,onStarted }) {
@@ -93,9 +86,13 @@ export default function AnalyzePage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
+  const [creatingPr, setCreatingPr] = useState(false);
+  const [prError, setPrError] = useState('');
+  const [prUrl, setPrUrl] = useState(null);
+  const [prBranches, setPrBranches] = useState([]);
+  const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
-  const [diffMode, setDiffMode] = useState(false);
   const fileInputRef = useRef(null);
 
   // AI 감지 & 프롬프트 추천 상태
@@ -109,7 +106,6 @@ export default function AnalyzePage() {
   const [promptError, setPromptError] = useState('');
   const [promptCopied, setPromptCopied] = useState(false);
 
-  const [detectElapsed, setDetectElapsed] = useState(null);
   const [promptElapsed, setPromptElapsed] = useState(null);
 
   // --- 원본 프롬프트 재구성을 위한 상태 추가 ---
@@ -171,6 +167,18 @@ export default function AnalyzePage() {
     fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
 
+  // Push 성공 후 PR 대상(base) 브랜치 선택지 불러오기
+  useEffect(() => {
+    if (!pushed || !repoId) return;
+    fetchRepoBranches(Number(repoId))
+      .then((list) => {
+        setPrBranches(list ?? []);
+        const defaultBranch = (list ?? []).find((b) => b.isDefault);
+        if (defaultBranch) setPrBaseBranch(defaultBranch.name);
+      })
+      .catch(() => setPrBranches([]));
+  }, [pushed, repoId]);
+
   useEffect(()=>{
     if (!selectedRepo || !branch){
       setFiles([]);
@@ -229,16 +237,20 @@ export default function AnalyzePage() {
 
         setIssues([
           ...vulnerabilities.map((v) => ({
-            type: '보안',
-            severity: 'high',
-            description: `${v.line}번째 줄 — ${v.message}`,
-            reason: v.rule_id,
+            category: 'SECURITY',
+            line: v.line ?? null,
+            title: null,
+            message: v.message ?? '',
+            ruleId: v.rule_id ?? null,
+            functionName: null,
           })),
           ...complexityDetails.map((c) => ({
-            type: '비효율',
-            severity: 'low',
-            description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
-            reason: c.message,
+            category: 'PERFORMANCE',
+            line: c.line ?? null,
+            title: `${c.function_name} 함수 복잡도 ${c.complexity_score}`,
+            message: c.message ?? '',
+            ruleId: null,
+            functionName: c.function_name ?? null,
           })),
         ]);
         
@@ -310,7 +322,7 @@ export default function AnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
-    if (!repoId) { setDetectError('먼저 분석할 레포지토리를 선택하거나 직접 입력을 선택해 주세요'); return; }
+    if (!repoId) { setDetectError('먼저 분석할 Repository를 선택하거나 직접 입력을 선택해 주세요'); return; }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
@@ -330,16 +342,20 @@ export default function AnalyzePage() {
       setImprovedCode(data.modifiedCode || originalCode);
       setIssues([
         ...vulnerabilities.map((v) => ({
-          type: '보안',
-          severity: 'high',
-          description: `${v.line}번째 줄 — ${v.message}`,
-          reason: v.rule_id,
+          category: 'SECURITY',
+          line: v.line ?? null,
+          title: null,
+          message: v.message ?? '',
+          ruleId: v.rule_id ?? null,
+          functionName: null,
         })),
         ...complexityDetails.map((c) => ({
-          type: '비효율',
-          severity: 'low',
-          description: `${c.function_name} 함수 (복잡도 ${c.complexity_score})`,
-          reason: c.message,
+          category: 'PERFORMANCE',
+          line: c.line ?? null,
+          title: `${c.function_name} 함수 복잡도 ${c.complexity_score}`,
+          message: c.message ?? '',
+          ruleId: null,
+          functionName: c.function_name ?? null,
         })),
       ]);
       setIssueCount(data.totalIssues ?? 0);
@@ -387,6 +403,20 @@ export default function AnalyzePage() {
     }
   };
 
+  const handleCreatePr = async () => {
+    if (!pushAnalysisId) return;
+    setCreatingPr(true);
+    setPrError('');
+    try {
+      const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, { baseBranch: prBaseBranch });
+      setPrUrl(result.prUrl);
+    } catch (e) {
+      setPrError(e.message || 'PR 생성에 실패했습니다.');
+    } finally {
+      setCreatingPr(false);
+    }
+  };
+
   const goToMyPage = () =>{
     if (navigate){
       navigate('?page=mypage#github-section');
@@ -403,11 +433,9 @@ export default function AnalyzePage() {
     setPromptResult(null);
     setPromptTab('improve');
     setUserPrompt('');
-    setDetectElapsed(null);
     try {
-      const { result, elapsedMs } = await detectAiGeneratedCode(originalCode);
+      const { result } = await detectAiGeneratedCode(originalCode);
       setAiDetection(result);
-      setDetectElapsed(elapsedMs);
     } catch (e) {
       setDetectError(e.message || 'AI 감지 중 오류가 발생했습니다.');
     } finally {
@@ -469,7 +497,7 @@ export default function AnalyzePage() {
 
   const TAB_ITEMS = [
     { key: 'analyze', label: '코드 분석' },
-    { key: 'ai', label: 'AI 판별' },
+    { key: 'ai', label: '분석 결과 및 설명' },
   ];
 
   return (
@@ -503,7 +531,7 @@ export default function AnalyzePage() {
             </div>
           ) : (
             <>
-              {/* 1. 레포지토리 선택 (정상적으로 repos 목록 출력) */}
+              {/* 1. Repository 선택 (정상적으로 repos 목록 출력) */}
               <div className="analyze-toolbar__field">
                 <label>Repository</label>
                 <Select
@@ -520,7 +548,7 @@ export default function AnalyzePage() {
                   }}
                   disabled={analyzing}
                 >
-                  <option value="">레포 선택</option>
+                  <option value="">Repository 선택</option>
                   {/*<option value="custom">✍️ 코드 직접 입력</option>*/}
                   {repos.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
@@ -636,24 +664,76 @@ export default function AnalyzePage() {
 
       {activeTab === 'analyze' && (
         <>
-          {analyzed && improvedCode && (
-            <div className="analyze-view-toggle">
-              <button
-                className={`view-toggle-btn ${!diffMode ? 'view-toggle-btn--active' : ''}`}
-                onClick={() => setDiffMode(false)}
-              >
-                <Icon name="code" size={14} /> 분리 보기
-              </button>
-              <button
-                className={`view-toggle-btn ${diffMode ? 'view-toggle-btn--active' : ''}`}
-                onClick={() => setDiffMode(true)}
-              >
-                <Icon name="compare" size={14} /> 변경점 비교
-              </button>
+          <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+              {!pushed && (
+                analyzing ? (
+                  <>
+                    <Button variant="danger" onClick={handleStopAnalysis}>
+                      분석 중지
+                    </Button>
+                    <span className="ui-spinner" aria-hidden="true" />
+                  </>
+                ) : (
+                  <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
+                    분석하기
+                  </Button>
+                )
+              )}
             </div>
-          )}
 
-          {diffMode && analyzed && improvedCode ? (
+            {analyzed && pushAnalysisId && branch && filePath && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+                  <Button variant="primary" onClick={handlepush} disabled={pushing || pushed}>
+                    {pushed ? '반영 완료 ✓' : pushing ? '반영 중 …' : 'GitHub에 Push'}
+                  </Button>
+                </div>
+
+                {pushed && (
+                  prUrl ? (
+                    <Button variant="secondary" onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}>
+                      GitHub에서 PR 확인
+                    </Button>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-sm)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>base:</span>
+                        <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
+                          {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
+                          {prBranches.map((b) => (
+                            <option key={b.name} value={b.name}>
+                              {b.name}{b.isDefault ? ' (default)' : ''}
+                            </option>
+                          ))}
+                        </Select>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>←</span>
+                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>compare:</span>
+                        <span
+                          className="text-body-sm"
+                          style={{
+                            backgroundColor: 'var(--surface-soft)',
+                            border: '1px solid var(--border-hairline-strong)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '4px 10px',
+                          }}
+                        >
+                          {branch}
+                        </span>
+                      </div>
+                      <Button variant="primary" onClick={handleCreatePr} disabled={creatingPr || !prBaseBranch}>
+                        {creatingPr ? 'PR 생성 중…' : 'Pull Request 생성'}
+                      </Button>
+                      {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          {analyzed && improvedCode ? (
             <Card className="diff-card">
               <DiffViewer original={originalCode} improved={improvedCode} />
             </Card>
@@ -674,7 +754,6 @@ export default function AnalyzePage() {
                       setOriginalCode(e.target.value);
                       setAnalyzed(false);
                       setCompareMode(false);
-                      setDiffMode(false);
                     }}
                     spellCheck={false}
                     readOnly={compareMode}
@@ -708,73 +787,6 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          <div className="analyze-actions">
-            {analyzing ? (
-              <>
-                <span className="ui-spinner" aria-hidden="true" />
-                <Button variant="danger" onClick={handleStopAnalysis}>
-                  분석 중지
-                </Button>
-              </>
-            ) : (
-              <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
-                분석하기
-              </Button>
-            )}
-
-            {analyzed && pushAnalysisId && branch && filePath && (
-              <>
-                <Button variant="primary" onClick={handlepush} disabled={pushing || pushed}>
-                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중 …' : 'GitHub에 Push'}
-                </Button>
-                {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-              </>
-            )}
-          </div>
-
-          {analyzed && (
-            <div className="result-section">
-              <div className="gr-page__header">
-                <h2 className="text-heading-lg">분석 결과 및 설명</h2>
-                {issueCount !== null && <span className="text-body-sm">총 {issueCount}건의 이슈가 발견되었습니다.</span>}
-              </div>
-              <div className="result-grid">
-                {issues.map((issue, i) => (
-                  <Card key={i} className="result-card">
-                    <div className="result-card__head">
-                      <span className={`result-card__severity result-card__severity--${issue.severity}`} />
-                      <Badge variant={TYPE_VARIANT[issue.type] || 'neutral'}>{issue.type}</Badge>
-                    </div>
-                    <p className="text-body-sm">{issue.description}</p>
-                    <p className="text-caption-md result-card__reason">
-                      <strong>개선 사유</strong><br />{issue.reason}
-                    </p>
-                  </Card>
-                ))}
-                {aiDetection && (
-                  <Card className="result-card">
-                    <div className="result-card__head">
-                      <Icon name="bug" size={15} />
-                      <Badge variant={aiDetection.hasVulnerability ? 'warning' : 'success'}>
-                        {aiDetection.hasVulnerability ? `취약점 ${aiDetection.vulnerabilities.length}건` : '취약점 없음'}
-                      </Badge>
-                    </div>
-                    {aiDetection.vulnerabilities.length > 0 ? (
-                      aiDetection.vulnerabilities.map((v, i) => (
-                        <p key={i} className="text-body-sm" style={{ marginTop: 4 }}>
-                          <strong>{v.line}번째 줄</strong> — {v.message}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="text-caption-md" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
-                        semgrep 분석 결과 취약점이 발견되지 않았습니다.
-                      </p>
-                    )}
-                  </Card>
-                )}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -787,6 +799,15 @@ export default function AnalyzePage() {
               </span>
             )}
           </div>
+
+          {analyzed && (
+            <div className="result-section result-section--detail">
+              <AnalysisResult
+                issues={issues}
+                aiProbability={aiDetection?.confidence ?? null}
+              />
+            </div>
+          )}
 
           {detectError && (
             <div className="ui-banner ui-banner--error">
@@ -808,25 +829,6 @@ export default function AnalyzePage() {
 
           {aiDetection && (
             <Card className="ai-detect-card">
-              <div className="ai-detect-card__header">
-                <div className="ai-detect-card__title">
-                  <Icon name={aiDetection.isAiGenerated ? 'spark' : 'check'} size={18} />
-                  <h2 className="text-heading-lg">
-                    {aiDetection.isAiGenerated ? 'AI 생성 코드로 판별됨' : '사람이 작성한 코드로 판별됨'}
-                  </h2>
-                  {aiDetection.confidence !== null && (
-                    <span className={`confidence-pill confidence-pill--${getConfidenceLevel(aiDetection.confidence)}`}>
-                      AI가 작성했을 확률 : {Math.round(aiDetection.confidence)}%
-                    </span>
-                  )}
-                  {detectElapsed !== null && (
-                    <span className="ai-elapsed text-caption-md">
-                      <Icon name="spark" size={12} /> {detectElapsed >= 1000 ? `${(detectElapsed / 1000).toFixed(2)}s` : `${detectElapsed}ms`}
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {aiDetection.confidence !== null && aiDetection.confidence >= 70 && (
                 <div className="ui-banner ui-banner--error confidence-warning">
                   <Icon name="bug" size={16} /> AI가 작성했을 가능성이 높은 코드입니다.
