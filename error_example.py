@@ -30,18 +30,17 @@ def create_table():
 def add_user(username, password, email):
     conn = connect_db()
     cursor = conn.cursor()
-    password_hash = hashlib.md5(password.encode()).hexdigest()
-    query = "INSERT INTO users (username, password, email) VALUES ('" + \
-            username + "', '" + password_hash + "', '" + email + "')"
-    cursor.execute(query)
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    query = """INSERT INTO users (username, password, email) VALUES (?, ?, ?)"""
+    cursor.execute(query, (username, password_hash, email))
     conn.commit()
     conn.close()
 
 def find_user(username):
     conn = connect_db()
     cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE username = '" + username + "'"
-    cursor.execute(query)
+    query = """SELECT * FROM users WHERE username = ?"""
+    cursor.execute(query, (username,))
     result = cursor.fetchall()
     conn.close()
     return result
@@ -53,9 +52,10 @@ def run_command(command):
 def execute_shell(command):
     result = subprocess.run(
         command,
-        shell=True,
+        shell=False,
         capture_output=True,
-        text=True
+        text=True,
+        check=True
     )
     return result.stdout
 
@@ -76,15 +76,14 @@ def save_user_data(data):
 def search_users(users, keyword):
     result = []
     for user in users:
-        if keyword.lower() in user["name"].lower():
+        if keyword.lower() in user["username"].lower():
             result.append(user)
     return result
 
 def calculate_total(numbers):
     total = 0
     for i in range(len(numbers)):
-        for j in range(1):
-            total = total + numbers[i]
+        total = total + numbers[i]
     return total
 
 def duplicate_check(items):
@@ -107,8 +106,8 @@ def login(username, password):
     users = find_user(username)
     if len(users) == 0:
         return False
-    password_hash = hashlib.md5(password.encode()).hexdigest()
-    if users[0][2] == password_hash:
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    if users[0][1] == password_hash:
         return True
     return False
 
@@ -127,7 +126,7 @@ def send_request(url, token):
     response = requests.get(
         url,
         headers=headers,
-        verify=False
+        verify=True
     )
     return response.text
 
