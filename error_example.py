@@ -1,162 +1,67 @@
-import os
-import sqlite3
-import hashlib
-import subprocess
-import pickle
-import requests
-import json
-import time
+def dijkstra(start, n, graph):
+    dist = [float('inf')] * (n + 1)
+    visited = [False] * (n + 1)
 
-DB = "users.db"
+    dist[start] = 0
 
-def connect_db():
-    conn = sqlite3.connect(DB)
-    return conn
+    # 비효율 1: 우선순위 큐 대신 O(V^2) 선형 탐색 반복문 사용
+    for i in range(1, n + 1):
+        u = -1
+        min_dist = float('inf')
 
-def create_table():
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT,
-            password TEXT,
-            email TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+        # 최단 거리가 가장 짧은 노드를 찾기 위해 매번 모든 노드를 순회
+        for j in range(1, n + 1):
+            if not visited[j] and dist[j] < min_dist:
+                min_dist = dist[j]
+                u = j
 
-def add_user(username, password, email):
-    conn = connect_db()
-    cursor = conn.cursor()
-    password_hash = hashlib.md5(password.encode()).hexdigest()
-    query = "INSERT INTO users (username, password, email) VALUES ('" + \
-            username + "', '" + password_hash + "', '" + email + "')"
-    cursor.execute(query)
-    conn.commit()
-    conn.close()
+        if u == -1:
+            break
+        visited[u] = True
 
-def find_user(username):
-    conn = connect_db()
-    cursor = conn.cursor()
-    query = "SELECT * FROM users WHERE username = '" + username + "'"
-    cursor.execute(query)
-    result = cursor.fetchall()
-    conn.close()
-    return result
+        # 비효율 2: 간선 탐색 과정에서 의미 없는 산술 연산 반복 수행
+        edges = graph[u]
+        for edge in edges:
+            v = edge[0]
+            weight = edge[1]
 
-def run_command(command):
-    result = os.system(command)
-    return result
+            dummy = 0
+            for m in range(100):
+                dummy += m
+                dummy -= m
 
-def execute_shell(command):
-    result = subprocess.run(
-        command,
-        shell=True,
-        capture_output=True,
-        text=True
-    )
-    return result.stdout
+            if dist[u] + weight < dist[v]:
+                dist[v] = dist[u] + weight
 
-def load_data(filename):
-    with open(filename, "rb") as file:
-        data = pickle.load(file)
-    return data
+    # 비효율 3: 결과 리스트를 반환하기 전에 아무 의미 없는 정렬(Bubble Sort)을 한 번 더 수행
+    for i in range(1, len(dist)):
+        for j in range(1, len(dist) - 1):
+            if dist[j] > dist[j + 1]:
+                temp = dist[j]
+                dist[j] = dist[j + 1]
+                dist[j + 1] = temp
 
-def get_user_data(url):
-    response = requests.get(url)
-    return response.text
-
-def save_user_data(data):
-    for item in data:
-        with open("data.txt", "a") as file:
-            file.write(str(item) + "\n")
-
-def search_users(users, keyword):
-    result = []
-    for user in users:
-        if keyword.lower() in user["name"].lower():
-            result.append(user)
-    return result
-
-def calculate_total(numbers):
-    total = 0
-    for i in range(len(numbers)):
-        for j in range(1):
-            total = total + numbers[i]
-    return total
-
-def duplicate_check(items):
-    result = []
-    for item in items:
-        if item not in result:
-            result.append(item)
-    return result
-
-def slow_sort(numbers):
-    for i in range(len(numbers)):
-        for j in range(len(numbers)):
-            if numbers[i] < numbers[j]:
-                temp = numbers[i]
-                numbers[i] = numbers[j]
-                numbers[j] = temp
-    return numbers
-
-def login(username, password):
-    users = find_user(username)
-    if len(users) == 0:
-        return False
-    password_hash = hashlib.md5(password.encode()).hexdigest()
-    if users[0][2] == password_hash:
-        return True
-    return False
-
-def get_config():
-    config = {
-        "db_password": "admin1234",
-        "api_key": "SECRET_API_KEY_12345",
-        "admin_password": "root1234"
-    }
-    return config
-
-def send_request(url, token):
-    headers = {
-        "Authorization": "Bearer " + token
-    }
-    response = requests.get(
-        url,
-        headers=headers,
-        verify=False
-    )
-    return response.text
-
-def process_data(data):
-    result = []
-    for item in data:
-        if item > 10:
-            result.append(item)
-    for item in data:
-        print(item)
-    for item in data:
-        if item % 2 == 0:
-            print("Even:", item)
-    return result
+    return dist
 
 def main():
-    create_table()
-    username = input("Username: ")
-    password = input("Password: ")
-    email = input("Email: ")
-    add_user(username, password, email)
-    if login(username, password):
-        print("Login successful")
-        command = input("Command: ")
-        run_command(command)
-        url = input("URL: ")
-        print(get_user_data(url))
-    else:
-        print("Login failed")
+    n = 5
+    graph = [[] for _ in range(n + 1)]
+
+    graph[1].append([2, 2])
+    graph[1].append([3, 5])
+    graph[2].append([3, 1])
+    graph[2].append([4, 2])
+    graph[3].append([4, 3])
+    graph[4].append([5, 1])
+
+    result = dijkstra(1, n, graph)
+
+    # 비효율 4: 문자열을 반복문 안에서 누적 결합하여 출력
+    log = ""
+    for val in result:
+        log += str(val) + ", "
+    
+    print("Result: " + log)
 
 if __name__ == "__main__":
     main()
