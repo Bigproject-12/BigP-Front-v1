@@ -1,7 +1,15 @@
 .login-shell {
+  position: relative;
   min-height: 100svh;
   display: grid;
   grid-template-columns: 1.1fr 1fr;
+}
+
+.login-shell__theme-toggle {
+  position: absolute;
+  top: calc((var(--topbar-height) - 40px) / 2);
+  right: var(--space-xl);
+  z-index: 10;
 }
 
 .login-intro {
@@ -123,7 +131,7 @@
 }
 
 .privacy-modal {
-  background-color: var(--surface-canvas, #ffffff);
+  background-color: var(--surface-card);
   border-radius: var(--radius-md, 8px);
   width: 90%;
   max-width: 700px;
@@ -138,18 +146,23 @@
   margin: 0;
   font-size: var(--fs-body-strong, 18px);
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .privacy-modal-content {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background-color: var(--surface-soft);
+  border: 1px solid var(--border-hairline);
   border-radius: 4px;
   padding: 20px; /* 패딩을 약간 늘려 여백 확보 (선택사항) */
-  max-height: 50vh; 
+  max-height: 50vh;
   overflow-y: auto;
   font-size: var(--fs-body-sm, 14px);
-  color: #495057;
+  color: var(--text-body);
   line-height: 1.6; /* 줄간격을 살짝 넓혀 가독성 향상 (선택사항) */
+}
+.privacy-modal-content h1,
+.privacy-modal-content h2 {
+  color: var(--text-primary);
 }
 
 .privacy-modal-agree {
