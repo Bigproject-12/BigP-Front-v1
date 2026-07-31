@@ -559,3 +559,22 @@ body.dark .ai-banner__icon-wrapper,
   background-color: var(--surface-input, #1f2937) !important;
   box-shadow: none !important;
 }
+.pr-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.pr-modal__branch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--surface-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.pr-modal__branch-name {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+}

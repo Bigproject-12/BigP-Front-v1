@@ -13,6 +13,7 @@ import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
+import Modal from '../components/ui/Modal'
 import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
@@ -89,6 +90,10 @@ export default function AnalyzePage() {
   const [creatingPr, setCreatingPr] = useState(false);
   const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState(null);
+  const [isPrModalOpen, setIsPrModalOpen] = useState(false);
+  const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
+const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
+const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 여부
   const [prBranches, setPrBranches] = useState([]);
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
@@ -697,36 +702,9 @@ export default function AnalyzePage() {
                       GitHub에서 PR 확인
                     </Button>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-sm)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>base:</span>
-                        <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
-                          {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
-                          {prBranches.map((b) => (
-                            <option key={b.name} value={b.name}>
-                              {b.name}{b.isDefault ? ' (default)' : ''}
-                            </option>
-                          ))}
-                        </Select>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>←</span>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>compare:</span>
-                        <span
-                          className="text-body-sm"
-                          style={{
-                            backgroundColor: 'var(--surface-soft)',
-                            border: '1px solid var(--border-hairline-strong)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '4px 10px',
-                          }}
-                        >
-                          {branch}
-                        </span>
-                      </div>
-                      <Button variant="primary" onClick={handleCreatePr} disabled={creatingPr || !prBaseBranch}>
-                        {creatingPr ? 'PR 생성 중…' : 'Pull Request 생성'}
-                      </Button>
-                      {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
-                    </div>
+                    <Button variant="primary" onClick={() => setIsPrModalOpen(true)}>
+                      Pull Request 생성
+                    </Button>
                   )
                 )}
               </div>
@@ -893,6 +871,38 @@ export default function AnalyzePage() {
             </Card>
           )}
         </>
+      )}
+      {isPrModalOpen && (
+        <Modal
+          title="Pull Request 생성"
+          onClose={() => setIsPrModalOpen(false)}
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setIsPrModalOpen(false)}>
+                취소
+              </Button>
+              <Button variant="primary" onClick={() => console.log('생성 클릭')}>
+                생성
+              </Button>
+            </>
+          }
+        >
+          <div className="pr-modal">
+  {/* 브랜치 요약 줄 — 왼쪽은 고정, 오른쪽만 선택 가능 */}
+  <div className="pr-modal__branch">
+    <span className="pr-modal__branch-name">{branch}</span>
+    <Icon name="arrowRight" size={14} />
+    <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
+      {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
+      {prBranches.map((b) => (
+        <option key={b.name} value={b.name}>
+          {b.name}{b.isDefault ? ' (default)' : ''}
+        </option>
+      ))}
+    </Select>
+  </div>
+</div>
+        </Modal>
       )}
     </div>
   );
