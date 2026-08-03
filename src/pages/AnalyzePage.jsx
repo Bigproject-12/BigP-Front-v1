@@ -281,6 +281,7 @@ const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 �
         // 이슈 파싱 (secuResult, inefficiencyResult)[cite: 4]
         const vulnerabilities = parseJsonArray(data.secuResult);
         const complexityDetails = parseJsonArray(data.inefficiencyResult);
+        const duplicates = parseJsonArray(data.duplicateResult);
 
         setIssues([
           ...vulnerabilities.map((v) => ({
@@ -299,6 +300,18 @@ const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 �
             ruleId: null,
             functionName: c.function_name ?? null,
           })),
+          ...duplicates.map((d) => {
+            const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
+            return {
+              category: 'DUPLICATE',
+              line: null,
+              title: `기존 함수와 재사용 가능${similarityPct !== null ? ` (유사도 ${similarityPct}%)` : ''}`,
+              message: `${d.file_path}의 ${d.function_name}() 함수와 거의 동일한 로직입니다.`,
+              codeSnippet: d.code ?? null,
+              ruleId: null,
+              functionName: null,
+            };
+          }),
         ]);
         
         setIssueCount(data.totalIssues ?? 0);
@@ -381,6 +394,7 @@ const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 �
 
       const vulnerabilities = parseJsonArray(data.secuResult);
       const complexityDetails = parseJsonArray(data.inefficiencyResult);
+      const duplicates = parseJsonArray(data.duplicateResult);
 
       setImprovedCode(data.modifiedCode || originalCode);
       setIssues([
@@ -400,6 +414,17 @@ const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 �
           ruleId: null,
           functionName: c.function_name ?? null,
         })),
+        ...duplicates.map((d) => {
+          const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
+          return {
+            category: 'DUPLICATE',
+            line: null,
+            title: `기존 함수와 재사용 가능${similarityPct !== null ? ` (유사도 ${similarityPct}%)` : ''}`,
+            message: `${d.file_path}의 ${d.function_name}() 함수와 거의 동일한 로직입니다.`,
+            ruleId: null,
+            functionName: null,
+          };
+        }),
       ]);
       setIssueCount(data.totalIssues ?? 0);
       setImprovableRatio(
