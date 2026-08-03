@@ -92,7 +92,7 @@ export default function AnalyzePage() {
   const [isPrModalOpen, setIsPrModalOpen] = useState(false);
   const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
   const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
-  const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 여부
+   const [isPrEditing, setIsPrEditing] = useState(false);  // 제목·설명 편집 모드 여부
   const [prBranches, setPrBranches] = useState([]);
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
@@ -115,6 +115,10 @@ export default function AnalyzePage() {
   );
   const prBodyPreview = prBodyLines.slice(0, 2);          // 접힘 상태에서 보여줄 2줄
   const prBodyRestCount = Math.max(prBodyLines.length - 2, 0); // 숨겨진 줄 수
+
+  // 자동 생성 원본과 달라졌을 때만 「초기화」 노출
+  const isTitleDirty = prTitle !== prDefaultsRef.current.title;
+  const isBodyDirty = prBody !== prDefaultsRef.current.body;
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
   const resetAnalysisOutput = () => {
@@ -506,7 +510,7 @@ export default function AnalyzePage() {
     prDefaultsRef.current = defaults; // 초기화용 원본 보관
     setPrTitle(defaults.title);
     setPrBody(defaults.body);
-    setIsBodyExpanded(false); // 항상 접힌 상태로 시작
+    setIsPrEditing(false); // 항상 표시 모드로 시작
     setPrError('');
     setIsPrModalOpen(true);
   };
@@ -515,14 +519,20 @@ export default function AnalyzePage() {
   const handleResetPrBody = () => {
     setPrBody(prDefaultsRef.current.body);
   };
+  // 사용자가 수정한 제목/설명을 자동 생성 원본으로 되돌린다
+  const handleResetPrTitle = () => {
+    setPrTitle(prDefaultsRef.current.title);
+  };
+
 const handleCreatePr = async () => {
     if (!pushAnalysisId) return;
     setCreatingPr(true);
     setPrError('');
     try {
-      // 하드코딩 단계: title/body는 백엔드가 생성하므로 baseBranch만 보낸다
       const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, {
         baseBranch: prBaseBranch,
+        title: prTitle,
+        body: prBody,
       });
       setPrUrl(result.prUrl);
       setIsPrModalOpen(false);   // 성공 시 모달 닫기
@@ -999,7 +1009,7 @@ const handleCreatePr = async () => {
               </Button>
               <Button
                 variant="primary"
-                onClick={handleCreatePr}       // ⭐ console.log → 실제 함수 연결
+                onClick={handleCreatePr}
                 disabled={creatingPr || !prBaseBranch}
               >
                 {creatingPr ? '생성 중…' : '생성'}
@@ -1007,7 +1017,7 @@ const handleCreatePr = async () => {
             </>
           }
         >
-<div className="pr-modal">
+          <div className="pr-modal">
             {/* 브랜치 — 상단 메타 정보 */}
             <div className="pr-modal__branch">
               <span className="pr-modal__branch-label">병합 대상</span>
@@ -1025,41 +1035,73 @@ const handleCreatePr = async () => {
               </div>
             </div>
 
-            {/* 제목 — 박스 없이 큰 글씨로 */}
-            <h3 className="pr-modal__title">{prTitle}</h3>
-
-            {/* 설명 — 박스 없이 본문처럼 */}
-            <div className="pr-modal__body">
-              {(isBodyExpanded ? prBodyLines : prBodyPreview).map((line, i) => (
-                <div key={i} className="pr-modal__body-line">{line}</div>
-              ))}
-              {!isBodyExpanded && prBodyRestCount > 0 && (
-                <button
-                  type="button"
-                  className="pr-modal__more"
-                  onClick={() => setIsBodyExpanded(true)}
-                >
-                  …외 {prBodyRestCount}건 더보기
-                </button>
+            {/* 제목 — 편집 모드일 때만 input, 오른쪽에 편집/완료 토글 */}
+            <div className="pr-modal__field-head">
+              {isPrEditing ? (
+                <input
+                  className="pr-modal__title-input"
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="PR 제목을 입력하세요"
+                  autoFocus
+                />
+              ) : (
+                <h3 className="pr-modal__title">{prTitle}</h3>
               )}
-              {isBodyExpanded && (
+              <div className="pr-modal__field-actions">
+                {isPrEditing && isTitleDirty && (
+                  <button type="button" className="pr-modal__more" onClick={handleResetPrTitle}>
+                    제목 초기화
+                  </button>
+                )}
                 <button
                   type="button"
                   className="pr-modal__more"
-                  onClick={() => setIsBodyExpanded(false)}
+                  onClick={() => setIsPrEditing((v) => !v)}
                 >
-                  접기
+                  {isPrEditing ? '완료' : '편집'}
                 </button>
+              </div>
+            </div>
+
+            {/* 설명 — 편집 모드면 textarea, 아니면 2줄 미리보기 */}
+            <div className="pr-modal__body">
+              {isPrEditing ? (
+                <>
+                  <textarea
+                    className="pr-modal__body-textarea"
+                    value={prBody}
+                    onChange={(e) => setPrBody(e.target.value)}
+                    rows={10}
+                    placeholder="PR 설명을 입력하세요"
+                  />
+                  {isBodyDirty && (
+                    <div className="pr-modal__field-actions">
+                      <button type="button" className="pr-modal__more" onClick={handleResetPrBody}>
+                        설명 초기화
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {prBodyPreview.map((line, i) => (
+                    <div key={i} className="pr-modal__body-line">{line}</div>
+                  ))}
+                  {prBodyRestCount > 0 && (
+                    <span className="pr-modal__rest">…외 {prBodyRestCount}줄</span>
+                  )}
+                </>
               )}
             </div>
 
             <p className="pr-modal__hint">
-              내용은 분석 결과로 자동 생성되며, 생성 후 GitHub에서 수정할 수 있습니다.
+              내용은 분석 결과로 자동 생성됩니다. 필요하면 수정한 뒤 생성하세요.
             </p>
 
             {prError && <div className="ui-banner ui-banner--error">{prError}</div>}
           </div>
-          </Modal>
+        </Modal>
       )}
 
       {showScrollTop && (
