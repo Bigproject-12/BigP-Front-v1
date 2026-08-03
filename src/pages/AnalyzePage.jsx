@@ -33,28 +33,6 @@ function parseJsonArray(str) {
   }
 }
 
-async function runAnalysis({ repoId, language, code,filePath,branch,onStarted }) {
-  const { analysis_id } = await api.post('/api/analysis', {
-    code_content: code,
-    // 'custom'인 경우 repoId를 null로 전송
-    repoId: repoId === 'custom' || !repoId ? null : Number(repoId),
-    language,
-    prompt: null,
-    filePath: filePath || null,
-    branch: branch || null,
-  });
-
-  if (onStarted) onStarted(analysis_id);
-
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < 120000) {
-    const data = await api.get(`/api/analysis/${analysis_id}`);
-    if (data.status !== 'ANALYZING') return data;
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-  }
-  throw new Error('코드 분석이 비정상적으로 오래걸립니다. 잠시 후 다시 시도해주세요.');
-}
-
 export default function AnalyzePage() {
   const { params, navigate } = useRouter();
   const { user } = useAuth();
@@ -69,8 +47,6 @@ export default function AnalyzePage() {
   const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
 
-
-  
   // 선택된 확장자 필터 상태
   const [selectedExt, setSelectedExt] = useState('');
 
@@ -79,8 +55,11 @@ export default function AnalyzePage() {
   const [issues, setIssues] = useState([]);
   const [issueCount, setIssueCount] = useState(null);
   const [improvableRatio, setImprovableRatio] = useState(null);
+  
   const [analyzing, setAnalyzing] = useState(false);
+  const [progress, setProgress] = useState(0); // 👈 진척도(% 단위) 상태 추가
   const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
+  
   const [pushAnalysisId, setPushAnalysisId] = useState(null);
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
@@ -93,8 +72,10 @@ export default function AnalyzePage() {
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  
   const fileInputRef = useRef(null);
   const originalTextareaRef = useRef(null);
+  
   const originalLineCount = useMemo(
     () => (originalCode ? originalCode.split('\n').length : 1),
     [originalCode]
@@ -104,7 +85,7 @@ export default function AnalyzePage() {
     [improvedCode]
   );
 
-  // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
+  // 레포/브랜치/파일을 바꿀 때 이전 분석 결과 초기화
   const resetAnalysisOutput = () => {
     setAnalyzed(false);
     setCompareMode(false);
@@ -126,14 +107,12 @@ export default function AnalyzePage() {
     setPrBaseBranch('');
   };
 
-  // 페이지가 일정 이상 스크롤되면 맨 위로 버튼 노출
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // 내부 스크롤바 대신 페이지 스크롤을 쓰도록 입력창 높이를 내용에 맞춰 늘림
   useEffect(() => {
     const el = originalTextareaRef.current;
     if (!el) return;
@@ -141,7 +120,6 @@ export default function AnalyzePage() {
     el.style.height = `${el.scrollHeight}px`;
   }, [originalCode]);
 
-  // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null);
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState('');
@@ -151,18 +129,14 @@ export default function AnalyzePage() {
   const [recommending, setRecommending] = useState(false);
   const [promptError, setPromptError] = useState('');
   const [promptCopied, setPromptCopied] = useState(false);
-
   const [promptElapsed, setPromptElapsed] = useState(null);
 
-  // --- 원본 프롬프트 재구성을 위한 상태 추가 ---
   const [originalPrompt, setOriginalPrompt] = useState('');
   const [reconstructing, setReconstructing] = useState(false);
   const [reconstructError, setReconstructError] = useState('');
   const [reconstructResult, setReconstructResult] = useState(null);
   const [reconstructCopied, setReconstructCopied] = useState(false);
-  // -------------------------------------------
 
-  // 저장소에 있는 모든 파일들의 확장자 목록을 중복 없이 추출
   const availableExtensions = useMemo(() => {
     const exts = new Set();
     files.forEach((path) => {
@@ -177,27 +151,19 @@ export default function AnalyzePage() {
     return Array.from(exts).sort();
   }, [files]);
 
-  // 확장자 필터가 적용된 상태로 폴더별 그룹화 수행
   const groupedFiles = useMemo(() => {
     return files.reduce((acc, path) => {
       const parts = path.split('/');
       const fileName = parts[parts.length - 1];
       const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
 
-      // 선택한 확장자와 일치하지 않으면 제외
       if (selectedExt && ext !== selectedExt) {
         return acc;
       }
 
       const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '루트 디렉토리';
-      
       if (!acc[folder]) acc[folder] = [];
-      
-      acc[folder].push({ 
-        path: path, 
-        name: fileName 
-      });
-      
+      acc[folder].push({ path: path, name: fileName });
       return acc;
     }, {});
   }, [files, selectedExt]);
@@ -213,7 +179,6 @@ export default function AnalyzePage() {
     fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
 
-  // Push 성공 후 PR 대상(base) 브랜치 선택지 불러오기
   useEffect(() => {
     if (!pushed || !repoId) return;
     fetchRepoBranches(Number(repoId))
@@ -247,33 +212,27 @@ export default function AnalyzePage() {
       .catch(() => {});
   }, [filePath, branch, selectedRepo?.fullName]);
 
-  // 히스토리에서 analysisId를 들고 들어왔을 때 기존 분석 결과 불러오기
   useEffect(() => {
     const analysisId = params.get('analysisId');
     if (!analysisId) return;
 
     setAnalyzing(true);
-    setCompareMode(true); // 비교 모드 활성화
+    setCompareMode(true);
 
     api.get(`/api/analysis/${analysisId}`)
       .then((data) => {
         if (!data) return;
-
-        // 🚨 새로고침 등으로 repoId가 비어있을 경우, 백엔드 데이터로 복구
         if (data.repoId) {
           setRepoId(String(data.repoId));
         }
         
-        // 백엔드 DTO 필드명(originCode, modifiedCode)에 맞춤[cite: 4]
         setOriginalCode(data.originCode || '');
         setImprovedCode(data.modifiedCode || '');
         
-        // 파일 경로 설정
         if (data.filePath) {
           setFileNameOverride(data.filePath.split('/').pop());
         }
 
-        // 이슈 파싱 (secuResult, inefficiencyResult)[cite: 4]
         const vulnerabilities = parseJsonArray(data.secuResult);
         const complexityDetails = parseJsonArray(data.inefficiencyResult);
         const duplicates = parseJsonArray(data.duplicateResult);
@@ -351,18 +310,15 @@ export default function AnalyzePage() {
     reader.readAsText(file);
   };
 
-  // 👈 상단 탭 클릭 시 히스토리(RepoDetailPage)로 돌아가는 기능 추가
   const handleTopTabChange = (key) => {
     if (key === 'history') {
-      // 💡 코드가 입력되어 있거나, 이미 분석을 돌린 상태라면 경고창을 띄움
       if (originalCode.trim() || analyzed) {
         const confirmLeave = window.confirm(
           "화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n히스토리로 이동하시겠습니까?"
         );
-        if (!confirmLeave) return; // 사용자가 '취소'를 누르면 탭 이동을 막음
+        if (!confirmLeave) return;
       }
 
-      // '확인'을 누르거나 초기 상태일 때만 이동 허용
       if (repoId && repoId !== 'custom') {
         navigate(`/?page=repo-detail&repoId=${repoId}`);
       } else {
@@ -371,20 +327,64 @@ export default function AnalyzePage() {
     }
   };
 
+  // 👈 진척도 계산 로직이 포함된 분석 실행 함수
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
-    if (!repoId) { setDetectError('먼저 분석할 Repository를 선택하거나 직접 입력을 선택해 주세요'); return; }
+    if (!repoId) { 
+      setDetectError('먼저 분석할 Repository를 선택하거나 직접 입력을 선택해 주세요'); 
+      return; 
+    }
+
     setAnalyzing(true);
+    setProgress(5); // 시작 시 초기 진척도 설정
     setCompareMode(false);
     setAiDetection(null);
     setDetectError('');
     setPromptResult(null);
     setPushed(false);
     setPushError('');
+
+    let timer = null;
+    const startedAt = Date.now();
+
     try {
+      // 가상 진척도 타이머 (최대 120초 기준 백분율 증가)
+      timer = setInterval(() => {
+        const elapsed = Date.now() - startedAt;
+        const calculated = Math.min(Math.floor((elapsed / 120000) * 95), 95);
+        setProgress((prev) => (calculated > prev ? calculated : prev));
+      }, 1000);
+
       const ext = activeFileName.includes('.') ? activeFileName.split('.').pop().toUpperCase() : 'JAVA';
-      const data = await runAnalysis({ repoId, language: ext, code: originalCode, filePath: filePath || fileNameOverride || null, branch: branch || null, onStarted: setCurrentAnalysisId });
-      if (data.status === 'CANCELED') { setDetectError('분석이 취소되었습니다.'); return; }
+      
+      const { analysis_id } = await api.post('/api/analysis', {
+        code_content: originalCode,
+        repoId: repoId === 'custom' || !repoId ? null : Number(repoId),
+        language: ext,
+        prompt: null,
+        filePath: filePath || fileNameOverride || null,
+        branch: branch || null,
+      });
+
+      setCurrentAnalysisId(analysis_id);
+
+      let data = null;
+      while (Date.now() - startedAt < 120000) {
+        data = await api.get(`/api/analysis/${analysis_id}`);
+        if (data.status !== 'ANALYZING') break;
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+
+      clearInterval(timer);
+      setProgress(100);
+
+      if (!data || data.status === 'ANALYZING') {
+        throw new Error('코드 분석이 비정상적으로 오래걸립니다. 잠시 후 다시 시도해주세요.');
+      }
+      if (data.status === 'CANCELED') { 
+        setDetectError('분석이 취소되었습니다.'); 
+        return; 
+      }
       if (data.status === 'FAILED') throw new Error('분석에 실패했습니다.');
 
       const vulnerabilities = parseJsonArray(data.secuResult);
@@ -437,7 +437,9 @@ export default function AnalyzePage() {
     } catch (e) {
       setDetectError(e.message || '분석 중 오류가 발생했습니다.');
     } finally {
+      if (timer) clearInterval(timer);
       setAnalyzing(false);
+      setProgress(0);
       setCurrentAnalysisId(null);
     }
   };
@@ -447,7 +449,11 @@ export default function AnalyzePage() {
     try {
       await api.patch(`/api/analysis/${currentAnalysisId}`);
     } catch {
-      /* 폴링 쪽에서 최종 상태를 다시 확인하니 여기선 무시해도 됨 */
+      // 무시
+    } finally {
+      setAnalyzing(false);
+      setProgress(0);
+      setCurrentAnalysisId(null);
     }
   };
 
@@ -506,58 +512,6 @@ export default function AnalyzePage() {
     }
   };
 
-  const handleRecommendPrompt = async () => {
-    if (!originalCode.trim()) return;
-    setRecommending(true);
-    setPromptError('');
-    setPromptResult(null);
-    setPromptCopied(false);
-    setPromptElapsed(null);
-    try {
-      const { result, elapsedMs } = await recommendPrompt(originalCode, userPrompt);
-      setPromptResult(result);
-      setPromptElapsed(elapsedMs);
-    } catch (e) {
-      setPromptError(e.message || '프롬프트 추천 중 오류가 발생했습니다.');
-    } finally {
-      setRecommending(false);
-    }
-  };
-
-  const handleReconstructPrompt = async () => {
-    if (!originalPrompt.trim() || !pushAnalysisId) return;
-    setReconstructing(true);
-    setReconstructError('');
-    setReconstructResult(null);
-    setReconstructCopied(false);
-    try {
-      const result = await api.post(`/api/analysis/${pushAnalysisId}/reconstruct-prompt`, {
-        originalPrompt: originalPrompt,
-      });
-      setReconstructResult(result);
-    } catch (e) {
-      setReconstructError(e.message || '프롬프트 재구성 중 오류가 발생했습니다.');
-    } finally {
-      setReconstructing(false);
-    }
-  };
-
-  const handleCopyReconstructedPrompt = () => {
-    const text = reconstructResult?.reconstructedPrompt ?? '';
-    navigator.clipboard.writeText(text).then(() => {
-      setReconstructCopied(true);
-      setTimeout(() => setReconstructCopied(false), 2000);
-    });
-  };
-
-  const handleCopyPrompt = () => {
-    const text = promptResult?.[promptTab]?.prompt ?? '';
-    navigator.clipboard.writeText(text).then(() => {
-      setPromptCopied(true);
-      setTimeout(() => setPromptCopied(false), 2000);
-    });
-  };
-
   const TAB_ITEMS = [
     { key: 'analyze', label: '코드 분석' },
     { key: 'ai', label: '분석 결과 및 설명' },
@@ -574,15 +528,12 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* 👈 여기에 상단 탭 렌더링 (현재 위치는 'analyze'로 활성화) */}
       {repoId && repoId !== 'custom' && (
         <Tabs items={TOP_TABS} active="analyze" onChange={handleTopTabChange} />
       )}
 
-      {/* 파일 선택 툴바 — 탭 공통 영역 */}
-<Card>
+      <Card>
         <div className="analyze-toolbar">
-
           {hasNoData ? (
             <div style={{display: 'flex', alignItems: 'center', gap:'12px', flex:1}}>
               <span className="text-body-sm" style={{color: 'var(--text-muted)'}}>
@@ -594,7 +545,6 @@ export default function AnalyzePage() {
             </div>
           ) : (
             <>
-              {/* 1. Repository 선택 (정상적으로 repos 목록 출력) */}
               <div className="analyze-toolbar__field">
                 <label>Repository</label>
                 <Select
@@ -611,94 +561,85 @@ export default function AnalyzePage() {
                   disabled={analyzing}
                 >
                   <option value="">Repository 선택</option>
-                  {/*<option value="custom">✍️ 코드 직접 입력</option>*/}
                   {repos.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </Select>
               </div>
 
-          {/* 2. 브랜치 선택 */}
-          <div className="analyze-toolbar__field">
-            <label>Branch</label>
-            <Select
-              value={branch}
-              onChange={(e)=>{
-                setBranch(e.target.value);
-                setFilePath('');
-                setFileNameOverride('');
-                setSelectedExt('');
-                setOriginalCode('');
-                resetAnalysisOutput();
-              }}
-              disabled={!repoId || analyzing}
-              //disabled={!repoId || repoId === 'custom'}// 👈 'custom'일 때 비활성화
-            >
-              <option value="">브랜치 선택</option>
-              {branches.map((b)=>(
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </Select>
-          </div>
-
-          {/* 3. 확장자 필터 선택 (파일 선택보다 앞으로 이동) */}
-          <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
-            <label>확장자 필터</label>
-            <Select
-              value={selectedExt}
-              onChange={(e) => {
-                const nextExt = e.target.value;
-                setSelectedExt(nextExt);
-
-                // 이미 선택된 파일이 새 필터에서 탈락할 때만 초기화
-                if (filePath && nextExt) {
-                  const fileName = filePath.split('/').pop();
-                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
-                  if (ext !== nextExt) {
+              <div className="analyze-toolbar__field">
+                <label>Branch</label>
+                <Select
+                  value={branch}
+                  onChange={(e)=>{
+                    setBranch(e.target.value);
                     setFilePath('');
+                    setFileNameOverride('');
+                    setSelectedExt('');
                     setOriginalCode('');
                     resetAnalysisOutput();
-                  }
-                }
-              }}
-              disabled={!branch || analyzing}
-            >
-              <option value="">모든 확장자</option>
-              {availableExtensions.map((ext) => (
-                <option key={ext} value={ext}>*.{ext}</option>
-              ))}
-            </Select>
-          </div>
-
-          {/* 4. 폴더/파일 선택 (확장자 필터 뒤로 이동) */}
-          <div className="analyze-toolbar__field">
-            <label>폴더 / 파일</label>
-            <Select
-              value={filePath || (fileNameOverride ? 'custom' : '')}
-              onChange={(e) => {
-                setFilePath(e.target.value);
-                setFileNameOverride('');
-                setCompareMode(false);
-                setAnalyzed(false);
-              }}
-              disabled={!branch || analyzing}
-            >
-              <option value="">파일 선택</option>
-              {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
-
-              {/* groupedFiles는 selectedExt가 이미 반영된 결과 */}
-              {Object.entries(groupedFiles).map(([folder, fileList]) => (
-                <optgroup key={folder} label={`📂 ${folder}`}>
-                  {fileList.map((file) => (
-                    <option key={file.path} value={file.path}>
-                      📄 {file.name}
-                    </option>
+                  }}
+                  disabled={!repoId || analyzing}
+                >
+                  <option value="">브랜치 선택</option>
+                  {branches.map((b)=>(
+                    <option key={b} value={b}>{b}</option>
                   ))}
-                </optgroup>
-              ))}
-            </Select>
-          </div>
-          </>
+                </Select>
+              </div>
+
+              <div className="analyze-toolbar__field" style={{ maxWidth: '140px' }}>
+                <label>확장자 필터</label>
+                <Select
+                  value={selectedExt}
+                  onChange={(e) => {
+                    const nextExt = e.target.value;
+                    setSelectedExt(nextExt);
+                    if (filePath && nextExt) {
+                      const fileName = filePath.split('/').pop();
+                      const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+                      if (ext !== nextExt) {
+                        setFilePath('');
+                        setOriginalCode('');
+                        resetAnalysisOutput();
+                      }
+                    }
+                  }}
+                  disabled={!branch || analyzing}
+                >
+                  <option value="">모든 확장자</option>
+                  {availableExtensions.map((ext) => (
+                    <option key={ext} value={ext}>*.{ext}</option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="analyze-toolbar__field">
+                <label>폴더 / 파일</label>
+                <Select
+                  value={filePath || (fileNameOverride ? 'custom' : '')}
+                  onChange={(e) => {
+                    setFilePath(e.target.value);
+                    setFileNameOverride('');
+                    setCompareMode(false);
+                    setAnalyzed(false);
+                  }}
+                  disabled={!branch || analyzing}
+                >
+                  <option value="">파일 선택</option>
+                  {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
+                  {Object.entries(groupedFiles).map(([folder, fileList]) => (
+                    <optgroup key={folder} label={`📂 ${folder}`}>
+                      {fileList.map((file) => (
+                        <option key={file.path} value={file.path}>
+                          📄 {file.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+              </div>
+            </>
           )}
 
           <div className="analyze-toolbar__spacer" />
@@ -721,7 +662,6 @@ export default function AnalyzePage() {
         </div>
       )}
 
-      {/* 메인 탭 */}
       <Tabs items={TAB_ITEMS} active={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'analyze' && (
@@ -730,12 +670,18 @@ export default function AnalyzePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
               {!pushed && (
                 analyzing ? (
-                  <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Button variant="danger" onClick={handleStopAnalysis}>
                       분석 중지
                     </Button>
-                    <span className="ui-spinner" aria-hidden="true" />
-                  </>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="ui-spinner" aria-hidden="true" />
+                      {/* 👈 퍼센트 진척도 텍스트 출력 영역 */}
+                      <span className="text-body-sm" style={{ fontWeight: 600, color: 'var(--ps-primary)' }}>
+                        코드 분석 중... {progress}%
+                      </span>
+                    </div>
+                  </div>
                 ) : (
                   <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
                     분석하기
@@ -860,7 +806,6 @@ export default function AnalyzePage() {
               <Icon name="close" size={16} /> {detectError}
             </div>
           )}
-
         </>
       )}
 
@@ -899,72 +844,6 @@ export default function AnalyzePage() {
                 {detecting ? 'AI 감지 중…' : 'AI 생성 코드 감지'}
               </Button>
             </div>
-          )}
-
-          {aiDetection && (
-            <Card className="ai-detect-card">
-              {aiDetection.confidence !== null && aiDetection.confidence >= 70 && (
-                <div className="ui-banner ui-banner--error confidence-warning">
-                  <Icon name="bug" size={16} /> AI가 작성했을 가능성이 높은 코드입니다.
-                </div>
-              )}
-
-            {aiDetection.reasons.length > 0 && (
-              <ul className="ai-detect-card__reasons">
-                {aiDetection.reasons.map((r, i) => (
-                  <li key={i} className="text-body-sm">{r}</li>
-                ))}
-              </ul>
-          )}
-
-              {aiDetection.isAiGenerated && pushAnalysisId && (
-                <div
-                  className="prompt-section"
-                  style={!(aiDetection.confidence !== null && aiDetection.confidence >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
-                >
-                  <div className="prompt-section__header">
-                    <Icon name="edit" size={16} />
-                    <h3 className="text-heading-md">원본 프롬프트 재구성</h3>
-                  </div>
-                  <p className="text-body-sm prompt-section__desc">
-                    이 코드를 생성할 때 실제로 사용했던 프롬프트를 입력하면, 발견된 문제가 재발하지 않도록 프롬프트를 개선해드립니다.
-                  </p>
-                  <div className="prompt-section__input-row">
-                    <textarea
-                      className="prompt-section__textarea"
-                      placeholder="이 코드를 생성할 때 AI에게 실제로 입력했던 프롬프트를 붙여넣어 주세요."
-                      value={originalPrompt}
-                      onChange={(e) => setOriginalPrompt(e.target.value)}
-                      rows={2}
-                    />
-                    <Button variant="primary" onClick={handleReconstructPrompt} disabled={reconstructing || !originalPrompt.trim()}>
-                      {reconstructing ? '재구성 중…' : '프롬프트 재구성받기'}
-                    </Button>
-                  </div>
-
-                  {reconstructError && <div className="ui-banner ui-banner--error">{reconstructError}</div>}
-
-                  {reconstructResult && (
-                    <div className="prompt-result">
-                      <div className="prompt-result__body">
-                        <div className="prompt-result__header">
-                          <span className="text-caption-md prompt-result__label">
-                            발견된 문제가 반영된 개선된 프롬프트입니다.
-                          </span>
-                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
-                            {reconstructCopied ? '복사됨' : '복사'}
-                          </Button>
-                        </div>
-                        <pre className="prompt-result__text">{reconstructResult.reconstructedPrompt}</pre>
-                        <p className="text-caption-md prompt-result__explanation">
-                          <strong>재구성 이유</strong><br />{reconstructResult.explanation}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
           )}
         </>
       )}
