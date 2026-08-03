@@ -11,7 +11,6 @@ import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';
@@ -93,7 +92,54 @@ export default function AnalyzePage() {
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const fileInputRef = useRef(null);
+  const originalTextareaRef = useRef(null);
+  const originalLineCount = useMemo(
+    () => (originalCode ? originalCode.split('\n').length : 1),
+    [originalCode]
+  );
+  const improvedLineCount = useMemo(
+    () => (improvedCode ? improvedCode.split('\n').length : 1),
+    [improvedCode]
+  );
+
+  // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
+  const resetAnalysisOutput = () => {
+    setAnalyzed(false);
+    setCompareMode(false);
+    setImprovedCode('');
+    setIssues([]);
+    setIssueCount(null);
+    setImprovableRatio(null);
+    setAiDetection(null);
+    setDetectError('');
+    setPromptResult(null);
+    setCurrentAnalysisId(null);
+    setPushAnalysisId(null);
+    setPushed(false);
+    setPushError('');
+    setCreatingPr(false);
+    setPrError('');
+    setPrUrl(null);
+    setPrBranches([]);
+    setPrBaseBranch('');
+  };
+
+  // 페이지가 일정 이상 스크롤되면 맨 위로 버튼 노출
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // 내부 스크롤바 대신 페이지 스크롤을 쓰도록 입력창 높이를 내용에 맞춰 늘림
+  useEffect(() => {
+    const el = originalTextareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [originalCode]);
 
   // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null);
@@ -195,11 +241,7 @@ export default function AnalyzePage() {
   useEffect(() => {
     if (!filePath || !selectedRepo || !branch) return;
     setFileNameOverride('');
-    setAnalyzed(false);
-    setCompareMode(false);
-    setAiDetection(null);
-    setDetectError('');
-    setPromptResult(null);
+    resetAnalysisOutput();
     fetchFileContent(selectedRepo.fullName, filePath, branch)
       .then((content) => { setOriginalCode(content); })
       .catch(() => {});
@@ -234,6 +276,7 @@ export default function AnalyzePage() {
         // 이슈 파싱 (secuResult, inefficiencyResult)[cite: 4]
         const vulnerabilities = parseJsonArray(data.secuResult);
         const complexityDetails = parseJsonArray(data.inefficiencyResult);
+        const duplicates = parseJsonArray(data.duplicateResult);
 
         setIssues([
           ...vulnerabilities.map((v) => ({
@@ -252,6 +295,18 @@ export default function AnalyzePage() {
             ruleId: null,
             functionName: c.function_name ?? null,
           })),
+          ...duplicates.map((d) => {
+            const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
+            return {
+              category: 'DUPLICATE',
+              line: null,
+              title: `기존 함수와 재사용 가능${similarityPct !== null ? ` (유사도 ${similarityPct}%)` : ''}`,
+              message: `${d.file_path}의 ${d.function_name}() 함수와 거의 동일한 로직입니다.`,
+              codeSnippet: d.code ?? null,
+              ruleId: null,
+              functionName: null,
+            };
+          }),
         ]);
         
         setIssueCount(data.totalIssues ?? 0);
@@ -291,11 +346,7 @@ export default function AnalyzePage() {
       setOriginalCode(String(reader.result || ''));
       setFileNameOverride(file.name);
       setFilePath('');
-      setCompareMode(false);
-      setAnalyzed(false);
-      setAiDetection(null);
-      setDetectError('');
-      setPromptResult(null);
+      resetAnalysisOutput();
     };
     reader.readAsText(file);
   };
@@ -338,6 +389,7 @@ export default function AnalyzePage() {
 
       const vulnerabilities = parseJsonArray(data.secuResult);
       const complexityDetails = parseJsonArray(data.inefficiencyResult);
+      const duplicates = parseJsonArray(data.duplicateResult);
 
       setImprovedCode(data.modifiedCode || originalCode);
       setIssues([
@@ -357,6 +409,17 @@ export default function AnalyzePage() {
           ruleId: null,
           functionName: c.function_name ?? null,
         })),
+        ...duplicates.map((d) => {
+          const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
+          return {
+            category: 'DUPLICATE',
+            line: null,
+            title: `기존 함수와 재사용 가능${similarityPct !== null ? ` (유사도 ${similarityPct}%)` : ''}`,
+            message: `${d.file_path}의 ${d.function_name}() 함수와 거의 동일한 로직입니다.`,
+            ruleId: null,
+            functionName: null,
+          };
+        }),
       ]);
       setIssueCount(data.totalIssues ?? 0);
       setImprovableRatio(
@@ -538,13 +601,12 @@ export default function AnalyzePage() {
                   value={repoId}
                   onChange={(e) => {
                     setRepoId(e.target.value);
-                    setBranch(''); 
+                    setBranch('');
                     setFilePath('');
                     setFileNameOverride('');
                     setSelectedExt('');
-                    setCompareMode(false);
-                    setAnalyzed(false);
-                    if (e.target.value === 'custom') setOriginalCode('');//직접 입력
+                    setOriginalCode('');
+                    resetAnalysisOutput();
                   }}
                   disabled={analyzing}
                 >
@@ -563,11 +625,11 @@ export default function AnalyzePage() {
               value={branch}
               onChange={(e)=>{
                 setBranch(e.target.value);
-                setFilePath(''); 
+                setFilePath('');
                 setFileNameOverride('');
                 setSelectedExt('');
-                setCompareMode(false);
-                setAnalyzed(false);
+                setOriginalCode('');
+                resetAnalysisOutput();
               }}
               disabled={!repoId || analyzing}
               //disabled={!repoId || repoId === 'custom'}// 👈 'custom'일 때 비활성화
@@ -595,7 +657,7 @@ export default function AnalyzePage() {
                   if (ext !== nextExt) {
                     setFilePath('');
                     setOriginalCode('');
-                    setAnalyzed(false);
+                    resetAnalysisOutput();
                   }
                 }
               }}
@@ -738,47 +800,59 @@ export default function AnalyzePage() {
               <DiffViewer original={originalCode} improved={improvedCode} />
             </Card>
           ) : (
-            <div className="analyze-panes">
-              <Card className="code-pane">
-                <div className="code-pane__header">
-                  <h2 className="text-heading-md">원본 소스코드</h2>
-                  {activeFileName && <span className="text-caption-md">{activeFileName}</span>}
-                </div>
-                <div className="code-pane__body">
-                  <textarea
-                    className="code-textarea"
-                    placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
-                    style={{ resize: 'none' }}
-                    value={originalCode}
-                    onChange={(e) => {
-                      setOriginalCode(e.target.value);
-                      setAnalyzed(false);
-                      setCompareMode(false);
-                    }}
-                    spellCheck={false}
-                    readOnly={compareMode}
-                  />
-                </div>
-              </Card>
-
-              <Card className="code-pane">
-                <div className="code-pane__header">
-                  <h2 className="text-heading-md">개선 코드</h2>
-                 {analyzed && improvableRatio !== null && (
-                  <Badge variant="neutral">개선 가능률 {improvableRatio.toFixed(1)}%</Badge>
-                  )}
-                </div>
-                <div className="code-pane__body">
-                  {improvedCode ? (
-                    <pre className="code-view">{improvedCode}</pre>
-                  ) : (
-                    <div className="code-view code-view--empty">
-                      {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
+            <Card className="diff-card">
+              <div className="diff-viewer">
+                <div className="diff-pane diff-pane--left">
+                  <div className="diff-pane__label">
+                    원본{activeFileName ? ` · ${activeFileName}` : ''}
+                  </div>
+                  <div className="diff-pane__code">
+                    <div className="code-editor">
+                      <div className="code-editor__gutter">
+                        {Array.from({ length: originalLineCount }, (_, i) => (
+                          <div key={i + 1}>{i + 1}</div>
+                        ))}
+                      </div>
+                      <textarea
+                        ref={originalTextareaRef}
+                        className="code-textarea"
+                        placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
+                        value={originalCode}
+                        onChange={(e) => {
+                          setOriginalCode(e.target.value);
+                          setAnalyzed(false);
+                          setCompareMode(false);
+                        }}
+                        spellCheck={false}
+                        readOnly={compareMode}
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
-              </Card>
-            </div>
+
+                <div className="diff-pane">
+                  <div className="diff-pane__label">
+                    개선{analyzed && improvableRatio !== null ? ` · 개선 가능률 ${improvableRatio.toFixed(1)}%` : ''}
+                  </div>
+                  <div className="diff-pane__code">
+                    {improvedCode ? (
+                      <div className="code-editor">
+                        <div className="code-editor__gutter">
+                          {Array.from({ length: improvedLineCount }, (_, i) => (
+                            <div key={i + 1}>{i + 1}</div>
+                          ))}
+                        </div>
+                        <pre className="code-view">{improvedCode}</pre>
+                      </div>
+                    ) : (
+                      <div className="code-view code-view--empty">
+                        {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
           )}
 
           {detectError && (
@@ -893,6 +967,17 @@ export default function AnalyzePage() {
             </Card>
           )}
         </>
+      )}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top-btn"
+          aria-label="맨 위로 이동"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Icon name="arrowUp" size={18} />
+        </button>
       )}
     </div>
   );

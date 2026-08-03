@@ -228,7 +228,7 @@
 .ui-stat__value {
   font-family: var(--font-display);
   font-size: 32px;
-  font-weight: 300;
+  font-weight: 600;
   color: var(--text-primary);
   line-height: 1.15;
 }
