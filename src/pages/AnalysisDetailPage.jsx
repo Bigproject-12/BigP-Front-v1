@@ -444,7 +444,7 @@ export default function AnalysisDetailPage() {
                           <span className="text-caption-md prompt-result__label">
                             발견된 문제가 반영된 개선된 프롬프트입니다.
                           </span>
-                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
+                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'copy'} size={20} />} onClick={handleCopyReconstructedPrompt}>
                             {reconstructCopied ? '복사됨' : '복사'}
                           </Button>
                         </div>

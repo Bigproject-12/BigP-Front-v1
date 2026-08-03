@@ -6,7 +6,7 @@ import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
 import { fetchBranches, fetchRepoTree, fetchFileContent, fetchRepoBranches } from '../lib/github';
 
-import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
+import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
@@ -155,7 +155,6 @@ export default function AnalyzePage() {
 
   // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null);
-  const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
   const [promptResult, setPromptResult] = useState(null);
@@ -543,24 +542,6 @@ const handleCreatePr = async () => {
     }
   };
 
-  const handleDetectAi = async () => {
-    if (!originalCode.trim()) return;
-    setDetecting(true);
-    setDetectError('');
-    setAiDetection(null);
-    setPromptResult(null);
-    setPromptTab('improve');
-    setUserPrompt('');
-    try {
-      const { result } = await detectAiGeneratedCode(originalCode);
-      setAiDetection(result);
-    } catch (e) {
-      setDetectError(e.message || 'AI 감지 중 오류가 발생했습니다.');
-    } finally {
-      setDetecting(false);
-    }
-  };
-
   const handleRecommendPrompt = async () => {
     if (!originalCode.trim()) return;
     setRecommending(true);
@@ -927,16 +908,13 @@ const handleCreatePr = async () => {
             </div>
           )}
 
-          {!aiDetection && !detecting && !detectError && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-md)' }}>
-              <Card className="ai-empty">
-                <Icon name="spark" size={32} />
-                <p className="text-body-sm">AI 생성 코드 감지 버튼을 눌러 분석을 시작하세요.</p>
-              </Card>
-              <Button variant="primary" onClick={handleDetectAi} disabled={detecting || !originalCode.trim()}>
-                {detecting ? 'AI 감지 중…' : 'AI 생성 코드 감지'}
-              </Button>
-            </div>
+          {!aiDetection && !detectError && (
+            <Card className="ai-empty">
+              <Icon name="spark" size={32} />
+              <p className="text-body-sm">
+                {analyzed ? 'AI 감지 정보가 없습니다.' : '코드 분석 탭에서 분석하기를 실행하면 AI 감지 결과가 표시됩니다.'}
+              </p>
+            </Card>
           )}
 
           {aiDetection && (
@@ -989,7 +967,7 @@ const handleCreatePr = async () => {
                           <span className="text-caption-md prompt-result__label">
                             발견된 문제가 반영된 개선된 프롬프트입니다.
                           </span>
-                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
+                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'copy'} size={20} />} onClick={handleCopyReconstructedPrompt}>
                             {reconstructCopied ? '복사됨' : '복사'}
                           </Button>
                         </div>
