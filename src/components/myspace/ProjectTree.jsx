@@ -69,7 +69,7 @@ function TreeNode({ node, depth, expanded, toggle }) {
         <Icon name="chevronRight" size={13} className={`ptree-chevron ${isOpen ? 'ptree-chevron--open' : ''}`} />
         <Icon name="folder" size={14} className="ptree-row__icon" filled={isOpen} />
         <span className="ptree-row__name">{node.name}</span>
-        {count > 0 && <span className="ptree-count">{count}</span>}
+        {count > 0 && <span className="ptree-badge ptree-badge--high">{count}건</span>}
       </button>
       {isOpen && (
         <div className="ptree-children">

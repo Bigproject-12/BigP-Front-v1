@@ -86,6 +86,7 @@
   flex-direction: column;
   gap: var(--space-md);
 }
+
 .chart-card__header {
   display: flex;
   align-items: center;

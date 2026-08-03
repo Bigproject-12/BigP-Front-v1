@@ -1,9 +1,12 @@
+import { forwardRef } from 'react';
 import './ui.css';
 
-export default function Card({ flat = false, className = '', children, ...rest }) {
+const Card = forwardRef(function Card({ flat = false, className = '', children, ...rest }, ref) {
   return (
-    <div className={`ui-card ${flat ? 'ui-card--flat' : ''} ${className}`} {...rest}>
+    <div ref={ref} className={`ui-card ${flat ? 'ui-card--flat' : ''} ${className}`} {...rest}>
       {children}
     </div>
   );
-}
+});
+
+export default Card;

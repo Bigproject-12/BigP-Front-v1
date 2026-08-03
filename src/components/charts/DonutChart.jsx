@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import './charts.css';
 
 const SIZE = 200;
-const STROKE = 26;
-const R = (SIZE - STROKE) / 2;
+const STROKE = 32; // 기존 26에서 ~20% 확대
+const HOVER_GROWTH = 4; // 호버 시 strokeWidth가 이만큼 더 두꺼워짐
+const HOVER_MARGIN = 4; // 호버로 두꺼워져도 SVG 밖으로 잘리지 않도록 남기는 여백
+const R = SIZE / 2 - STROKE / 2 - HOVER_GROWTH / 2 - HOVER_MARGIN;
 const C = 2 * Math.PI * R;
 const GAP = 3;
 
@@ -50,7 +52,7 @@ export default function DonutChart({ data, labelKey = 'type', valueKey = 'count'
               r={R}
               fill="none"
               stroke={s.color}
-              strokeWidth={hoverIndex === i ? STROKE + 4 : STROKE}
+              strokeWidth={hoverIndex === i ? STROKE + HOVER_GROWTH : STROKE}
               strokeDasharray={`${s.length} ${C - s.length}`}
               strokeDashoffset={-s.offset + GAP / 2}
               transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}

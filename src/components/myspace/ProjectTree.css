@@ -51,12 +51,6 @@
   transform: rotate(90deg);
 }
 
-.ptree-count {
-  flex: none;
-  font-size: var(--fs-caption-md);
-  color: var(--text-muted);
-}
-
 .ptree-badge {
   flex: none;
   padding: 1px 8px;
