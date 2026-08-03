@@ -13,7 +13,7 @@ import './AnalyzePage.css';
 import './RepoDetailPage.css';
 import { Tabs } from '../components/ui/Tabs';
 
-const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral' };
+const TYPE_VARIANT = { 보안: 'warning', 비효율: 'info', 이슈: 'neutral'};
 
 function parseJsonArray(str) {
   if (!str) return [];
@@ -216,6 +216,7 @@ export default function AnalysisDetailPage() {
 
   const vulnerabilities = parseJsonArray(data.secuResult);
   const complexityDetails = parseJsonArray(data.inefficiencyResult);
+  const duplicates = parseJsonArray(data.duplicateResult);
   
 // AnalysisResult 컴포넌트가 기대하는 형태로 변환
   const issues = [
@@ -235,6 +236,25 @@ export default function AnalysisDetailPage() {
       ruleId: null,                   // lizard는 rule_id 없음
       functionName: c.function_name ?? null,   // 비효율은 함수명으로 점프
     })),
+    ...complexityDetails.map((c) => ({
+    category: 'PERFORMANCE',
+    line: c.line ?? null,
+    title: `${c.function_name} 함수 복잡도 ${c.complexity_score}`,
+    message: c.message ?? '',
+    ruleId: null,
+    functionName: c.function_name ?? null,
+  })),
+    ...duplicates.map((d) => {
+      const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
+      return {
+        category: 'DUPLICATE',
+        line: null,                 // 매칭 대상이 다른 파일/함수라 현재 코드 내 위치 아님
+        title: `기존 함수와 재사용 가능${similarityPct !== null ? ` (유사도 ${similarityPct}%)` : ''}`,
+        message: `${d.file_path}의 ${d.function_name}() 함수와 거의 동일한 로직입니다.`, // d.code 제거
+        ruleId: null,
+        functionName: null,
+      };
+    }),
   ];
 
   const pathParts = data.filePath ? data.filePath.split('/') : [];
