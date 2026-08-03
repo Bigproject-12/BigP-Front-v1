@@ -575,22 +575,110 @@ body.dark .ai-banner__icon-wrapper,
   background-color: var(--surface-input, #1f2937) !important;
   box-shadow: none !important;
 }
+
+
+/* ===== PR 생성 모달 ===== */
 .pr-modal {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
+/* 브랜치 — 라벨 + 방향 박스 */
 .pr-modal__branch {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  background: var(--surface-soft);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.pr-modal__branch-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.pr-modal__branch-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--surface-input);
+}
+.pr-modal__branch-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-body);
+}
+.pr-modal__branch-arrow {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+}
+.pr-modal__branch-box select {
+  font-size: 13px;
+  padding: 4px 26px 4px 10px;
+  height: auto;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hairline-strong);
+  border-radius: 6px;
 }
 
-.pr-modal__branch-name {
-  font-family: var(--font-mono, monospace);
+/* 제목 */
+.pr-modal__title {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* 설명 — 모달 배경보다 한 단계 앞으로 */
+.pr-modal__body {
+  padding: 14px 16px;
+  border: 1px solid var(--border-hairline);
+  border-radius: 10px;
+  background: var(--surface-input);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-body);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.pr-modal__body-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 더보기/접기 */
+.pr-modal__more {
+  margin-top: 4px;
+  padding: 0;
+  background: none;
+  border: none;
   font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pr-modal__more:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.pr-modal__hint {
+  margin: 2px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.ui-modal:has(.pr-modal) {
+  width: 640px;
+  max-width: 90vw;
 }
