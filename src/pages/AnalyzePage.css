@@ -584,46 +584,47 @@ body.dark .ai-banner__icon-wrapper,
 }
 
 
-/* ===== PR 생성 모달 ===== */
-.pr-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 브랜치 — 라벨 + 방향 박스 */
+/* PR 모달 — 병합 대상 (GitHub Compare 스타일) */
 .pr-modal__branch {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-hairline);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
-.pr-modal__branch-label {
-  font-size: 12px;
-  font-weight: 600;
+
+.pr-modal__branch-icon {
   color: var(--text-muted);
+  flex-shrink: 0;
 }
+
 .pr-modal__branch-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 12px;
-  border-radius: 8px;
-  background: var(--surface-input);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  background: var(--surface-soft);
 }
-.pr-modal__branch-name {
-  font-family: var(--font-mono);
+
+/* 'base:' 'compare:' 레이블 — 값보다 약하게 */
+.pr-modal__branch-key {
   font-size: 13px;
-  color: var(--text-body);
+  color: var(--text-muted);
 }
+
+/* 고정값(compare 브랜치명) — 코드처럼 보이게 */
+.pr-modal__branch-name {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .pr-modal__branch-arrow {
   color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1;
+  margin: 0 4px;
 }
 .pr-modal__branch-box select {
   font-size: 13px;
@@ -734,4 +735,58 @@ body.dark .ai-banner__icon-wrapper,
   margin-top: 4px;
   font-size: 0.8125rem;
   color: var(--text-muted);
+}
+/* 제목·설명을 묶는 편집 영역 — blur 감지 범위 */
+.pr-modal__editable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* 클릭으로 편집 진입 가능함을 hover로 암시 */
+.pr-modal__title--clickable,
+.pr-modal__body-preview {
+  cursor: text;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.pr-modal__title--clickable:hover,
+.pr-modal__body-preview:hover {
+  background: var(--surface-hover);
+}
+.pr-modal__title--clickable {
+  padding: 4px 8px;
+  margin-left: -8px; /* 패딩만큼 당겨서 원래 위치 유지 */
+}
+.pr-modal__body-preview {
+  margin: -4px;
+  padding: 4px;
+}
+
+/* ↺ 초기화 — 편집 버튼과 같은 자리, 같은 크기 */
+.pr-modal__reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pr-modal__reset:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+/* 수정 전에는 자리만 지키고 흐리게 */
+.pr-modal__reset:disabled {
+  color: var(--text-muted);
+  opacity: 0.4;
+  cursor: default;
 }
