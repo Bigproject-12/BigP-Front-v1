@@ -6,12 +6,13 @@ import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
 import { fetchBranches, fetchRepoTree, fetchFileContent, fetchRepoBranches } from '../lib/github';
 
-import { detectAiGeneratedCode, recommendPrompt } from '../lib/aiService';
+import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import Modal from '../components/ui/Modal'
 import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
@@ -88,12 +89,17 @@ export default function AnalyzePage() {
   const [creatingPr, setCreatingPr] = useState(false);
   const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState(null);
+  const [isPrModalOpen, setIsPrModalOpen] = useState(false);
+  const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
+  const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
+  const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 여부
   const [prBranches, setPrBranches] = useState([]);
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const fileInputRef = useRef(null);
+  const prDefaultsRef = useRef({ title: '', body: '' });
   const originalTextareaRef = useRef(null);
   const originalLineCount = useMemo(
     () => (originalCode ? originalCode.split('\n').length : 1),
@@ -103,6 +109,12 @@ export default function AnalyzePage() {
     () => (improvedCode ? improvedCode.split('\n').length : 1),
     [improvedCode]
   );
+  const prBodyLines = useMemo(                             // 설명을 줄 단위로 쪼개서 "앞 2줄 + …외 N건" 미리보기용 데이터
+    () => (prBody ? prBody.split('\n').filter((l) => l.trim() !== '') : []),
+    [prBody]
+  );
+  const prBodyPreview = prBodyLines.slice(0, 2);          // 접힘 상태에서 보여줄 2줄
+  const prBodyRestCount = Math.max(prBodyLines.length - 2, 0); // 숨겨진 줄 수
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
   const resetAnalysisOutput = () => {
@@ -143,7 +155,6 @@ export default function AnalyzePage() {
 
   // AI 감지 & 프롬프트 추천 상태
   const [aiDetection, setAiDetection] = useState(null);
-  const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
   const [promptResult, setPromptResult] = useState(null);
@@ -465,15 +476,58 @@ export default function AnalyzePage() {
       setPushing(false);
     }
   };
+// 분석 결과를 바탕으로 PR 제목/설명 기본값을 만든다
+  //    (추후 사용자 편집 기능을 붙이면 이 함수는 초기값 생성용으로만 남는다)
+  const buildPrDefaults = () => {
+    // 백엔드: filePath에서 마지막 '/' 뒤를 잘라내고, filePath가 null이면 "코드"
+    const fileName = filePath
+      ? filePath.substring(filePath.lastIndexOf('/') + 1)
+      : (activeFileName || '코드');
 
-  const handleCreatePr = async () => {
+    const countBy = (cat) => issues.filter((i) => i.category === cat).length;
+    const security = countBy('SECURITY');
+    const performance = countBy('PERFORMANCE');
+    const total = issueCount ?? issues.length;
+
+    const title = `GuardrAil: ${fileName} 코드 개선 (이슈 ${total}건)`;
+
+    const body =
+      `분석 결과: 총 ${total}건의 이슈 개선.\n\n` +
+      `- 파일: \`${filePath}\`\n` +
+      `- 보안 이슈: ${security}건\n` +
+      `- 비효율 이슈: ${performance}건\n\n` +
+      `분석 세부 내용은 분석 ID: ${pushAnalysisId}에서 확인 가능.`;
+
+    return { title, body };
+  };
+  // "Pull Request 생성" 버튼 → 기본값을 세팅한 뒤 모달을 연다
+  const openPrModal = () => {
+    const defaults = buildPrDefaults();
+    prDefaultsRef.current = defaults; // 초기화용 원본 보관
+    setPrTitle(defaults.title);
+    setPrBody(defaults.body);
+    setIsBodyExpanded(false); // 항상 접힌 상태로 시작
+    setPrError('');
+    setIsPrModalOpen(true);
+  };
+
+  // 사용자가 수정한 제목/설명을 자동 생성 원본으로 되돌린다
+  const handleResetPrBody = () => {
+    setPrBody(prDefaultsRef.current.body);
+  };
+const handleCreatePr = async () => {
     if (!pushAnalysisId) return;
     setCreatingPr(true);
     setPrError('');
     try {
-      const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, { baseBranch: prBaseBranch });
+      // 하드코딩 단계: title/body는 백엔드가 생성하므로 baseBranch만 보낸다
+      const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, {
+        baseBranch: prBaseBranch,
+      });
       setPrUrl(result.prUrl);
+      setIsPrModalOpen(false);   // 성공 시 모달 닫기
     } catch (e) {
+      // 실패 시엔 모달을 열어둔 채 에러 표시 (브랜치 선택값 보존)
       setPrError(e.message || 'PR 생성에 실패했습니다.');
     } finally {
       setCreatingPr(false);
@@ -485,24 +539,6 @@ export default function AnalyzePage() {
       navigate('?page=mypage#github-section');
     }else{
       window.location.hash='#/mypage#gihub-section';
-    }
-  };
-
-  const handleDetectAi = async () => {
-    if (!originalCode.trim()) return;
-    setDetecting(true);
-    setDetectError('');
-    setAiDetection(null);
-    setPromptResult(null);
-    setPromptTab('improve');
-    setUserPrompt('');
-    try {
-      const { result } = await detectAiGeneratedCode(originalCode);
-      setAiDetection(result);
-    } catch (e) {
-      setDetectError(e.message || 'AI 감지 중 오류가 발생했습니다.');
-    } finally {
-      setDetecting(false);
     }
   };
 
@@ -726,74 +762,57 @@ export default function AnalyzePage() {
 
       {activeTab === 'analyze' && (
         <>
-          <div className="analyze-toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
+    <div
+            className="analyze-toolbar"
+            style={{
+              justifyContent: 'flex-end',   // 모든 버튼을 오른쪽으로
+              alignItems: 'center',
+              minHeight: '40px',            // 버튼이 바뀌어도 높이 고정 → 레이아웃 시프트 방지
+              marginBottom: 'var(--space-md)',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-              {!pushed && (
-                analyzing ? (
-                  <>
-                    <Button variant="danger" onClick={handleStopAnalysis}>
-                      분석 중지
-                    </Button>
-                    <span className="ui-spinner" aria-hidden="true" />
-                  </>
-                ) : (
-                  <Button variant="primary" onClick={handleAnalyze} disabled={!originalCode.trim()}>
-                    분석하기
+              {/* 에러 메시지는 버튼 왼쪽에 나란히 */}
+              {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+
+              {/* 1) 분석 중 → 중지 버튼 + 스피너 */}
+              {analyzing ? (
+                <>
+                  <span className="ui-spinner" aria-hidden="true" />
+                  <Button variant="danger" onClick={handleStopAnalysis}>
+                    분석 중지
                   </Button>
-                )
+                </>
+              ) : prUrl ? (
+                /* 4) PR 생성 완료 → GitHub에서 확인 */
+                <Button
+                  variant="secondary"
+                  onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}
+                >
+                  GitHub에서 PR 확인
+                </Button>
+              ) : pushed ? (
+                /* 3) Push 완료 → PR 생성 */
+                <Button variant="primary" onClick={openPrModal}>
+                  Pull Request 생성
+                </Button>
+              ) : analyzed && pushAnalysisId && branch && filePath ? (
+                /* 2) 분석 완료 & GitHub 파일 → Push */
+                <Button variant="primary" onClick={handlepush} disabled={pushing}>
+                  {pushing ? '반영 중 …' : 'GitHub에 Push'}
+                </Button>
+              ) : (
+                /* 0) 기본 → 분석하기 */
+                <Button
+                  variant="primary"
+                  onClick={handleAnalyze}
+                  disabled={!originalCode.trim()}
+                >
+                  분석하기
+                </Button>
               )}
             </div>
-
-            {analyzed && pushAnalysisId && branch && filePath && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                  {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-                  <Button variant="primary" onClick={handlepush} disabled={pushing || pushed}>
-                    {pushed ? '반영 완료 ✓' : pushing ? '반영 중 …' : 'GitHub에 Push'}
-                  </Button>
-                </div>
-
-                {pushed && (
-                  prUrl ? (
-                    <Button variant="secondary" onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}>
-                      GitHub에서 PR 확인
-                    </Button>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-sm)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>base:</span>
-                        <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
-                          {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
-                          {prBranches.map((b) => (
-                            <option key={b.name} value={b.name}>
-                              {b.name}{b.isDefault ? ' (default)' : ''}
-                            </option>
-                          ))}
-                        </Select>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>←</span>
-                        <span className="text-body-sm" style={{ color: 'var(--text-muted)' }}>compare:</span>
-                        <span
-                          className="text-body-sm"
-                          style={{
-                            backgroundColor: 'var(--surface-soft)',
-                            border: '1px solid var(--border-hairline-strong)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '4px 10px',
-                          }}
-                        >
-                          {branch}
-                        </span>
-                      </div>
-                      <Button variant="primary" onClick={handleCreatePr} disabled={creatingPr || !prBaseBranch}>
-                        {creatingPr ? 'PR 생성 중…' : 'Pull Request 생성'}
-                      </Button>
-                      {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
+          </div>    
 
           {analyzed && improvedCode ? (
             <Card className="diff-card">
@@ -889,16 +908,13 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {!aiDetection && !detecting && !detectError && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-md)' }}>
-              <Card className="ai-empty">
-                <Icon name="spark" size={32} />
-                <p className="text-body-sm">AI 생성 코드 감지 버튼을 눌러 분석을 시작하세요.</p>
-              </Card>
-              <Button variant="primary" onClick={handleDetectAi} disabled={detecting || !originalCode.trim()}>
-                {detecting ? 'AI 감지 중…' : 'AI 생성 코드 감지'}
-              </Button>
-            </div>
+          {!aiDetection && !detectError && (
+            <Card className="ai-empty">
+              <Icon name="spark" size={32} />
+              <p className="text-body-sm">
+                {analyzed ? 'AI 감지 정보가 없습니다.' : '코드 분석 탭에서 분석하기를 실행하면 AI 감지 결과가 표시됩니다.'}
+              </p>
+            </Card>
           )}
 
           {aiDetection && (
@@ -951,7 +967,7 @@ export default function AnalyzePage() {
                           <span className="text-caption-md prompt-result__label">
                             발견된 문제가 반영된 개선된 프롬프트입니다.
                           </span>
-                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'upload'} size={14} />} onClick={handleCopyReconstructedPrompt}>
+                          <Button variant="ghost" size="sm" icon={<Icon name={reconstructCopied ? 'check' : 'copy'} size={20} />} onClick={handleCopyReconstructedPrompt}>
                             {reconstructCopied ? '복사됨' : '복사'}
                           </Button>
                         </div>
@@ -967,6 +983,83 @@ export default function AnalyzePage() {
             </Card>
           )}
         </>
+      )}
+{isPrModalOpen && (
+        <Modal
+          title="Pull Request 생성"
+          onClose={() => setIsPrModalOpen(false)}
+          actions={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setIsPrModalOpen(false)}
+                disabled={creatingPr}          // 생성 중엔 닫지 못하게 막음
+              >
+                취소
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCreatePr}       // ⭐ console.log → 실제 함수 연결
+                disabled={creatingPr || !prBaseBranch}
+              >
+                {creatingPr ? '생성 중…' : '생성'}
+              </Button>
+            </>
+          }
+        >
+<div className="pr-modal">
+            {/* 브랜치 — 상단 메타 정보 */}
+            <div className="pr-modal__branch">
+              <span className="pr-modal__branch-label">병합 대상</span>
+              <div className="pr-modal__branch-box">
+                <span className="pr-modal__branch-name">{branch}</span>
+                <span className="pr-modal__branch-arrow">→</span>
+                <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
+                  {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
+                  {prBranches.map((b) => (
+                    <option key={b.name} value={b.name}>
+                      {b.name}{b.isDefault ? ' (default)' : ''}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            {/* 제목 — 박스 없이 큰 글씨로 */}
+            <h3 className="pr-modal__title">{prTitle}</h3>
+
+            {/* 설명 — 박스 없이 본문처럼 */}
+            <div className="pr-modal__body">
+              {(isBodyExpanded ? prBodyLines : prBodyPreview).map((line, i) => (
+                <div key={i} className="pr-modal__body-line">{line}</div>
+              ))}
+              {!isBodyExpanded && prBodyRestCount > 0 && (
+                <button
+                  type="button"
+                  className="pr-modal__more"
+                  onClick={() => setIsBodyExpanded(true)}
+                >
+                  …외 {prBodyRestCount}건 더보기
+                </button>
+              )}
+              {isBodyExpanded && (
+                <button
+                  type="button"
+                  className="pr-modal__more"
+                  onClick={() => setIsBodyExpanded(false)}
+                >
+                  접기
+                </button>
+              )}
+            </div>
+
+            <p className="pr-modal__hint">
+              내용은 분석 결과로 자동 생성되며, 생성 후 GitHub에서 수정할 수 있습니다.
+            </p>
+
+            {prError && <div className="ui-banner ui-banner--error">{prError}</div>}
+          </div>
+          </Modal>
       )}
 
       {showScrollTop && (
