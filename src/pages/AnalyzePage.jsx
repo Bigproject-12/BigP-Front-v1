@@ -92,8 +92,7 @@ export default function AnalyzePage() {
   const [isPrModalOpen, setIsPrModalOpen] = useState(false);
   const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
   const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
-  const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 여부
-  const [isTitleEditing, setIsTitleEditing] = useState(false);  // 제목 편집 모드 여부
+   const [isPrEditing, setIsPrEditing] = useState(false);  // 제목·설명 편집 모드 여부
   const [prBranches, setPrBranches] = useState([]);
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
