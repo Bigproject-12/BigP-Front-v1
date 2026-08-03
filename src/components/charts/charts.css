@@ -75,7 +75,7 @@
 .gr-donut__total-value {
   font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 300;
+  font-weight: 700;
   fill: var(--text-primary);
 }
 .gr-donut__total-label {

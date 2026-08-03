@@ -261,6 +261,7 @@ const parsePrTitle = (title) => {
                 <tr>
                   <th>Repository</th>
                   <th>파일명</th>
+                  <th>브랜치</th>
                   <th>상태</th>
                 </tr>
               </thead>
@@ -290,7 +291,12 @@ const parsePrTitle = (title) => {
                         <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
                         {fileName}
                         </span>
-                       
+
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                          {pr.headBranch} → {pr.baseBranch}
+                        </span>
                       </td>
                       <td>
                         <Badge variant={st.variant}>{st.label}</Badge>
