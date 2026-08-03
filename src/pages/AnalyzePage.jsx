@@ -117,8 +117,8 @@ export default function AnalyzePage() {
   const prBodyRestCount = Math.max(prBodyLines.length - 2, 0); // 숨겨진 줄 수
 
   // 자동 생성 원본과 달라졌을 때만 「초기화」 노출
-  const isTitleDirty = prTitle !== prDefaultsRef.current.title;
-  const isBodyDirty = prBody !== prDefaultsRef.current.body;
+  const isPrDirty =
+    prTitle !== prDefaultsRef.current.title || prBody !== prDefaultsRef.current.body;
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
   const resetAnalysisOutput = () => {
@@ -515,16 +515,20 @@ export default function AnalyzePage() {
     setIsPrModalOpen(true);
   };
 
-  // 사용자가 수정한 제목/설명을 자동 생성 원본으로 되돌린다
-  const handleResetPrBody = () => {
+  // 사용자가 수정한 제목·설명을 자동 생성 원본으로 한 번에 되돌린다
+  const handleResetPrAll = () => {
+    setPrTitle(prDefaultsRef.current.title);
     setPrBody(prDefaultsRef.current.body);
   };
-  // 사용자가 수정한 제목/설명을 자동 생성 원본으로 되돌린다
-  const handleResetPrTitle = () => {
-    setPrTitle(prDefaultsRef.current.title);
+  // 편집 영역 바깥을 클릭하면 자동으로 표시 모드로 복귀
+  // relatedTarget = 포커스를 새로 받는 요소. 그게 편집 영역 안이면 유지
+  const handlePrEditBlur = (e) => {
+    const next = e.relatedTarget;
+    if (next && e.currentTarget.contains(next)) return; // 제목 ↔ 설명 이동은 유지
+    setIsPrEditing(false);
   };
 
-const handleCreatePr = async () => {
+  const handleCreatePr = async () => {
     if (!pushAnalysisId) return;
     setCreatingPr(true);
     setPrError('');
@@ -943,7 +947,7 @@ const handleCreatePr = async () => {
               </ul>
           )}
 
-              {aiDetection.isAiGenerated && pushAnalysisId && (
+                {pushAnalysisId && (
                 <div
                   className="prompt-section"
                   style={!(aiDetection.confidence !== null && aiDetection.confidence >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
@@ -1018,12 +1022,12 @@ const handleCreatePr = async () => {
           }
         >
           <div className="pr-modal">
-            {/* 브랜치 — 상단 메타 정보 */}
+            {/* 브랜치 — GitHub Compare 스타일 (base ← compare) */}
             <div className="pr-modal__branch">
-              <span className="pr-modal__branch-label">병합 대상</span>
+              <Icon name="compare" size={16} className="pr-modal__branch-icon" />
               <div className="pr-modal__branch-box">
-                <span className="pr-modal__branch-name">{branch}</span>
-                <span className="pr-modal__branch-arrow">→</span>
+                {/* base = 병합될 대상. 유일하게 편집 가능한 값 */}
+                <span className="pr-modal__branch-key">base:</span>
                 <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
                   {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
                   {prBranches.map((b) => (
@@ -1032,67 +1036,90 @@ const handleCreatePr = async () => {
                     </option>
                   ))}
                 </Select>
+
+                {/* 화살표 방향: compare의 변경사항이 base로 흘러들어감 */}
+                <span className="pr-modal__branch-arrow">←</span>
+
+                {/* compare = 이미 push한 작업 브랜치. 고정값이라 텍스트로만 표시 */}
+                <span className="pr-modal__branch-key">compare:</span>
+                <span className="pr-modal__branch-name">{branch}</span>
               </div>
             </div>
 
-            {/* 제목 — 편집 모드일 때만 input, 오른쪽에 편집/완료 토글 */}
-            <div className="pr-modal__field-head">
+            {/* 제목+설명 — 한 덩어리로 묶어 blur 감지 (내부 이동은 편집 유지) */}
+            <div className="pr-modal__editable" onBlur={handlePrEditBlur}>
+
+              {/* 제목 — 클릭하면 편집 진입 */}
+              <div className="pr-modal__field-head">
+                {isPrEditing ? (
+                  <input
+                    className="pr-modal__title-input"
+                    value={prTitle}
+                    onChange={(e) => setPrTitle(e.target.value)}
+                    placeholder="PR 제목을 입력하세요"
+                    autoFocus
+                  />
+                ) : (
+                  <h3
+                    className="pr-modal__title pr-modal__title--clickable"
+                    onClick={() => setIsPrEditing(true)}
+                    title="클릭해서 수정"
+                  >
+                    {prTitle}
+                  </h3>
+                )}
+                <div className="pr-modal__field-actions">
+                  {isPrEditing ? (
+                    <button
+                      type="button"
+                      className="pr-modal__reset"
+                      // 포커스 이동을 막아야 blur로 편집이 닫히기 전에 onClick이 실행됨
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleResetPrAll}
+                      disabled={!isPrDirty}
+                      title="제목·설명을 자동 생성 내용으로 되돌립니다"
+                      aria-label="제목·설명 초기화"
+                    >
+                      ↺
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="pr-modal__more"
+                      onClick={() => setIsPrEditing(true)}
+                    >
+                      편집
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 설명 — 편집 모드면 textarea, 아니면 2줄 미리보기(클릭 시 편집) */}
+              <div className="pr-modal__body">
               {isPrEditing ? (
-                <input
-                  className="pr-modal__title-input"
-                  value={prTitle}
-                  onChange={(e) => setPrTitle(e.target.value)}
-                  placeholder="PR 제목을 입력하세요"
-                  autoFocus
+                <textarea
+                  className="pr-modal__body-textarea"
+                  value={prBody}
+                  onChange={(e) => setPrBody(e.target.value)}
+                  rows={10}
+                  placeholder="PR 설명을 입력하세요"
                 />
               ) : (
-                <h3 className="pr-modal__title">{prTitle}</h3>
-              )}
-              <div className="pr-modal__field-actions">
-                {isPrEditing && isTitleDirty && (
-                  <button type="button" className="pr-modal__more" onClick={handleResetPrTitle}>
-                    제목 초기화
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="pr-modal__more"
-                  onClick={() => setIsPrEditing((v) => !v)}
+                <div
+                  className="pr-modal__body-preview"
+                  onClick={() => setIsPrEditing(true)}
+                  title="클릭해서 수정"
                 >
-                  {isPrEditing ? '완료' : '편집'}
-                </button>
-              </div>
-            </div>
-
-            {/* 설명 — 편집 모드면 textarea, 아니면 2줄 미리보기 */}
-            <div className="pr-modal__body">
-              {isPrEditing ? (
-                <>
-                  <textarea
-                    className="pr-modal__body-textarea"
-                    value={prBody}
-                    onChange={(e) => setPrBody(e.target.value)}
-                    rows={10}
-                    placeholder="PR 설명을 입력하세요"
-                  />
-                  {isBodyDirty && (
-                    <div className="pr-modal__field-actions">
-                      <button type="button" className="pr-modal__more" onClick={handleResetPrBody}>
-                        설명 초기화
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
                   {prBodyPreview.map((line, i) => (
                     <div key={i} className="pr-modal__body-line">{line}</div>
                   ))}
                   {prBodyRestCount > 0 && (
                     <span className="pr-modal__rest">…외 {prBodyRestCount}줄</span>
                   )}
-                </>
+                </div>
               )}
+            </div>
+
             </div>
 
             <p className="pr-modal__hint">
@@ -1103,7 +1130,6 @@ const handleCreatePr = async () => {
           </div>
         </Modal>
       )}
-
       {showScrollTop && (
         <button
           type="button"
