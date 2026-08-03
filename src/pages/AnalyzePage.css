@@ -63,6 +63,7 @@
   line-height: 1.65;
   color: var(--text-muted);
   border-right: 1px solid var(--border-hairline);
+  user-select: none;
 }
 .code-editor__gutter div { min-height: 21px; }
 .code-textarea {
@@ -77,6 +78,7 @@
   font-size: 12.5px;
   line-height: 1.65;
   overflow: hidden;
+  user-select: text;
 }
 .code-textarea:focus {
   outline: none;
@@ -92,6 +94,7 @@
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
 }
 .code-editor .code-view {
   flex: 1;
@@ -103,6 +106,7 @@
   justify-content: center;
   color: var(--text-muted);
   font-family: var(--font-body);
+  user-select: none;
 }
 
 /* diff 카드 */
@@ -111,18 +115,47 @@
   overflow: hidden;
 }
 
-/* diff 뷰어 */
+/* diff 뷰어 구조 개선: 좌우 패널 독립 선택 보장 */
 .diff-viewer {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 340px;
   overflow: auto;
+  user-select: none; /* 전체 영역은 기본 선택 방지하여 교차 선택 원천 차단 */
 }
+/* 좌우 패널을 담는 분할 컨테이너 */
+.diff-viewer-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 340px;
+  overflow: auto;
+  user-select: text;
+}
+
+/* 개별 하위 그리드 (줄 높이 및 정렬 유지) */
+.diff-subgrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.diff-subgrid .diff-row {
+  display: grid;
+  grid-template-columns: 40px 20px 1fr;
+}
+
+@media (max-width: 720px) {
+  .diff-viewer-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .diff-pane {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  user-select: text; /* 패널 내부에서는 텍스트 선택 허용 */
 }
+
 .diff-pane--left {
   border-right: 1px solid var(--border-hairline);
 }
@@ -133,17 +166,20 @@
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-hairline);
   background: var(--surface-input);
+  user-select: none;
 }
 .diff-pane__code {
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.65;
+  user-select: text;
 }
 
-/* 분석 결과 비교(DiffViewer) — 원본/개선을 같은 grid row에 그려서 줄바꿈이 생겨도 줄번호가 어긋나지 않게 함 */
+/* 분석 결과 비교(DiffViewer Grid 세부 조정) */
 .diff-compare__labels {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  user-select: none;
 }
 .diff-compare__labels > :first-child {
   border-right: 1px solid var(--border-hairline);
@@ -151,6 +187,7 @@
 .diff-grid {
   display: grid;
   grid-template-columns: 40px 20px 1fr 40px 20px 1fr;
+  user-select: none; /* 그리드 전체 컨테이너는 드래그 묶임 방지 */
 }
 .diff-row {
   display: contents;
@@ -167,7 +204,7 @@
   justify-content: flex-end;
   padding: 0 8px;
   color: var(--text-primary);
-  user-select: none;
+  user-select: none; /* 줄번호 드래그 제외 */
   border-right: 1px solid var(--border-hairline);
   font-size: 11px;
 }
@@ -175,7 +212,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  user-select: none;
+  user-select: none; /* 마커 기호 드래그 제외 */
   font-weight: 700;
 }
 .diff-cell--text {
@@ -183,6 +220,7 @@
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-all;
+  user-select: text; /* 👈 오직 코드 텍스트 영역만 개별 선택 가능하도록 설정 */
 }
 .diff-cell--divider {
   border-right: 1px solid var(--border-hairline);
@@ -228,7 +266,6 @@
   gap: var(--space-md);
 }
 
-
 .result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -240,7 +277,6 @@
   gap: 10px;
 }
 
-/* 분석 결과 상세 페이지 전용: 이슈 카드 조금 더 크게 */
 .result-section--detail .result-grid {
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
 }
@@ -275,7 +311,6 @@
   color: var(--text-body);
 }
 
-/* AI 탭 빈 상태 */
 .ai-empty {
   display: flex;
   flex-direction: column;
@@ -288,7 +323,6 @@
   text-align: center;
 }
 
-/* AI 감지 결과 카드 */
 .ai-detect-card {
   display: flex;
   flex-direction: column;
@@ -340,7 +374,6 @@
   font-weight: 600;
 }
 
-/* 프롬프트 추천 섹션 */
 .prompt-section {
   display: flex;
   flex-direction: column;
@@ -381,7 +414,6 @@
   outline: none;
 }
 
-/* 추천 프롬프트 결과 */
 .prompt-result {
   display: flex;
   flex-direction: column;
@@ -461,10 +493,6 @@
   color: var(--text-body);
 }
 
-/* =========================================
-   AI 판별 배너 스타일 (다크모드 지원)
-   ========================================= */
-
 .ai-banner {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -479,23 +507,6 @@
   justify-content: center;
 }
 
-.ai-banner {
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.ai-banner__icon-wrapper {
-  background-color: var(--surface-default, #ffffff);
-  padding: 12px;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* -----------------------------------------
-   라이트 모드 (기본)
-   ----------------------------------------- */
 .ai-banner--ai {
   background-color: rgba(239, 68, 68, 0.1); 
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -524,10 +535,6 @@
   color: #0ea5e9;
 }
 
-/* -----------------------------------------
-   다크 모드 대응
-   다크 모드 스위치 클릭 시 변경되는 클래스를 포괄적으로 감지합니다.
-   ----------------------------------------- */
 html.dark .ai-banner--ai,
 body.dark .ai-banner--ai,
 [data-theme='dark'] .ai-banner--ai,
