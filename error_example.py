@@ -44,18 +44,20 @@ def dijkstra(start, n, graph):
 
 
 def save_result_to_db(user_input_name, result):
+    # 보안 취약점 1: SQL Injection 위험이 있는 문자열 포맷팅 쿼리
     conn = sqlite3.connect('result.db')
     cursor = conn.cursor()
     
     cursor.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, data TEXT)")
     
     query = f"INSERT INTO history (name, data) VALUES ('{user_input_name}', '{str(result)}')"
-    cursor.executescript(query)
+    cursor.executescript(query) # 멀티 쿼리 및 SQL Injection에 취약
     conn.commit()
     conn.close()
 
 
 def run_system_command(user_cmd):
+    # 보안 취약점 2: OS Command Injection 위험이 있는 system 함수 사용
     os.system("echo " + user_cmd)
 
 
@@ -78,6 +80,7 @@ def main():
     
     print("Result: " + log)
 
+    # 취약한 함수 호출 예시 (외부 입력이 그대로 전달되는 시나리오)
     unsafe_user_input = "admin' OR '1'='1"
     save_result_to_db(unsafe_user_input, result)
     
