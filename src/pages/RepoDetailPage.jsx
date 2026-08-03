@@ -8,6 +8,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import FileTypeIcon from '../components/icons/FileTypeIcon';
 import Select from '../components/ui/Select';
 import { api } from '../lib/api'; 
 import './RepoDetailPage.css';
@@ -193,7 +194,7 @@ export default function RepoDetailPage() {
                   <tr key={a.id}>
                     <td>
                       <span className="history-table__file">
-                        <Icon name="file" size={15} />
+                        <FileTypeIcon name={fileName} size={15} />
                         {fileName}
                       </span>
                     </td>

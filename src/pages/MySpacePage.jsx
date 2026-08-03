@@ -74,8 +74,9 @@ const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
 const RISK_DONUT_CARD_HEIGHT = 360;
 const AI_PR_CARD_HEIGHT = 360;
 
+// 분석 상세(AnalysisResult.jsx CATEGORY_META)와 동일한 색상 기준: 보안=빨강, 비효율=주황, 기타=회색
 const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
-const ISSUE_TYPE_VARIANT = { SECURITY: 'warning', INEFFICIENCY: 'info', OTHER: 'success' };
+const ISSUE_TYPE_COLOR = { SECURITY: '#E11D48', INEFFICIENCY: '#F59E0B', OTHER: '#64748B' };
 const SEVERITY_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const SEVERITY_VARIANT = { CRITICAL: 'warning', HIGH: 'warning', MEDIUM: 'info', LOW: 'neutral' };
 const PR_STATUS_LABEL = {
@@ -517,7 +518,14 @@ function MySpaceRepoView({ repoId, branch }) {
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
-                          <Badge variant={ISSUE_TYPE_VARIANT[issue.type] ?? 'neutral'} style={{ alignSelf: 'flex-start' }}>
+                          <Badge
+                            variant="neutral"
+                            style={{
+                              alignSelf: 'flex-start',
+                              color: ISSUE_TYPE_COLOR[issue.type] ?? '#64748B',
+                              background: `${ISSUE_TYPE_COLOR[issue.type] ?? '#64748B'}22`,
+                            }}
+                          >
                             {ISSUE_TYPE_LABEL[issue.type] ?? issue.type}
                           </Badge>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
