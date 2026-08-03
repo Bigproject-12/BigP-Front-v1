@@ -193,7 +193,7 @@ export default function RepoDetailPage() {
                   <tr key={a.id}>
                     <td>
                       <span className="history-table__file">
-                        <Icon name="code" size={15} />
+                        <Icon name="file" size={15} />
                         {fileName}
                       </span>
                     </td>
