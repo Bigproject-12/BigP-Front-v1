@@ -689,3 +689,43 @@ body.dark .ai-banner__icon-wrapper,
   width: 640px;
   max-width: 90vw;
 }
+/* PR 모달 — 제목/설명 편집 */
+.pr-modal__field-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  min-height: 34px; /* 표시 ↔ 편집 전환 시 높이 흔들림 방지 */
+}
+
+.pr-modal__field-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.pr-modal__title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--surface-input);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+}
+
+.pr-modal__body-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-body);
+  background: var(--surface-input);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  resize: vertical;
+}

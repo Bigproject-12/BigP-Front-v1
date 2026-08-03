@@ -93,6 +93,7 @@ export default function AnalyzePage() {
   const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
   const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
   const [isBodyExpanded, setIsBodyExpanded] = useState(false);  // 설명 펼침 여부
+  const [isTitleEditing, setIsTitleEditing] = useState(false);  // 제목 편집 모드 여부
   const [prBranches, setPrBranches] = useState([]);
   const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
@@ -115,6 +116,10 @@ export default function AnalyzePage() {
   );
   const prBodyPreview = prBodyLines.slice(0, 2);          // 접힘 상태에서 보여줄 2줄
   const prBodyRestCount = Math.max(prBodyLines.length - 2, 0); // 숨겨진 줄 수
+
+  // 자동 생성 원본과 달라졌을 때만 「초기화」 노출
+  const isTitleDirty = prTitle !== prDefaultsRef.current.title;
+  const isBodyDirty = prBody !== prDefaultsRef.current.body;
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
   const resetAnalysisOutput = () => {
@@ -507,6 +512,7 @@ export default function AnalyzePage() {
     setPrTitle(defaults.title);
     setPrBody(defaults.body);
     setIsBodyExpanded(false); // 항상 접힌 상태로 시작
+    setIsTitleEditing(false); // 제목도 표시 모드로 시작
     setPrError('');
     setIsPrModalOpen(true);
   };
@@ -515,14 +521,20 @@ export default function AnalyzePage() {
   const handleResetPrBody = () => {
     setPrBody(prDefaultsRef.current.body);
   };
+  // 사용자가 수정한 제목/설명을 자동 생성 원본으로 되돌린다
+  const handleResetPrTitle = () => {
+    setPrTitle(prDefaultsRef.current.title);
+  };
+
 const handleCreatePr = async () => {
     if (!pushAnalysisId) return;
     setCreatingPr(true);
     setPrError('');
     try {
-      // 하드코딩 단계: title/body는 백엔드가 생성하므로 baseBranch만 보낸다
       const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, {
         baseBranch: prBaseBranch,
+        title: prTitle,
+        body: prBody,
       });
       setPrUrl(result.prUrl);
       setIsPrModalOpen(false);   // 성공 시 모달 닫기
@@ -1025,31 +1037,76 @@ const handleCreatePr = async () => {
               </div>
             </div>
 
-            {/* 제목 — 박스 없이 큰 글씨로 */}
-            <h3 className="pr-modal__title">{prTitle}</h3>
+{/* 제목 — 표시 모드 / 편집 모드 전환 */}
+            <div className="pr-modal__field">
+              <div className="pr-modal__field-head">
+                {isTitleEditing ? (
+                  <input
+                    className="pr-modal__title-input"
+                    value={prTitle}
+                    onChange={(e) => setPrTitle(e.target.value)}
+                    placeholder="PR 제목을 입력하세요"
+                    autoFocus
+                  />
+                ) : (
+                  <h3 className="pr-modal__title">{prTitle}</h3>
+                )}
+                <div className="pr-modal__field-actions">
+                  {isTitleDirty && (
+                    <button type="button" className="pr-modal__more" onClick={handleResetPrTitle}>
+                      초기화
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="pr-modal__more"
+                    onClick={() => setIsTitleEditing((v) => !v)}
+                  >
+                    {isTitleEditing ? '완료' : '편집'}
+                  </button>
+                </div>
+              </div>
+            </div>
 
-            {/* 설명 — 박스 없이 본문처럼 */}
+            {/* 설명 — 접힘: 미리보기 / 펼침: textarea 편집 */}
             <div className="pr-modal__body">
-              {(isBodyExpanded ? prBodyLines : prBodyPreview).map((line, i) => (
-                <div key={i} className="pr-modal__body-line">{line}</div>
-              ))}
-              {!isBodyExpanded && prBodyRestCount > 0 && (
-                <button
-                  type="button"
-                  className="pr-modal__more"
-                  onClick={() => setIsBodyExpanded(true)}
-                >
-                  …외 {prBodyRestCount}건 더보기
-                </button>
-              )}
-              {isBodyExpanded && (
-                <button
-                  type="button"
-                  className="pr-modal__more"
-                  onClick={() => setIsBodyExpanded(false)}
-                >
-                  접기
-                </button>
+              {isBodyExpanded ? (
+                <>
+                  <textarea
+                    className="pr-modal__body-textarea"
+                    value={prBody}
+                    onChange={(e) => setPrBody(e.target.value)}
+                    rows={10}
+                    placeholder="PR 설명을 입력하세요"
+                  />
+                  <div className="pr-modal__field-actions">
+                    {isBodyDirty && (
+                      <button type="button" className="pr-modal__more" onClick={handleResetPrBody}>
+                        초기화
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="pr-modal__more"
+                      onClick={() => setIsBodyExpanded(false)}
+                    >
+                      접기
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {prBodyPreview.map((line, i) => (
+                    <div key={i} className="pr-modal__body-line">{line}</div>
+                  ))}
+                  <button
+                    type="button"
+                    className="pr-modal__more"
+                    onClick={() => setIsBodyExpanded(true)}
+                  >
+                    {prBodyRestCount > 0 ? `…외 ${prBodyRestCount}건 더보기` : '설명 편집'}
+                  </button>
+                </>
               )}
             </div>
 
