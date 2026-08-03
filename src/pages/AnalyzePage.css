@@ -729,3 +729,9 @@ body.dark .ai-banner__icon-wrapper,
   border-radius: 6px;
   resize: vertical;
 }
+.pr-modal__rest {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}

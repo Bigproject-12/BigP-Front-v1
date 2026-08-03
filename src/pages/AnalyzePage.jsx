@@ -510,8 +510,7 @@ export default function AnalyzePage() {
     prDefaultsRef.current = defaults; // 초기화용 원본 보관
     setPrTitle(defaults.title);
     setPrBody(defaults.body);
-    setIsBodyExpanded(false); // 항상 접힌 상태로 시작
-    setIsTitleEditing(false); // 제목도 표시 모드로 시작
+    setIsPrEditing(false); // 항상 표시 모드로 시작
     setPrError('');
     setIsPrModalOpen(true);
   };
@@ -1010,7 +1009,7 @@ const handleCreatePr = async () => {
               </Button>
               <Button
                 variant="primary"
-                onClick={handleCreatePr}       // ⭐ console.log → 실제 함수 연결
+                onClick={handleCreatePr}
                 disabled={creatingPr || !prBaseBranch}
               >
                 {creatingPr ? '생성 중…' : '생성'}
@@ -1018,7 +1017,7 @@ const handleCreatePr = async () => {
             </>
           }
         >
-<div className="pr-modal">
+          <div className="pr-modal">
             {/* 브랜치 — 상단 메타 정보 */}
             <div className="pr-modal__branch">
               <span className="pr-modal__branch-label">병합 대상</span>
@@ -1036,40 +1035,38 @@ const handleCreatePr = async () => {
               </div>
             </div>
 
-{/* 제목 — 표시 모드 / 편집 모드 전환 */}
-            <div className="pr-modal__field">
-              <div className="pr-modal__field-head">
-                {isTitleEditing ? (
-                  <input
-                    className="pr-modal__title-input"
-                    value={prTitle}
-                    onChange={(e) => setPrTitle(e.target.value)}
-                    placeholder="PR 제목을 입력하세요"
-                    autoFocus
-                  />
-                ) : (
-                  <h3 className="pr-modal__title">{prTitle}</h3>
-                )}
-                <div className="pr-modal__field-actions">
-                  {isTitleDirty && (
-                    <button type="button" className="pr-modal__more" onClick={handleResetPrTitle}>
-                      초기화
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="pr-modal__more"
-                    onClick={() => setIsTitleEditing((v) => !v)}
-                  >
-                    {isTitleEditing ? '완료' : '편집'}
+            {/* 제목 — 편집 모드일 때만 input, 오른쪽에 편집/완료 토글 */}
+            <div className="pr-modal__field-head">
+              {isPrEditing ? (
+                <input
+                  className="pr-modal__title-input"
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="PR 제목을 입력하세요"
+                  autoFocus
+                />
+              ) : (
+                <h3 className="pr-modal__title">{prTitle}</h3>
+              )}
+              <div className="pr-modal__field-actions">
+                {isPrEditing && isTitleDirty && (
+                  <button type="button" className="pr-modal__more" onClick={handleResetPrTitle}>
+                    제목 초기화
                   </button>
-                </div>
+                )}
+                <button
+                  type="button"
+                  className="pr-modal__more"
+                  onClick={() => setIsPrEditing((v) => !v)}
+                >
+                  {isPrEditing ? '완료' : '편집'}
+                </button>
               </div>
             </div>
 
-            {/* 설명 — 접힘: 미리보기 / 펼침: textarea 편집 */}
+            {/* 설명 — 편집 모드면 textarea, 아니면 2줄 미리보기 */}
             <div className="pr-modal__body">
-              {isBodyExpanded ? (
+              {isPrEditing ? (
                 <>
                   <textarea
                     className="pr-modal__body-textarea"
@@ -1078,44 +1075,33 @@ const handleCreatePr = async () => {
                     rows={10}
                     placeholder="PR 설명을 입력하세요"
                   />
-                  <div className="pr-modal__field-actions">
-                    {isBodyDirty && (
+                  {isBodyDirty && (
+                    <div className="pr-modal__field-actions">
                       <button type="button" className="pr-modal__more" onClick={handleResetPrBody}>
-                        초기화
+                        설명 초기화
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      className="pr-modal__more"
-                      onClick={() => setIsBodyExpanded(false)}
-                    >
-                      접기
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   {prBodyPreview.map((line, i) => (
                     <div key={i} className="pr-modal__body-line">{line}</div>
                   ))}
-                  <button
-                    type="button"
-                    className="pr-modal__more"
-                    onClick={() => setIsBodyExpanded(true)}
-                  >
-                    {prBodyRestCount > 0 ? `…외 ${prBodyRestCount}건 더보기` : '설명 편집'}
-                  </button>
+                  {prBodyRestCount > 0 && (
+                    <span className="pr-modal__rest">…외 {prBodyRestCount}줄</span>
+                  )}
                 </>
               )}
             </div>
 
             <p className="pr-modal__hint">
-              내용은 분석 결과로 자동 생성되며, 생성 후 GitHub에서 수정할 수 있습니다.
+              내용은 분석 결과로 자동 생성됩니다. 필요하면 수정한 뒤 생성하세요.
             </p>
 
             {prError && <div className="ui-banner ui-banner--error">{prError}</div>}
           </div>
-          </Modal>
+        </Modal>
       )}
 
       {showScrollTop && (
