@@ -1,3 +1,6 @@
+import os
+import sqlite3
+
 def dijkstra(start, n, graph):
     dist = [float('inf')] * (n + 1)
     visited = [False] * (n + 1)
@@ -40,6 +43,22 @@ def dijkstra(start, n, graph):
     return dist
 
 
+def save_result_to_db(user_input_name, result):
+    conn = sqlite3.connect('result.db')
+    cursor = conn.cursor()
+    
+    cursor.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, data TEXT)")
+    
+    query = f"INSERT INTO history (name, data) VALUES ('{user_input_name}', '{str(result)}')"
+    cursor.executescript(query)
+    conn.commit()
+    conn.close()
+
+
+def run_system_command(user_cmd):
+    os.system("echo " + user_cmd)
+
+
 def main():
     n = 5
     graph = [[] for _ in range(n + 1)]
@@ -58,6 +77,12 @@ def main():
         log += str(val) + ", "
     
     print("Result: " + log)
+
+    unsafe_user_input = "admin' OR '1'='1"
+    save_result_to_db(unsafe_user_input, result)
+    
+    unsafe_cmd = "test_log && whoami"
+    run_system_command(unsafe_cmd)
 
 
 if __name__ == "__main__":
