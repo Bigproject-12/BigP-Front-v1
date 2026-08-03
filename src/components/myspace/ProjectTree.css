@@ -1,0 +1,78 @@
+.ptree {
+  font-size: var(--fs-body-sm);
+}
+
+.ptree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px 6px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.ptree-row--folder:hover {
+  background: var(--surface-soft);
+}
+.ptree-row--file {
+  cursor: default;
+  color: var(--text-body);
+}
+.ptree-row--file:hover {
+  background: var(--surface-soft);
+}
+
+.ptree-row__icon {
+  color: var(--text-muted);
+  flex: none;
+}
+.ptree-row--folder .ptree-row__icon {
+  color: var(--ps-primary);
+}
+
+.ptree-row__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptree-chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+.ptree-chevron--open {
+  transform: rotate(90deg);
+}
+
+.ptree-count {
+  flex: none;
+  font-size: var(--fs-caption-md);
+  color: var(--text-muted);
+}
+
+.ptree-badge {
+  flex: none;
+  padding: 1px 8px;
+  font-size: var(--fs-caption-md);
+  font-weight: 600;
+  border-radius: 999px;
+}
+.ptree-badge--high {
+  background: rgba(200, 27, 58, 0.12);
+  color: var(--danger-text);
+}
+.ptree-badge--low {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.ptree-children {
+  overflow: hidden;
+}

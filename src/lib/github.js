@@ -37,6 +37,11 @@ export async function fetchRepoBranches(repoId) {
   return api.get(`/api/repos/${repoId}/branches`);
 }
 
+// 파일 트리 + 파일별 이슈/품질점수 배지 (우리 백엔드를 통해 가져옴)
+export async function fetchRepoTreeWithIssues(repoId, branch, issuesOnly = false) {
+  return api.get(`/api/repos/${repoId}/tree?branch=${encodeURIComponent(branch)}&issuesOnly=${issuesOnly}`);
+}
+
 // 기존 fetchRepoTree 함수를 아래와 같이 수정하세요.
 export async function fetchRepoTree(fullName, branch = 'HEAD') {
   // HEAD 대신 ${encodeURIComponent(branch)}를 사용하여 특정 브랜치 트리를 가져옴
