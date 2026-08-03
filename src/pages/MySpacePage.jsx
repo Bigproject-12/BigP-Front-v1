@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
@@ -16,7 +16,7 @@ import ProjectTree from '../components/myspace/ProjectTree';
 import Icon from '../components/icons/Icon';
 import './dashboard.css';
 import './RepoDetailPage.css';
-import './AnalyzePage.css';
+import './MySpacePage.css'; // 👈 전용 CSS 파일 임포트
 
 function toISODate(date) {
   const y = date.getFullYear();
@@ -87,6 +87,7 @@ export default function MySpacePage() {
   const [repoId, setRepoId] = useState('');
   const [branches, setBranches] = useState([]);
   const [branch, setBranch] = useState('');
+  const branchSelectRef = useRef(null);
 
   useEffect(() => {
     setBranch('');
@@ -96,6 +97,12 @@ export default function MySpacePage() {
       .then((list) => {
         setBranches(list);
         setBranch(list.find((b) => b.isDefault)?.name || list[0]?.name || '');
+      
+        setTimeout(() => {
+          if (branchSelectRef.current) {
+            branchSelectRef.current.focus();
+          }
+        }, 100);
       })
       .catch(() => setBranches([]));
   }, [repoId]);
@@ -104,36 +111,46 @@ export default function MySpacePage() {
     <>
       <div className="gr-page__header">
         <div className="gr-page__header-text">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h1 className="text-display-md" style={{ margin: 0 }}>My Space</h1>
-            <span style={{ color: 'var(--text-muted)' }}>/</span>
-            <div style={{ width: 170 }}>
-              <Select value={repoId} onChange={(e) => setRepoId(e.target.value)}>
+          {/* GitHub 스타일의 폴더 구조 브레드크럼 레이아웃 적용 */}
+          <div className="myspace-breadcrumb">
+            <h1 className="text-display-md myspace-breadcrumb__title">My Space</h1>
+            <span className="myspace-breadcrumb__slash">  /</span>
+            
+            {/* 1. Repository 선택 셀렉트 */}
+            <div className="myspace-select-wrapper">
+              <Select 
+                className="myspace-ghost-select" 
+                value={repoId} 
+                onChange={(e) => setRepoId(e.target.value)}
+              >
                 <option value="">전체 Repository</option>
                 {repos.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </Select>
             </div>
+
+            {/* 2. Repository 선택 시 나타나는 Branch 선택 셀렉트 (사이에 슬래시 추가) */}
+            {repoId && (
+              <>
+                <span className="myspace-breadcrumb__slash">/</span>
+                <div className="myspace-select-wrapper">
+                  <Select
+                    ref={branchSelectRef}
+                    className="myspace-ghost-select"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    disabled={branches.length === 0}
+                  >
+                    {branches.length === 0 && <option value="">로딩 중...</option>}
+                    {branches.map((b) => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
-          <span className="text-body-sm">
-            {user ? `${user.name}님의 코드 품질 현황을 확인하세요.` : ''}
-          </span>
-          {repoId && (
-            <div style={{ width: 100, marginTop: 6 }}>
-              <Select
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                disabled={branches.length === 0}
-                style={{ height: 28, padding: '0 24px 0 8px', fontSize: 'var(--fs-caption-md)', minWidth: 0 }}
-              >
-                {branches.length === 0 && <option value="">브랜치 없음</option>}
-                {branches.map((b) => (
-                  <option key={b.name} value={b.name}>{b.name}</option>
-                ))}
-              </Select>
-            </div>
-          )}
         </div>
       </div>
 

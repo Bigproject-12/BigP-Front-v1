@@ -1,0 +1,75 @@
+/* ===== My Space 전용 스타일 파일 (MySpace.css) ===== */
+
+.myspace-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.myspace-breadcrumb__title {
+  margin: 0;
+  font-weight: 300;
+  font-size: var(--fs-display-md, 2rem);
+  line-height: 1.2;
+}
+
+.myspace-breadcrumb__slash {
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0 4px;
+  font-size: 10;
+  line-height: 1.2;
+}
+
+/* 👈 첫 번째 슬래시(`My Space` 바로 뒤에 오는 첫 번째 슬래시)만 왼쪽 간격을 살짝 넓힘 */
+.myspace-breadcrumb__title + .myspace-breadcrumb__slash {
+  margin-left: 6px; /* 원하시는 만큼 px 값을 조절해 보세요 */
+}
+
+.myspace-select-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative; /* 화살표 아이콘 배치를 위한 포지션 기준 설정 */
+}
+
+/* GitHub 스타일 고스트 셀렉트 + 항상 보이는 드롭다운 삼각형 화살표 추가 */
+.myspace-ghost-select {
+  border: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  font-size: 10 !important;
+  font-weight: 400 !important;
+  color: var(--text-primary, #24292e) !important;
+  
+  /* 오른쪽 화살표가 들어갈 공간(24px)을 위해 패딩 확보 */
+  padding: 2px 28px 2px 6px !important; 
+  
+  border-radius: 6px !important;
+  cursor: pointer;
+  height: auto !important;
+  line-height: 1.2 !important;
+  transition: background-color 0.15s ease;
+
+  width: auto !important;
+  max-width: 300px;
+
+  /* 브라우저 기본 화살표 제거 후, 깔끔한 커스텀 아래 삼각형 SVG를 배경으로 삽입 */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23586069' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 6px center !important;
+  background-size: 14px !important;
+}
+
+/* 마우스 올렸을 때와 클릭(포커스)했을 때 음영(배경색) 처리 및 화살표 색상 진하게 */
+.myspace-ghost-select:hover {
+  background-color: var(--surface-hover, rgba(0, 0, 0, 0.05)) !important;
+}
+
+.myspace-ghost-select:focus {
+  outline: none !important;
+  background-color: var(--surface-hover, rgba(0, 0, 0, 0.05)) !important;
+}
