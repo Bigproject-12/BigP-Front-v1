@@ -13,7 +13,7 @@ const USE_MOCK = false;
 
 // 서버가 2개인 경우 각각 URL을 지정하세요.
 // 같은 서버라면 BACKEND_BASE만 사용하고 AI_BASE를 동일하게 맞추면 됩니다.
-const BACKEND_BASE = 'http://localhost:8081'; // 백엔드 서버 (인증, 데이터 등)
+const BACKEND_BASE = import.meta.env.VITE_API_BASE; // 백엔드 서버 (인증, 데이터 등)
 const AI_BASE = 'http://localhost:8000';      // AI 모델 서버 (HuggingFace 등)
 
 // ─── mock 데이터 ────────────────────────────────────────────────────────────

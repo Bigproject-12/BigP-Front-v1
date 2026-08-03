@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8081';
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export const TOKEN_KEY = 'GuardrAil-token';
 export const REFRESH_TOKEN_KEY = 'GuardrAil-refresh-token';
@@ -101,7 +101,7 @@ export const api = {
 };
 
 export async function deleteAccount(password, token) {
-  const response = await fetch('http://localhost:8081/api/users/me', {
+  const response = await fetch(`${API_BASE}/api/users/me`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -119,4 +119,3 @@ export async function deleteAccount(password, token) {
 
 
 export { API_BASE };
-
