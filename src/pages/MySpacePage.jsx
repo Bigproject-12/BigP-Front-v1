@@ -14,6 +14,7 @@ import DonutChart from '../components/charts/DonutChart';
 import DiffViewer from '../components/ui/DiffViewer';
 import ProjectTree from '../components/myspace/ProjectTree';
 import Icon from '../components/icons/Icon';
+import FileTypeIcon from '../components/icons/FileTypeIcon';
 import './dashboard.css';
 import './RepoDetailPage.css';
 import './AnalyzePage.css';
@@ -69,10 +70,12 @@ function ratioDeltaProps(change) {
   };
 }
 
-const STRUCTURE_ISSUES_CARD_HEIGHT = 580;
+const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
+const RISK_DONUT_CARD_HEIGHT = 360;
+const AI_PR_CARD_HEIGHT = 360;
 
 const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
-const ISSUE_TYPE_VARIANT = { SECURITY: 'warning', INEFFICIENCY: 'info', OTHER: 'neutral' };
+const ISSUE_TYPE_VARIANT = { SECURITY: 'warning', INEFFICIENCY: 'info', OTHER: 'success' };
 const SEVERITY_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const SEVERITY_VARIANT = { CRITICAL: 'warning', HIGH: 'warning', MEDIUM: 'info', LOW: 'neutral' };
 const PR_STATUS_LABEL = {
@@ -359,7 +362,7 @@ function MySpaceRepoView({ repoId, branch }) {
 
     api
       .get(`/api/my-space/repos/${repoId}/pull-requests?branch=${encodeURIComponent(branch)}&status=ALL&limit=20`)
-      .then((prs) => setAutoPrs(prs.filter((pr) => pr.platformGenerated)))
+      .then((prs) => setAutoPrs(prs.filter((pr) => pr.platformGenerated).slice(0, 5)))
       .catch(() => setAutoPrs([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoId, branch, tree]);
@@ -425,14 +428,12 @@ function MySpaceRepoView({ repoId, branch }) {
           </div>
 
           <div className="recent-grid" style={{ marginTop: 'var(--space-lg)', gridTemplateColumns: '1fr 0.7fr' }}>
-            <Card style={{ padding: 0 }}>
-              <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Card style={{ padding: 0, height: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+              <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="score" size={18} />
                 <h2 className="text-heading-md" style={{ margin: 0 }}>파일 별 위험도 TOP5</h2>
               </div>
-              {riskFiles.length === 0 ? (
-                <div className="ui-empty">분석된 파일이 없습니다.</div>
-              ) : (
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 <table className="history-table">
                   <thead>
                     <tr>
@@ -443,34 +444,40 @@ function MySpaceRepoView({ repoId, branch }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {riskFiles.map((f, idx) => (
-                      <tr key={f.path}>
-                        <td>{idx + 1}</td>
+                    {Array.from({ length: 5 }, (_, idx) => riskFiles[idx]).map((f, idx) => (
+                      <tr key={f?.path ?? `empty-${idx}`}>
+                        <td>{f ? idx + 1 : ''}</td>
                         <td>
-                          <span className="history-table__file">
-                            <Icon name="file" size={15} />
-                            {f.path}
-                          </span>
+                          {f ? (
+                            <span className="history-table__file">
+                              <FileTypeIcon name={f.path} size={15} />
+                              {f.path}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
                         </td>
-                        <td>{f.qualityScore}점</td>
-                        <td>{f.totalIssueCount}건</td>
+                        <td>{f ? `${f.qualityScore}점` : '-'}</td>
+                        <td>{f ? `${f.totalIssueCount}건` : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
+              </div>
             </Card>
 
-            <Card className="chart-card">
-              <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+            <Card className="chart-card" style={{ height: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+              <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="bug" size={18} />
                 <h2 className="text-heading-md" style={{ margin: 0 }}>이슈 유형 분포</h2>
               </div>
-              {repoIssueDistribution.length > 0 ? (
-                <DonutChart data={repoIssueDistribution} />
-              ) : (
-                <div className="ui-empty">발견된 이슈가 없습니다.</div>
-              )}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center' }}>
+                {repoIssueDistribution.length > 0 ? (
+                  <DonutChart data={repoIssueDistribution} />
+                ) : (
+                  <div className="ui-empty">발견된 이슈가 없습니다.</div>
+                )}
+              </div>
             </Card>
           </div>
 
@@ -558,29 +565,32 @@ function MySpaceRepoView({ repoId, branch }) {
           </div>
 
           <div className="recent-grid" style={{ marginTop: 'var(--space-lg)' }}>
-                <Card style={{ padding: 0 }}>
-                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+                <Card style={{ padding: 0, height: AI_PR_CARD_HEIGHT, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                     <Icon name="spark" size={18} />
-                    <h2 className="text-heading-md" style={{ margin: 0 }}>AI 리팩토링 제안</h2>
+                    <h2 className="text-heading-md" style={{ margin: 0 }}>Ai 리팩토링 제안</h2>
                   </div>
+                  {summary && summary.modifiedCode && summary.modifiedCode !== summary.originCode && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      style={{ position: 'absolute', top: 14, right: 16 }}
+                      onClick={() => navigate(`?page=analysis-detail&analysisId=${summary.analysisId}`)}
+                    >
+                      상세보기
+                    </Button>
+                  )}
                   {loading ? (
                     <div className="ui-empty">불러오는 중…</div>
                   ) : !summary || !summary.modifiedCode || summary.modifiedCode === summary.originCode ? (
                     <div className="ui-empty">제안할 개선 코드가 없습니다.</div>
                   ) : (
                     <>
-                      <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ padding: '0 16px 8px' }}>
                         <span className="text-caption-md" style={{ color: 'var(--text-muted)' }}>{summary.filePath}</span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => navigate(`?page=analysis-detail&analysisId=${summary.analysisId}`)}
-                        >
-                          상세보기
-                        </Button>
                       </div>
                       <div style={{ padding: '0 16px 16px' }}>
-                        <div className="diff-card" style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', maxHeight: 240, overflowY: 'auto' }}>
+                        <div className="diff-card" style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', maxHeight: 270, overflowY: 'auto' }}>
                           <DiffViewer original={summary.originCode} improved={summary.modifiedCode} />
                         </div>
                       </div>
@@ -588,14 +598,12 @@ function MySpaceRepoView({ repoId, branch }) {
                   )}
                 </Card>
 
-                <Card style={{ padding: 0 }}>
-                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+                <Card style={{ padding: 0, height: AI_PR_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                     <Icon name="pullrequest" size={18} />
-                    <h2 className="text-heading-md" style={{ margin: 0 }}>자동 생성 PR</h2>
+                    <h2 className="text-heading-md" style={{ margin: 0 }}>최근 생성 PR TOP5</h2>
                   </div>
-                  {autoPrs.length === 0 ? (
-                    <div className="ui-empty">자동 생성된 PR이 없습니다.</div>
-                  ) : (
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                     <table className="history-table">
                       <thead>
                         <tr>
@@ -605,34 +613,38 @@ function MySpaceRepoView({ repoId, branch }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {autoPrs.map((pr) => {
-                          const st = PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' };
+                        {Array.from({ length: 5 }, (_, idx) => autoPrs[idx]).map((pr, idx) => {
+                          const st = pr ? (PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' }) : null;
                           return (
                             <tr
-                              key={pr.githubPrNumber}
-                              style={{ cursor: 'pointer' }}
-                              onClick={() => window.open(pr.prUrl, '_blank', 'noopener,noreferrer')}
+                              key={pr?.githubPrNumber ?? `empty-${idx}`}
+                              style={pr ? { cursor: 'pointer' } : undefined}
+                              onClick={pr ? () => window.open(pr.prUrl, '_blank', 'noopener,noreferrer') : undefined}
                             >
                               <td>
-                                <span className="history-table__file">
-                                  <Icon name="pr" size={15} />
-                                  {pr.title.replace(/^GuardrAil:\s*/, '')}
-                                </span>
+                                {pr ? (
+                                  <span className="history-table__file">
+                                    <Icon name="pr" size={15} />
+                                    {pr.title.replace(/^GuardrAil:\s*/, '')}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                )}
                               </td>
                               <td>
-                                <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                                  {pr.headBranch} → {pr.baseBranch}
-                                </span>
+                                {pr ? (
+                                  <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                                    {pr.headBranch} → {pr.baseBranch}
+                                  </span>
+                                ) : '-'}
                               </td>
-                              <td>
-                                <Badge variant={st.variant}>{st.label}</Badge>
-                              </td>
+                              <td>{st ? <Badge variant={st.variant}>{st.label}</Badge> : '-'}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
-                  )}
+                  </div>
                 </Card>
               </div>
         </>

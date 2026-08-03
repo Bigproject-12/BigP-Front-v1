@@ -899,14 +899,6 @@ export default function AnalyzePage() {
 
       {activeTab === 'ai' && (
         <>
-          <div className="analyze-actions">
-            {!originalCode.trim() && (
-              <span className="text-caption-md" style={{ color: 'var(--text-muted)' }}>
-                코드 분석 탭에서 코드를 먼저 입력해주세요.
-              </span>
-            )}
-          </div>
-
           {analyzed && (
             <div className="result-section result-section--detail">
               <AnalysisResult

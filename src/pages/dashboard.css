@@ -158,8 +158,8 @@
   color: #F87171; /* 밝은 빨강 */
 }
 
-[data-theme='dark'] .ui-stat__icon--spark,
-.dark .ui-stat__icon--spark {
+[data-theme='dark'] .ui-stat__icon--score,
+.dark .ui-stat__icon--score {
   background-color: rgba(124, 58, 237, 0.25);
   color: #C084FC; /* 밝은 보라 */
 }

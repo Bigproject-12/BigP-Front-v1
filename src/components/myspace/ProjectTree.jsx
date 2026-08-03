@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import Icon from '../icons/Icon';
+import FileTypeIcon from '../icons/FileTypeIcon';
 import './ProjectTree.css';
 
 // 파일 경로 목록으로부터 중첩 폴더 트리를 만든다.
@@ -44,7 +45,7 @@ function TreeNode({ node, depth, expanded, toggle }) {
     const hasIssues = f.analyzed && f.totalIssueCount > 0;
     return (
       <div className="ptree-row ptree-row--file" style={{ paddingLeft: depth * 18 + 28 }}>
-        <Icon name="file" size={14} className="ptree-row__icon" />
+        <FileTypeIcon name={node.name} size={14} className="ptree-row__icon" />
         <span className="ptree-row__name">{node.name}</span>
         {hasIssues && (
           <span className={`ptree-badge ${f.criticalIssueCount > 0 || f.highIssueCount > 0 ? 'ptree-badge--high' : 'ptree-badge--low'}`}>
