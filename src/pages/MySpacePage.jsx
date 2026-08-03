@@ -488,7 +488,7 @@ function MySpaceRepoView({ repoId, branch }) {
             <Card style={{ padding: 0, height: STRUCTURE_ISSUES_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
                 <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                   <Icon name="bug" size={18} />
-                  <h2 className="text-heading-md" style={{ margin: 0 }}>우선 해결해야 할 이슈 (상위 4건)</h2>
+                  <h2 className="text-heading-md" style={{ margin: 0 }}>우선 해결해야 할 이슈</h2>
                 </div>
                 {extrasLoading ? (
                   <div className="ui-empty">불러오는 중…</div>
