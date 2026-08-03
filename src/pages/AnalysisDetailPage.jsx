@@ -236,14 +236,7 @@ export default function AnalysisDetailPage() {
       ruleId: null,                   // lizard는 rule_id 없음
       functionName: c.function_name ?? null,   // 비효율은 함수명으로 점프
     })),
-    ...complexityDetails.map((c) => ({
-    category: 'PERFORMANCE',
-    line: c.line ?? null,
-    title: `${c.function_name} 함수 복잡도 ${c.complexity_score}`,
-    message: c.message ?? '',
-    ruleId: null,
-    functionName: c.function_name ?? null,
-  })),
+
     ...duplicates.map((d) => {
       const similarityPct = d.similarity_score != null ? Math.round(d.similarity_score * 100) : null;
       return {
