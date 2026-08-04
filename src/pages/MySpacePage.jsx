@@ -74,8 +74,8 @@ const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
 const RISK_DONUT_CARD_HEIGHT = 360;
 const AI_PR_CARD_HEIGHT = 360;
 
-// 분석 상세(AnalysisResult.jsx CATEGORY_META)와 동일한 색상 기준: 보안=빨강, 비효율=주황, 기타=회색
-const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
+// 분석 상세(AnalysisResult.jsx CATEGORY_META)와 동일한 색상 기준: 보안=빨강, 비효율=주황, 코드 중복성=회색
+const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '코드 중복성' };
 const ISSUE_TYPE_COLOR = { SECURITY: '#E11D48', INEFFICIENCY: '#F59E0B', OTHER: '#64748B' };
 const SEVERITY_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const SEVERITY_VARIANT = { CRITICAL: 'warning', HIGH: 'warning', MEDIUM: 'info', LOW: 'neutral' };
@@ -404,7 +404,7 @@ function MySpaceRepoView({ repoId, branch }) {
     ? [
         { type: '보안', count: summary.securityIssueCount },
         { type: '비효율', count: summary.inefficiencyIssueCount },
-        { type: '기타', count: summary.otherIssueCount },
+        { type: '코드 중복성', count: summary.otherIssueCount },
       ].filter((d) => d.count > 0)
     : [];
 

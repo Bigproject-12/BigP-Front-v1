@@ -186,7 +186,7 @@ export default function AnalyzePage() {
       if (fileName.includes('.')) {
         exts.add(fileName.split('.').pop());
       } else {
-        exts.add('기타');
+        exts.add('코드 중복성');
       }
     });
     return Array.from(exts).sort();
@@ -197,7 +197,7 @@ export default function AnalyzePage() {
     return files.reduce((acc, path) => {
       const parts = path.split('/');
       const fileName = parts[parts.length - 1];
-      const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+      const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
 
       // 선택한 확장자와 일치하지 않으면 제외
       if (selectedExt && ext !== selectedExt) {
@@ -703,7 +703,7 @@ export default function AnalyzePage() {
                 // 이미 선택된 파일이 새 필터에서 탈락할 때만 초기화
                 if (filePath && nextExt) {
                   const fileName = filePath.split('/').pop();
-                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
+                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
                   if (ext !== nextExt) {
                     setFilePath('');
                     setOriginalCode('');

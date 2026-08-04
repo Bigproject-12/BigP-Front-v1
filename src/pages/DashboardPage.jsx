@@ -25,7 +25,7 @@ function rangeEndingAt(to) {
   return { from: toISODate(from), to };
 }
 
-const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
+const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '코드 중복성' };
 const STATUS_LABEL = {
   COMPLETED: { label: '완료', variant: 'success' },
   ANALYZING: { label: '분석중', variant: 'info' },

@@ -6,7 +6,7 @@ const CATEGORY_META = {
   SECURITY:    { label: '보안 취약점', color: '#E11D48' },
   PERFORMANCE: { label: '코드 비효율', color: '#F59E0B' },
   STYLE:       { label: '코드 스타일', color: '#0EA5E9' },
-  ETC:         { label: '기타',        color: '#64748B' },
+  ETC:         { label: '코드 중복성',        color: '#64748B' },
 };
 const CATEGORY_ORDER = ['SECURITY', 'PERFORMANCE', 'STYLE', 'ETC'];
 
