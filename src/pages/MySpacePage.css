@@ -73,3 +73,11 @@
   outline: none !important;
   background-color: var(--surface-hover, rgba(0, 0, 0, 0.05)) !important;
 }
+
+/* 다크모드 시 셀렉트 옵션 상자 배경 및 글자색 강제 지정 */
+html.dark .myspace-ghost-select option,
+body.dark .myspace-ghost-select option,
+[data-theme='dark'] .myspace-ghost-select option {
+  background-color: var(--surface-input, #1f2937);
+  color: var(--text-primary, #f3f4f6);
+}
