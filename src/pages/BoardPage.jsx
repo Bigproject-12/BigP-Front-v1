@@ -218,15 +218,15 @@ function BoardDetail({ postId, isAdmin, navigate }) {
 
         {/* 📁 첨부파일 목록 및 다운로드 영역 */}
         {files.length > 0 && (
-          <div style={{ marginTop: '24px', padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
+          <div style={{ marginTop: '24px', padding: '12px', background: 'var(--surface-soft)', borderRadius: '8px' }}>
             <span className="text-body-sm" style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
               첨부파일 ({files.length})
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {files.map((file) => (
                 <div key={file.fileId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-body-sm" style={{ color: '#333' }}>
-                    📎 {file.originalFileName} 
+                  <span className="text-body-sm" style={{ color: 'var(--text-body)' }}>
+                    📎 {file.originalFileName}
                   </span>
                   <Button 
                     variant="secondary" 
@@ -289,7 +289,7 @@ function ImagePreview({ fileId, fileName }) {
   if (!imageUrl) return null;
 
   return (
-    <div style={{ maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' }}>
+    <div style={{ maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-hairline)' }}>
       <img 
         src={imageUrl} 
         alt={fileName} 
@@ -393,7 +393,7 @@ function BoardEditor({ postId, navigate }) {
                 style={{ fontSize: '14px', padding: '4px 0' }}
               />
               {files.length > 0 && (
-                <span className="text-body-sm" style={{ color: '#666', marginTop: '4px' }}>
+                <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
                   선택된 파일: {files.map(f => f.name).join(', ')}
                 </span>
               )}
