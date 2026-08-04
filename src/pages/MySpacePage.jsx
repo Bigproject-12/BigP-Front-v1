@@ -93,6 +93,22 @@ export default function MySpacePage() {
   const [branch, setBranch] = useState('');
   const branchSelectRef = useRef(null);
 
+  const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
+  const [overview, setOverview] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState('');
+
+  const fetchOverview = () => {
+    setOverviewLoading(true);
+    setOverviewError('');
+    api.get(`/api/my-space/overview?from=${range.from}&to=${range.to}`)
+      .then(setOverview)
+      .catch((e) => setOverviewError(e.message || '요약 정보를 불러오지 못했습니다.'))
+      .finally(() => setOverviewLoading(false));
+  };
+
+  useEffect(fetchOverview, [range.from, range.to]);
+
   useEffect(() => {
     setBranch('');
     setBranches([]);
@@ -101,7 +117,7 @@ export default function MySpacePage() {
       .then((list) => {
         setBranches(list);
         setBranch(list.find((b) => b.isDefault)?.name || list[0]?.name || '');
-      
+
         setTimeout(() => {
           if (branchSelectRef.current) {
             branchSelectRef.current.focus();
@@ -119,12 +135,12 @@ export default function MySpacePage() {
           <div className="myspace-breadcrumb">
             <h1 className="text-display-md myspace-breadcrumb__title">My Space</h1>
             <span className="myspace-breadcrumb__slash">  /</span>
-            
+
             {/* 1. Repository 선택 셀렉트 */}
             <div className="myspace-select-wrapper">
-              <Select 
-                className="myspace-ghost-select" 
-                value={repoId} 
+              <Select
+                className="myspace-ghost-select"
+                value={repoId}
                 onChange={(e) => setRepoId(e.target.value)}
               >
                 <option value="">전체 Repository</option>
@@ -155,31 +171,41 @@ export default function MySpacePage() {
               </>
             )}
           </div>
+          <span className="text-body-sm">
+            {user ? `${user.name}님의 코드 품질 현황을 확인하세요.` : ''}
+          </span>
         </div>
+
+        {!repoId && (
+          <div className="dashboard-controls">
+            <label className="dashboard-date-range">
+              <span>{range.from} ~</span>
+              <input
+                type="date"
+                value={range.to}
+                max={toISODate(new Date())}
+                onChange={(e) => e.target.value && setRange(rangeEndingAt(e.target.value))}
+              />
+            </label>
+            <Button variant="secondary" onClick={fetchOverview} disabled={overviewLoading}>
+              <Icon name="refresh" size={16} />
+              새로고침
+            </Button>
+          </div>
+        )}
       </div>
 
-      {repoId ? <MySpaceRepoView repoId={Number(repoId)} branch={branch} /> : <MySpaceOverview />}
+      {repoId ? (
+        <MySpaceRepoView repoId={Number(repoId)} branch={branch} />
+      ) : (
+        <MySpaceOverview overview={overview} loading={overviewLoading} error={overviewError} />
+      )}
     </>
   );
 }
 
-function MySpaceOverview() {
+function MySpaceOverview({ overview, loading, error }) {
   const { navigate } = useRouter();
-  const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
-  const [overview, setOverview] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetchOverview = () => {
-    setLoading(true);
-    setError('');
-    api.get(`/api/my-space/overview?from=${range.from}&to=${range.to}`)
-      .then(setOverview)
-      .catch((e) => setError(e.message || '요약 정보를 불러오지 못했습니다.'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(fetchOverview, [range.from, range.to]);
 
   const qualityTrend = overview
     ? overview.qualityScoreTrend
@@ -195,22 +221,6 @@ function MySpaceOverview() {
 
   return (
     <>
-      <div className="dashboard-controls" style={{ justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
-        <label className="dashboard-date-range">
-          <span>{range.from} ~</span>
-          <input
-            type="date"
-            value={range.to}
-            max={toISODate(new Date())}
-            onChange={(e) => e.target.value && setRange(rangeEndingAt(e.target.value))}
-          />
-        </label>
-        <Button variant="secondary" onClick={fetchOverview} disabled={loading}>
-          <Icon name="refresh" size={16} />
-          새로고침
-        </Button>
-      </div>
-
       {error && (
         <div className="ui-banner ui-banner--error">
           <Icon name="close" size={16} /> {error}

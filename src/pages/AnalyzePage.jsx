@@ -1115,7 +1115,7 @@ export default function AnalyzePage() {
             </div>
 
             <p className="pr-modal__hint">
-              내용은 분석 결과로 자동 생성됩니다. 필요하면 수정한 뒤 생성하세요.
+              제목과 내용은 자동 생성됩니다. 편집을 눌러 수정할 수 있습니다.
             </p>
 
             {prError && <div className="ui-banner ui-banner--error">{prError}</div>}
