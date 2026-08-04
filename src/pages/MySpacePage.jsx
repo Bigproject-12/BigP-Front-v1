@@ -669,7 +669,7 @@ function MySpaceRepoView({ repoId, branch }) {
                               <td>
                                 {pr ? (
                                   <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                                    {pr.headBranch} → {pr.baseBranch}
+                                    {pr.baseBranch} ← {pr.headBranch}
                                   </span>
                                 ) : '-'}
                               </td>
