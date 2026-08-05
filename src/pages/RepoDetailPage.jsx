@@ -15,8 +15,8 @@ import './RepoDetailPage.css';
 
 const TOP_TABS = [
   { key: 'history', label: '히스토리' },
-  { key: 'analyze', label: '코드 분석' },
   { key: 'push', label: 'Push'},
+  { key: 'analyze', label: '코드 분석' },
 ];
 
 const STATUS_FILTERS = [
@@ -42,7 +42,7 @@ export default function RepoDetailPage() {
 
   // 👈 페이지네이션을 위한 상태 추가 (기본 1페이지, 페이지당 10개)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15; 
+  const itemsPerPage = 15;
 
   useEffect(() => {
     if (!repoId) return;
@@ -96,6 +96,11 @@ export default function RepoDetailPage() {
   const handleTabChange = (key) => {
     if (key === 'analyze') {
       navigate(`/Analyze?repoId=${repoId}`);
+      return;
+    }
+    if (key === 'push') {
+      navigate(`?page=push-tab&repoId=${repoId}`);
+      return;
     }
   };
 
@@ -112,7 +117,9 @@ export default function RepoDetailPage() {
           </button>
           <div>
             <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
-            {repo && <span className="text-body-sm">{repo.description}</span>}
+            <span className="text-body-sm">
+              {repo ? `${repo.name} Repository의 히스토리입니다.` : ''}
+            </span>
           </div>
         </div>
         {repo && (
