@@ -61,7 +61,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-lg);
-  align-items: start;
+  align-items: stretch;
 }
 @media (max-width: 900px) {
   .recent-grid {
@@ -69,16 +69,18 @@
   }
 }
 
-.recent-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-lg);
-  align-items: start;
+/* 2. 카드 내부를 flex 구조로 만들어 내용물이 늘어나도 스크롤 영역이 잡히도록 함 */
+.recent-grid .card, 
+.recent-grid .ui-card { /* 프로젝트에서 사용하는 카드 클래스명에 맞춰 조절 */
+  display: flex;
+  flex-direction: column;
 }
-@media (max-width: 900px) {
-  .recent-grid {
-    grid-template-columns: 1fr;
-  }
+
+/* 3. 테이블(리스트)을 감싸는 영역에 최대 높이와 스크롤 부여 */
+.recent-grid .table-scroll-container {
+  max-height: 380px; /* 원하는 최대 높이 (디자인에 맞게 조절 가능) */
+  overflow-y: auto;  /* 내용이 넘치면 세로 스크롤 생성 */
+  width: 100%;
 }
 
 .chart-card {
