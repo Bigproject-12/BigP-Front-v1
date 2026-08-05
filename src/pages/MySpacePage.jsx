@@ -189,7 +189,7 @@ export default function MySpacePage() {
             </label>
             <Button variant="secondary" onClick={fetchOverview} disabled={overviewLoading}>
               <Icon name="refresh" size={16} />
-              새로고침
+              
             </Button>
           </div>
         )}
@@ -413,7 +413,7 @@ function MySpaceRepoView({ repoId, branch }) {
       <div className="dashboard-controls" style={{ justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
         <Button variant="secondary" onClick={fetchAll} disabled={loading}>
           <Icon name="refresh" size={16} />
-          새로고침
+          
         </Button>
       </div>
 
