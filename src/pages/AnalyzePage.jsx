@@ -763,7 +763,7 @@ export default function AnalyzePage() {
           <div className="analyze-toolbar__field">
             <Input
               label="파일 검색"
-              placeholder="파일명 또는 경로 검색"
+              placeholder="입력 후 파일 선택"
               leftIcon={<Icon name="search" size={16} />}
               value={fileSearch}
               onChange={(e) => setFileSearch(e.target.value)}
