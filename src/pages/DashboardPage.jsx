@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from '../router/RouterContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
@@ -8,7 +7,7 @@ import Button from '../components/ui/Button';
 import LineChart from '../components/charts/LineChart';
 import DonutChart from '../components/charts/DonutChart';
 import Icon from '../components/icons/Icon';
-import './dashboard.css';
+import './DashboardPage.css';
 import './RepoDetailPage.css';
 
 function toISODate(date) {
@@ -48,7 +47,6 @@ function deltaProps(rate) {
 }
 
 export default function DashboardPage() {
-  const { navigate } = useRouter();
   const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
