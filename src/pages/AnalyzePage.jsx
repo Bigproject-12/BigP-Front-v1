@@ -189,7 +189,7 @@ export default function AnalyzePage() {
       if (fileName.includes('.')) {
         exts.add(fileName.split('.').pop());
       } else {
-        exts.add('코드 중복성');
+        exts.add('기타');
       }
     });
     return Array.from(exts).sort();
@@ -201,7 +201,7 @@ export default function AnalyzePage() {
     return files.reduce((acc, path) => {
       const parts = path.split('/');
       const fileName = parts[parts.length - 1];
-      const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
+      const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
 
       // 선택한 확장자와 일치하지 않으면 제외
       if (selectedExt && ext !== selectedExt) {
@@ -713,7 +713,7 @@ export default function AnalyzePage() {
                 // 이미 선택된 파일이 새 필터에서 탈락할 때만 초기화
                 if (filePath && nextExt) {
                   const fileName = filePath.split('/').pop();
-                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
+                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
                   if (ext !== nextExt) {
                     setFilePath('');
                     setOriginalCode('');
@@ -763,7 +763,7 @@ export default function AnalyzePage() {
           <div className="analyze-toolbar__field">
             <Input
               label="파일 검색"
-              placeholder="입력 후 파일 선택"
+              placeholder="파일명 또는 경로 검색"
               leftIcon={<Icon name="search" size={16} />}
               value={fileSearch}
               onChange={(e) => setFileSearch(e.target.value)}
