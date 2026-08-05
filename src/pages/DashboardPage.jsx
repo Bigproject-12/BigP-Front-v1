@@ -200,60 +200,63 @@ const parsePrTitle = (title) => {
         </Card>
       </div>
 
-<div className="recent-grid">
+      <div className="recent-grid">
         {/* 최근 분석 카드 */}
-        <Card style={{ padding: 0, height: 360, display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+        <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-hairline)' }}>
             <Icon name="code" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
-          {data.recentAnalyses.length === 0 ? (
-            <div className="ui-empty">최근 분석 이력이 없습니다.</div>
-          ) : (
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Repository</th>
-                  <th>확장자</th>
-                  <th>상태</th>
-                  <th>이슈</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentAnalyses.map((a) => {
-                  const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
-                  return (
-                    <tr key={a.analysisId}>
-                      <td>
-                        <span className="history-table__file">
-                          <Icon name="repo" size={15} />
-                          {a.repoName}
-                        </span>
-                      </td>
-                      <td>{a.language}</td>
-                      <td>
-                        <Badge variant={st.variant}>{st.label}</Badge>
-                      </td>
-                      <td>{a.totalIssueCount}건</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <div>
+            {data.recentAnalyses.length === 0 ? (
+              <div className="ui-empty">최근 분석 이력이 없습니다.</div>
+            ) : (
+              <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th>Repository</th>
+                    <th>확장자</th>
+                    <th>상태</th>
+                    <th>이슈</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 👈 최대 7개까지만 출력 */}
+                  {data.recentAnalyses.slice(0, 7).map((a) => {
+                    const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
+                    return (
+                      <tr key={a.analysisId}>
+                        <td>
+                          <span className="history-table__file">
+                            <Icon name="repo" size={15} />
+                            {a.repoName}
+                          </span>
+                        </td>
+                        <td>{a.language}</td>
+                        <td>
+                          <Badge variant={st.variant}>{st.label}</Badge>
+                        </td>
+                        <td>{a.totalIssueCount}건</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </Card>
 
         {/* 최근 PR 카드 */}
-        <Card style={{ padding: 0, height: 360, display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+        <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-hairline)' }}>
             <Icon name="pullrequest" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 PR</h2>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div>
             {data.recentPullRequests.length === 0 ? (
               <div className="ui-empty">최근 생성된 PR이 없습니다.</div>
             ) : (
-              <table className="history-table">
+              <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th>Repository</th>
@@ -263,40 +266,31 @@ const parsePrTitle = (title) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from({ length: 5 }, (_, idx) => data.recentPullRequests[idx]).map((pr, idx) => {
-                    const st = pr ? (PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' }) : null;
-                    const { fileName } = pr ? parsePrTitle(pr.title) : { fileName: '' };
+                  {/* 👈 최대 7개까지만 출력 */}
+                  {data.recentPullRequests.slice(0, 7).map((pr, idx) => {
+                    const st = PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' };
+                    const { fileName } = parsePrTitle(pr.title);
                     return (
                       <tr
-                        key={pr?.pullRequestId ?? `empty-pr-${idx}`}
-                        style={pr ? { cursor: 'pointer' } : undefined}
-                        onClick={pr ? () => window.open(pr.prUrl, '_blank', 'noopener,noreferrer') : undefined}
+                        key={pr.pullRequestId ?? `pr-${idx}`}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => window.open(pr.prUrl, '_blank', 'noopener,noreferrer')}
                       >
                         <td>
-                          {pr ? (
-                            <span className="history-table__file">
-                              <Icon name="repo" size={15} />
-                              {pr.repoName}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
+                          <span className="history-table__file">
+                            <Icon name="repo" size={15} />
+                            {pr.repoName}
+                          </span>
                         </td>
                         <td>
-                          {pr ? (
-                            <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                              {fileName}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
+                          <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                            {fileName}
+                          </span>
                         </td>
                         <td>
-                          {pr ? (
-                            <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                              {pr.headBranch} → {pr.baseBranch}
-                            </span>
-                          ) : '-'}
+                          <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                            {pr.headBranch} → {pr.baseBranch}
+                          </span>
                         </td>
                         <td>
                           {st ? <Badge variant={st.variant}>{st.label}</Badge> : '-'}
