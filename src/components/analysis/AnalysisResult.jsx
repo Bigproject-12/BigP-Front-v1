@@ -6,7 +6,7 @@ const CATEGORY_META = {
   SECURITY:    { label: '보안 취약점', color: '#E11D48' },
   PERFORMANCE: { label: '코드 비효율', color: '#F59E0B' },
   STYLE:       { label: '코드 스타일', color: '#0EA5E9' },
-  ETC:         { label: '기타',        color: '#64748B' },
+  ETC:         { label: '코드 중복성',        color: '#64748B' },
 };
 const CATEGORY_ORDER = ['SECURITY', 'PERFORMANCE', 'STYLE', 'ETC'];
 
@@ -44,7 +44,7 @@ function resolveTitle(issue) {
 /* AI 확률을 한 문장으로 해석 */
 function aiVerdict(p) {
   if (p >= 50) return 'AI 생성 코드로 의심됩니다.';
-  if (p >= 25) return '일부 구간에서 AI 생성 패턴이 보입니다.';
+  if (p >= 30) return '일부 구간에서 AI 생성 패턴이 보입니다.';
   return '사람이 작성한 코드입니다.';
 }
 
@@ -52,7 +52,7 @@ function aiVerdict(p) {
 function aiColor(p) {
   if (p >= 70) return '#E11D48';
   if (p >= 50) return '#F59E0B';
-  if (p >= 25) return '#EAB308';
+  if (p >= 30) return '#EAB308';
   return '#10B981';
 }
 

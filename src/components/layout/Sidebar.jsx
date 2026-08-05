@@ -58,7 +58,7 @@ export default function Sidebar() {
 
   const isActive = (item) => {
     if (item.key === 'analyze') return page === 'analyze';
-    if (item.key === 'repolist') return page === 'repolist' || page === 'repo-detail';
+    if (item.key === 'repolist') return page === 'repolist' || page === 'repo-detail' || page === 'push-tab';
     return page === item.key;
   };
 
@@ -174,7 +174,7 @@ export default function Sidebar() {
                       <button
                         key={repo.id}
                         className={`gr-fav-dropdown__item ${
-                          page === 'repo-detail' && activeRepoId === String(repo.id)
+                          (page === 'repo-detail' || page === 'push-tab') && activeRepoId === String(repo.id)
                             ? 'gr-fav-dropdown__item--active'
                             : ''
                         }`}

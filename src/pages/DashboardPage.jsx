@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from '../router/RouterContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
@@ -8,7 +7,7 @@ import Button from '../components/ui/Button';
 import LineChart from '../components/charts/LineChart';
 import DonutChart from '../components/charts/DonutChart';
 import Icon from '../components/icons/Icon';
-import './dashboard.css';
+import './DashboardPage.css';
 import './RepoDetailPage.css';
 
 function toISODate(date) {
@@ -25,7 +24,7 @@ function rangeEndingAt(to) {
   return { from: toISODate(from), to };
 }
 
-const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '기타' };
+const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '코드 중복성' };
 const STATUS_LABEL = {
   COMPLETED: { label: '완료', variant: 'success' },
   ANALYZING: { label: '분석중', variant: 'info' },
@@ -48,7 +47,6 @@ function deltaProps(rate) {
 }
 
 export default function DashboardPage() {
-  const { navigate } = useRouter();
   const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +82,7 @@ export default function DashboardPage() {
         </label>
         <Button variant="secondary" onClick={fetchDashboard} disabled={loading}>
           <Icon name="refresh" size={16} />
-          새로고침
+          
         </Button>
       </div>
     </div>
@@ -208,44 +206,43 @@ const parsePrTitle = (title) => {
             <Icon name="code" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
-          {data.recentAnalyses.length === 0 ? (
-            <div className="ui-empty">최근 분석 이력이 없습니다.</div>
-          ) : (
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Repository</th>
-                  <th>언어</th>
-                  <th>상태</th>
-                  <th>이슈</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentAnalyses.map((a) => {
-                  const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
-                  return (
-                    <tr
-                      key={a.analysisId}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`)}
-                    >
-                      <td>
-                        <span className="history-table__file">
-                          <Icon name="repo" size={15} />
-                          {a.repoName}
-                        </span>
-                      </td>
-                      <td>{a.language}</td>
-                      <td>
-                        <Badge variant={st.variant}>{st.label}</Badge>
-                      </td>
-                      <td>{a.totalIssueCount}건</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <div>
+            {data.recentAnalyses.length === 0 ? (
+              <div className="ui-empty">최근 분석 이력이 없습니다.</div>
+            ) : (
+              <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th>Repository</th>
+                    <th>확장자</th>
+                    <th>상태</th>
+                    <th>이슈</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 👈 최대 7개까지만 출력 */}
+                  {data.recentAnalyses.slice(0, 7).map((a) => {
+                    const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
+                    return (
+                      <tr key={a.analysisId}>
+                        <td>
+                          <span className="history-table__file">
+                            <Icon name="repo" size={15} />
+                            {a.repoName}
+                          </span>
+                        </td>
+                        <td>{a.language}</td>
+                        <td>
+                          <Badge variant={st.variant}>{st.label}</Badge>
+                        </td>
+                        <td>{a.totalIssueCount}건</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </Card>
 
         <Card style={{ padding: 0 }}>
@@ -295,7 +292,7 @@ const parsePrTitle = (title) => {
                       </td>
                       <td>
                         <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                          {pr.headBranch} → {pr.baseBranch}
+                          {pr.baseBranch} ← {pr.headBranch}
                         </span>
                       </td>
                       <td>

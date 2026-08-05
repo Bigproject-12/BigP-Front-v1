@@ -23,7 +23,7 @@ function getNotifVariant(type) {
   return 'complete'; // ANALYSIS_COMPLETE 및 기본값
 }
 
-const NOTIFICATION_API = 'http://localhost:8081/api/notification';
+const NOTIFICATION_API = `${import.meta.env.VITE_API_BASE}/api/notification`;
 
 export default function Topbar() {
   const { navigate } = useRouter();

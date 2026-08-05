@@ -312,8 +312,8 @@ export default function AnalysisDetailPage() {
             <span style={{ color: 'var(--text-muted)' }}>Branch:</span>
             <span style={{ color: 'var(--text-primary)' }}>{data.branch ?? 'main'}</span>
           </div>
-          <span>•</span>
-          <span>확장자: <strong>{data.language ?? '-'}</strong></span>
+          <span> </span>
+          <span>•  확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
 
@@ -397,7 +397,8 @@ export default function AnalysisDetailPage() {
                 aiProbability={data.aiProbability}
               />
 
-              {/* 3. 행동 — 원본 프롬프트 재구성 (항상 노출) */}
+              {/* 3. 행동 — 원본 프롬프트 재구성 (AI 생성 확률 30% 이상일 때만 노출) */}
+              {data.aiProbability != null && data.aiProbability >= 30 && (
               <Card style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
                 {data.aiProbability >= 70 && (
                   <div className="ui-banner ui-banner--error confidence-warning">
@@ -450,6 +451,7 @@ export default function AnalysisDetailPage() {
                   )}
                 </div>
               </Card>
+              )}
 
             </div>
           )}

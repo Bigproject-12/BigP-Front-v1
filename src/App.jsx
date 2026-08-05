@@ -16,6 +16,7 @@ import BoardPage from './pages/BoardPage';
 import MembersPage from './pages/MembersPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import AnalysisDetailPage from './pages/AnalysisDetailPage';
+import PushPage from './pages/PushPage';
 
 const PAGES = {
   dashboard: DashboardPage,
@@ -24,6 +25,7 @@ const PAGES = {
   'analysis-detail': AnalysisDetailPage,
   repolist: RepoListPage,
   'repo-detail': RepoDetailPage,
+  'push-tab': PushPage,
   mypage: MyPage,
   board: BoardPage,
   members: MembersPage,

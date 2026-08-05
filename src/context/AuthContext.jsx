@@ -3,6 +3,7 @@ import { api, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../lib/api';
 
 const STORAGE_KEY = 'GuardrAil-user';
 const AuthContext = createContext(null);
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function readStoredUser() {
   try {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (loginId, password) => {
     let res;
     try {
-      res = await fetch('http://localhost:8081/api/users/login', {
+      res = await fetch(`${API_BASE}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loginId, password }),
@@ -81,7 +82,7 @@ export function AuthProvider({ children }) {
     const user = { id: data.userId, name: data.name, role: data.role, loginId };
     setUser(user);
     // gitId, companyName 등 나머지 프로필 정보는 화면 전환을 막지 않고 백그라운드에서 채운다.
-    fetch('http://localhost:8081/api/users/me', {
+    fetch(`${API_BASE}/api/users/me`, {
       headers: { Authorization: `Bearer ${data.accessToken}` },
     })
       .then((meRes) => (meRes.ok ? meRes.json() : null))
@@ -95,7 +96,7 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async ({ loginId, password, confirm, name, companyName, gitId }) => {
     let res;
     try {
-      res = await fetch('http://localhost:8081/api/users/signup', {
+      res = await fetch(`${API_BASE}/api/users/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName, gitId }),
@@ -117,7 +118,7 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     setUser(null);
     if (token) {
-      fetch('http://localhost:8081/api/users/logout', {
+      fetch(`${API_BASE}/api/users/logout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});
