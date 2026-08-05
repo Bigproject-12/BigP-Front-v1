@@ -113,6 +113,7 @@ export default function RepoDetailPage() {
           <div>
             <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
             {repo && <span className="text-body-sm">{repo.description}</span>}
+            <div className="text-body-sm">히스토리를 확인하고 코드 분석 상세내용을 확인하세요.</div>
           </div>
         </div>
         {repo && (
