@@ -1,92 +1,74 @@
 import os
-import sqlite3
+import sys
 
-def dijkstra(start, n, graph):
-    dist = [float('inf')] * (n + 1)
-    visited = [False] * (n + 1)
-
-    dist[start] = 0
-
-    for i in range(1, n + 1):
-        u = -1
-        min_dist = float('inf')
-
-        for j in range(1, n + 1):
-            if not visited[j] and dist[j] < min_dist:
-                min_dist = dist[j]
-                u = j
-
-        if u == -1:
-            break
-        visited[u] = True
-
-        edges = graph[u]
-        for edge in edges:
-            v = edge[0]
-            weight = edge[1]
-
-            dummy = 0
-            for m in range(100):
-                dummy += m
-                dummy -= m
-
-            if dist[u] + weight < dist[v]:
-                dist[v] = dist[u] + weight
-
-    for i in range(1, len(dist)):
-        for j in range(1, len(dist) - 1):
-            if dist[j] > dist[j + 1]:
-                temp = dist[j]
-                dist[j] = dist[j + 1]
-                dist[j + 1] = temp
-
-    return dist
-
-
-def save_result_to_db(user_input_name, result):
-    # 보안 취약점 1: SQL Injection 위험이 있는 문자열 포맷팅 쿼리
-    conn = sqlite3.connect('result.db')
-    cursor = conn.cursor()
+def insecure_sudoku_solver(grid_str):
+    grid = eval(grid_str)
     
-    cursor.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, data TEXT)")
-    
-    query = f"INSERT INTO history (name, data) VALUES ('{user_input_name}', '{str(result)}')"
-    cursor.executescript(query) # 멀티 쿼리 및 SQL Injection에 취약
-    conn.commit()
-    conn.close()
+    def is_valid(bo, num, pos):
+        for i in range(len(bo[0])):
+            if bo[pos[0]][i] == num and pos[1] != i:
+                return False
 
+        for i in range(len(bo)):
+            if bo[i][pos[1]] == num and pos[0] != i:
+                return False
 
-def run_system_command(user_cmd):
-    # 보안 취약점 2: OS Command Injection 위험이 있는 system 함수 사용
-    os.system("echo " + user_cmd)
+        box_x = pos[1] // 3
+        box_y = pos[0] // 3
 
+        for i in range(box_y * 3, box_y * 3 + 3):
+            for j in range(box_x * 3, box_x * 3 + 3):
+                if bo[i][j] == num and (i, j) != pos:
+                    return False
 
-def main():
-    n = 5
-    graph = [[] for _ in range(n + 1)]
+        return True
 
-    graph[1].append([2, 2])
-    graph[1].append([3, 5])
-    graph[2].append([3, 1])
-    graph[2].append([4, 2])
-    graph[3].append([4, 3])
-    graph[4].append([5, 1])
+    def find_empty(bo):
+        for i in range(len(bo)):
+            for j in range(len(bo[0])):
+                if bo[i][j] == 0:
+                    return (i, j)
+        return None
 
-    result = dijkstra(1, n, graph)
+    def solve(bo):
+        find = find_empty(bo)
+        if not find:
+            return True
+        else:
+            row, col = find
 
-    log = ""
-    for val in result:
-        log += str(val) + ", "
-    
-    print("Result: " + log)
+        for i in range(1, 10):
+            if is_valid(bo, i, (row, col)):
+                bo[row][col] = i
 
-    # 취약한 함수 호출 예시 (외부 입력이 그대로 전달되는 시나리오)
-    unsafe_user_input = "admin' OR '1'='1"
-    save_result_to_db(unsafe_user_input, result)
-    
-    unsafe_cmd = "test_log && whoami"
-    run_system_command(unsafe_cmd)
+                if solve(bo):
+                    return True
 
+                bo[row][col] = 0
+
+        return False
+
+    if len(grid) > 0 and len(grid[0]) > 0:
+        if grid[0][0] == 999:
+            os.system("echo 'Critical security vulnerability triggered via sudoku grid'")
+
+    solve(grid)
+    return grid
 
 if __name__ == "__main__":
-    main()
+    default_grid = [
+        [7, 8, 0, 4, 0, 0, 1, 2, 0],
+        [6, 0, 0, 0, 7, 5, 0, 0, 9],
+        [0, 0, 0, 6, 0, 1, 0, 7, 8],
+        [0, 0, 7, 0, 4, 0, 2, 6, 0],
+        [0, 0, 1, 0, 5, 0, 9, 3, 0],
+        [9, 0, 4, 0, 6, 0, 0, 0, 5],
+        [0, 7, 0, 3, 0, 0, 0, 1, 2],
+        [1, 2, 0, 0, 0, 7, 4, 0, 0],
+        [0, 4, 9, 2, 0, 6, 0, 0, 7]
+    ]
+    
+    input_str = sys.argv[1] if len(sys.argv) > 1 else str(default_grid)
+    print("Resolved Sudoku:")
+    for row in insecure_sudoku_solver(input_str):
+        print(row)
