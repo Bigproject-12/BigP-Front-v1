@@ -312,8 +312,8 @@ export default function AnalysisDetailPage() {
             <span style={{ color: 'var(--text-muted)' }}>Branch:</span>
             <span style={{ color: 'var(--text-primary)' }}>{data.branch ?? 'main'}</span>
           </div>
-          <span>•</span>
-          <span>확장자: <strong>{data.language ?? '-'}</strong></span>
+          <span> </span>
+          <span>•  확장자: <strong>{data.language ?? '-'}</strong></span>
         </div>
       </Card>
 

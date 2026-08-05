@@ -215,7 +215,7 @@ const parsePrTitle = (title) => {
               <thead>
                 <tr>
                   <th>Repository</th>
-                  <th>언어</th>
+                  <th>확장자</th>
                   <th>상태</th>
                   <th>이슈</th>
                 </tr>
