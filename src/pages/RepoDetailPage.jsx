@@ -193,10 +193,13 @@ export default function RepoDetailPage() {
                 return (
                   <tr key={a.id}>
                     <td>
-                      <span className="history-table__file">
-                        <FileTypeIcon name={fileName} size={15} />
-                        {fileName}
-                      </span>
+                    <span 
+                      className="history-table__file file-link" 
+                      onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
+                    >
+                      <FileTypeIcon name={fileName} size={15} />
+                      {fileName}
+                    </span>
                     </td>
                     <td>{formatDateTime(a.analyzedAt)}</td>
                     
@@ -218,7 +221,9 @@ export default function RepoDetailPage() {
                     <td>
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </td>
+                  
                     <td>
+                    {/*
                       <Button
                         variant="secondary"
                         size="sm"
@@ -227,6 +232,8 @@ export default function RepoDetailPage() {
                       >
                         상세 결과
                       </Button>
+                    
+                    */}
                     </td>
                   </tr>
                 );
