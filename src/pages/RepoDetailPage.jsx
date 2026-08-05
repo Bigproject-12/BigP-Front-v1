@@ -194,7 +194,10 @@ export default function RepoDetailPage() {
                 return (
                   <tr key={a.id}>
                     <td>
-                      <span className="history-table__file">
+                      <span 
+                        className="history-table__file file-link" 
+                        onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
+                      >
                         <FileTypeIcon name={fileName} size={15} />
                         {fileName}
                       </span>
@@ -220,14 +223,7 @@ export default function RepoDetailPage() {
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </td>
                     <td>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={<Icon name="compare" size={14} />}
-                        onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
-                      >
-                        상세 결과
-                      </Button>
+
                     </td>
                   </tr>
                 );

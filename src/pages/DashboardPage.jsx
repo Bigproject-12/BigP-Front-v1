@@ -206,40 +206,43 @@ const parsePrTitle = (title) => {
             <Icon name="code" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
-          {data.recentAnalyses.length === 0 ? (
-            <div className="ui-empty">최근 분석 이력이 없습니다.</div>
-          ) : (
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Repository</th>
-                  <th>확장자</th>
-                  <th>상태</th>
-                  <th>이슈</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentAnalyses.map((a) => {
-                  const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
-                  return (
-                    <tr key={a.analysisId}>
-                      <td>
-                        <span className="history-table__file">
-                          <Icon name="repo" size={15} />
-                          {a.repoName}
-                        </span>
-                      </td>
-                      <td>{a.language}</td>
-                      <td>
-                        <Badge variant={st.variant}>{st.label}</Badge>
-                      </td>
-                      <td>{a.totalIssueCount}건</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <div>
+            {data.recentAnalyses.length === 0 ? (
+              <div className="ui-empty">최근 분석 이력이 없습니다.</div>
+            ) : (
+              <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th>Repository</th>
+                    <th>확장자</th>
+                    <th>상태</th>
+                    <th>이슈</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 👈 최대 7개까지만 출력 */}
+                  {data.recentAnalyses.slice(0, 7).map((a) => {
+                    const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
+                    return (
+                      <tr key={a.analysisId}>
+                        <td>
+                          <span className="history-table__file">
+                            <Icon name="repo" size={15} />
+                            {a.repoName}
+                          </span>
+                        </td>
+                        <td>{a.language}</td>
+                        <td>
+                          <Badge variant={st.variant}>{st.label}</Badge>
+                        </td>
+                        <td>{a.totalIssueCount}건</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </Card>
 
         <Card style={{ padding: 0 }}>
