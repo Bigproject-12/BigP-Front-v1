@@ -34,6 +34,9 @@ export default function PushPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [locallyPushedIds, setLocallyPushedIds] = useState(new Set());
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushedBatch, setPushedBatch] = useState([]);
@@ -52,23 +55,16 @@ export default function PushPage() {
       .finally(() => setLoading(false));
   }, [repoId]);
 
-  // 완료 + 브랜치/파일경로 있는 것만, 파일경로별로 "가장 최근 분석"만 남기기
-  const latestPerFile = useMemo(() => {
-    const map = new Map();
-    for (const a of analyses) {
-      if (a.status !== 'COMPLETED' || !a.filePath || !a.branch) continue;
-      const prev = map.get(a.filePath);
-      if (!prev || new Date(a.analyzedAt) > new Date(prev.analyzedAt)) {
-        map.set(a.filePath, a);
-      }
-    }
-    return [...map.values()];
-  }, [analyses]);
+  // 완료 + 브랜치/파일경로 있는 것만 (같은 파일이어도 분석 건마다 전부 표시)
+  const eligible = useMemo(
+    () => analyses.filter((a) => a.status === 'COMPLETED' && a.filePath && a.branch),
+    [analyses]
+  );
 
   // 기본 필터: push 안 된 것만
   const unpushed = useMemo(
-    () => latestPerFile.filter((a) => !a.pushed && !locallyPushedIds.has(a.id)),
-    [latestPerFile, locallyPushedIds]
+    () => eligible.filter((a) => !a.pushed && !locallyPushedIds.has(a.id)),
+    [eligible, locallyPushedIds]
   );
 
   const branches = useMemo(
@@ -85,8 +81,19 @@ export default function PushPage() {
     });
   }, [unpushed, branchFilter, query]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [branchFilter, query]);
+
+  const totalPages = Math.ceil(visible.length / itemsPerPage);
+  const paginatedVisible = visible.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const selectedList = visible.filter((a) => selectedIds.has(a.id));
   const lockedBranch = selectedList[0]?.branch ?? null;
+  const selectedFilePaths = new Set(selectedList.map((a) => a.filePath));
 
   const toggleSelect = (item) => {
     setSelectedIds((prev) => {
@@ -216,9 +223,11 @@ export default function PushPage() {
                     </td>
                   </tr>
                 ) : (
-                  visible.map((a) => {
+                  paginatedVisible.map((a) => {
                     const fileName = a.filePath.split('/').pop();
-                    const disabled = lockedBranch !== null && a.branch !== lockedBranch && !selectedIds.has(a.id);
+                    const branchMismatch = lockedBranch !== null && a.branch !== lockedBranch;
+                    const fileTaken = selectedFilePaths.has(a.filePath) && !selectedIds.has(a.id);
+                    const disabled = branchMismatch || fileTaken;
                     return (
                       <tr key={a.id} style={disabled ? { opacity: 0.4 } : undefined}>
                         <td>
@@ -227,7 +236,13 @@ export default function PushPage() {
                             checked={selectedIds.has(a.id)}
                             onChange={() => toggleSelect(a)}
                             disabled={disabled}
-                            title={disabled ? '이미 선택한 항목과 브랜치가 달라 함께 Push할 수 없습니다.' : undefined}
+                            title={
+                              disabled
+                                ? fileTaken
+                                  ? '같은 파일의 다른 분석 결과가 이미 선택되어 있습니다.'
+                                  : '이미 선택한 항목과 브랜치가 달라 함께 Push할 수 없습니다.'
+                                : undefined
+                            }
                           />
                         </td>
                         <td>
@@ -249,6 +264,30 @@ export default function PushPage() {
                 )}
               </tbody>
             </table>
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', padding: '16px', borderTop: '1px solid var(--border-hairline)' }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                >
+                  이전
+                </Button>
+                <span style={{ fontSize: 'var(--fs-body-sm)', color: 'var(--text-muted)' }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                >
+                  다음
+                </Button>
+              </div>
+            )}
           </Card>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>

@@ -961,7 +961,7 @@ export default function AnalyzePage() {
               </ul>
           )}
 
-                {pushAnalysisId && (
+                {pushAnalysisId && aiDetection.confidence !== null && aiDetection.confidence >= 30 && (
                 <div
                   className="prompt-section"
                   style={!(aiDetection.confidence !== null && aiDetection.confidence >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
