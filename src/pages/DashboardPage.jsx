@@ -200,10 +200,9 @@ const parsePrTitle = (title) => {
         </Card>
       </div>
 
-<div className="recent-grid">
-        {/* 최근 분석 카드 */}
-        <Card style={{ padding: 0, height: 360, display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+      <div className="recent-grid">
+        <Card style={{ padding: 0 }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
             <Icon name="code" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
@@ -243,71 +242,65 @@ const parsePrTitle = (title) => {
           )}
         </Card>
 
-        {/* 최근 PR 카드 */}
-        <Card style={{ padding: 0, height: 360, display: 'flex', flexDirection: 'column' }}>
-          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+        <Card style={{ padding: 0 }}>
+          <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
             <Icon name="pullrequest" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 PR</h2>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {data.recentPullRequests.length === 0 ? (
-              <div className="ui-empty">최근 생성된 PR이 없습니다.</div>
-            ) : (
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>Repository</th>
-                    <th>파일명</th>
-                    <th>브랜치</th>
-                    <th>상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 5 }, (_, idx) => data.recentPullRequests[idx]).map((pr, idx) => {
-                    const st = pr ? (PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' }) : null;
-                    const { fileName } = pr ? parsePrTitle(pr.title) : { fileName: '' };
-                    return (
-                      <tr
-                        key={pr?.pullRequestId ?? `empty-pr-${idx}`}
-                        style={pr ? { cursor: 'pointer' } : undefined}
-                        onClick={pr ? () => window.open(pr.prUrl, '_blank', 'noopener,noreferrer') : undefined}
-                      >
-                        <td>
-                          {pr ? (
-                            <span className="history-table__file">
-                              <Icon name="repo" size={15} />
-                              {pr.repoName}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-                        <td>
-                          {pr ? (
-                            <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                              {fileName}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-                        <td>
-                          {pr ? (
-                            <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
-                              {pr.headBranch} → {pr.baseBranch}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td>
-                          {st ? <Badge variant={st.variant}>{st.label}</Badge> : '-'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {data.recentPullRequests.length === 0 ? (
+            <div className="ui-empty">최근 생성된 PR이 없습니다.</div>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Repository</th>
+                  <th>파일명</th>
+                  <th>브랜치</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentPullRequests.map((pr) => {
+                  const st = PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' };
+                  const {fileName,issueText}=parsePrTitle(pr.title);
+                  return (
+                    <tr
+                      key={pr.pullRequestId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => window.open(pr.prUrl, '_blank', 'noopener,noreferrer')}
+                    >
+                      <td>
+                        <span className="history-table__file">
+                          <Icon name="repo" size={15} />
+                          {pr.repoName}
+                        </span>
+                      </td>
+                      <td>
+                        {/* 원하는 조합과 볼드체 적용 */}
+                        {/*
+                        <span style={{ color: 'var(--text-muted)', marginRight: '6px' }}>
+                          #{pr.githubPrNumber}
+                        </span>
+                        */}
+                        <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                        {fileName}
+                        </span>
+
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                          {pr.baseBranch} ← {pr.headBranch}
+                        </span>
+                      </td>
+                      <td>
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </Card>
       </div>
     </>
