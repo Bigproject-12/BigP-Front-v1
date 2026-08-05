@@ -10,6 +10,7 @@ import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
 import Modal from '../components/ui/Modal'
@@ -74,6 +75,8 @@ export default function AnalyzePage() {
   
   // 선택된 확장자 필터 상태
   const [selectedExt, setSelectedExt] = useState('');
+  // 폴더/파일 검색어
+  const [fileSearch, setFileSearch] = useState('');
 
   const [originalCode, setOriginalCode] = useState('');
   const [improvedCode, setImprovedCode] = useState('');
@@ -192,8 +195,9 @@ export default function AnalyzePage() {
     return Array.from(exts).sort();
   }, [files]);
 
-  // 확장자 필터가 적용된 상태로 폴더별 그룹화 수행
+  // 확장자 필터 + 검색어가 적용된 상태로 폴더별 그룹화 수행
   const groupedFiles = useMemo(() => {
+    const keyword = fileSearch.trim().toLowerCase();
     return files.reduce((acc, path) => {
       const parts = path.split('/');
       const fileName = parts[parts.length - 1];
@@ -203,19 +207,23 @@ export default function AnalyzePage() {
       if (selectedExt && ext !== selectedExt) {
         return acc;
       }
+      // 검색어가 파일명에 포함되지 않으면 제외 (폴더명 일치는 무시)
+      if (keyword && !fileName.toLowerCase().includes(keyword)) {
+        return acc;
+      }
 
       const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '루트 디렉토리';
-      
+
       if (!acc[folder]) acc[folder] = [];
-      
-      acc[folder].push({ 
-        path: path, 
-        name: fileName 
+
+      acc[folder].push({
+        path: path,
+        name: fileName
       });
-      
+
       return acc;
     }, {});
-  }, [files, selectedExt]);
+  }, [files, selectedExt, fileSearch]);
 
   const [activeTab, setActiveTab] = useState('analyze');
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
@@ -655,6 +663,7 @@ export default function AnalyzePage() {
                     setFilePath('');
                     setFileNameOverride('');
                     setSelectedExt('');
+                    setFileSearch('');
                     setOriginalCode('');
                     resetAnalysisOutput();
                   }}
@@ -678,6 +687,7 @@ export default function AnalyzePage() {
                 setFilePath('');
                 setFileNameOverride('');
                 setSelectedExt('');
+                setFileSearch('');
                 setOriginalCode('');
                 resetAnalysisOutput();
               }}
@@ -747,6 +757,18 @@ export default function AnalyzePage() {
                 </optgroup>
               ))}
             </Select>
+          </div>
+
+          {/* 5. 파일 검색 (경로/파일명 기준) */}
+          <div className="analyze-toolbar__field">
+            <Input
+              label="파일 검색"
+              placeholder="파일명 또는 경로 검색"
+              leftIcon={<Icon name="search" size={16} />}
+              value={fileSearch}
+              onChange={(e) => setFileSearch(e.target.value)}
+              disabled={!branch || analyzing}
+            />
           </div>
           </>
           )}
