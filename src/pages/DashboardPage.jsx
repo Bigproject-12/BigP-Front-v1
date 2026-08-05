@@ -207,50 +207,40 @@ const parsePrTitle = (title) => {
             <Icon name="code" size={18} />
             <h2 className="text-heading-md" style={{ margin: 0 }}>최근 분석</h2>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {data.recentAnalyses.length === 0 ? (
-              <div className="ui-empty">최근 분석 이력이 없습니다.</div>
-            ) : (
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>Repository</th>
-                    <th>언어</th>
-                    <th>상태</th>
-                    <th>이슈</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 5 }, (_, idx) => data.recentAnalyses[idx]).map((a, idx) => {
-                    const st = a ? (STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' }) : null;
-                    return (
-                      <tr
-                        key={a?.analysisId ?? `empty-analysis-${idx}`}
-                        style={a ? { cursor: 'pointer' } : undefined}
-                        onClick={a ? () => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`) : undefined}
-                      >
-                        <td>
-                          {a ? (
-                            <span className="history-table__file">
-                              <Icon name="repo" size={15} />
-                              {a.repoName}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-                        <td>{a ? a.language : '-'}</td>
-                        <td>
-                          {st ? <Badge variant={st.variant}>{st.label}</Badge> : '-'}
-                        </td>
-                        <td>{a ? `${a.totalIssueCount}건` : '-'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {data.recentAnalyses.length === 0 ? (
+            <div className="ui-empty">최근 분석 이력이 없습니다.</div>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Repository</th>
+                  <th>확장자</th>
+                  <th>상태</th>
+                  <th>이슈</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentAnalyses.map((a) => {
+                  const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
+                  return (
+                    <tr key={a.analysisId}>
+                      <td>
+                        <span className="history-table__file">
+                          <Icon name="repo" size={15} />
+                          {a.repoName}
+                        </span>
+                      </td>
+                      <td>{a.language}</td>
+                      <td>
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                      </td>
+                      <td>{a.totalIssueCount}건</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </Card>
 
         {/* 최근 PR 카드 */}

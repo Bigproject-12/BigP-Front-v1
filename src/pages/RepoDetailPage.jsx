@@ -16,6 +16,7 @@ import './RepoDetailPage.css';
 const TOP_TABS = [
   { key: 'history', label: '히스토리' },
   { key: 'analyze', label: '코드 분석' },
+  { key: 'push', label: 'Push'},
 ];
 
 const STATUS_FILTERS = [
