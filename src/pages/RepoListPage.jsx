@@ -141,7 +141,7 @@ export default function RepoListPage() {
         {/* 새로고침은 항상 가능해야 함 (연동 여부와 무관하게 DB 재조회 시도) */}
         <Button variant="ghost" onClick={refreshRepos} disabled={reposLoading}>
           <Icon name="refresh" size={16} />
-          {reposLoading ? '불러오는 중…' : '새로고침'}
+          {reposLoading ? '불러오는 중…' : ''}
         </Button>
       </div>
 

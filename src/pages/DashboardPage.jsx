@@ -82,7 +82,7 @@ export default function DashboardPage() {
         </label>
         <Button variant="secondary" onClick={fetchDashboard} disabled={loading}>
           <Icon name="refresh" size={16} />
-          새로고침
+          
         </Button>
       </div>
     </div>
