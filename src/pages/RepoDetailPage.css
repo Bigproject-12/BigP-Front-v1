@@ -56,20 +56,3 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-
-/* 파일명 링크 스타일 */
-.history-table__file.file-link {
-  cursor: pointer;
-  color: var(--text-primary); /* 기본 텍스트 색상(보통 검은색/어두운 회색) */
-  text-decoration: none;      /* 밑줄 제거 */
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.2s ease;
-}
-
-/* 마우스를 올렸을 때 포인트 색상(파란색 계열 등)으로 살짝 변경 */
-.history-table__file.file-link:hover {
-  color: var(--link);         /* 시스템의 링크 색상으로 부드럽게 변경 */
-  text-decoration: underline; /* 호버 시에만 밑줄이 나타나게 하려면 이 줄을 추가 */
-}
