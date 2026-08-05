@@ -15,7 +15,7 @@ import DiffViewer from '../components/ui/DiffViewer';
 import ProjectTree from '../components/myspace/ProjectTree';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
-import './dashboard.css';
+import './DashboardPage.css';
 import './RepoDetailPage.css';
 import './MySpacePage.css'; // 👈 전용 CSS 파일 임포트
 

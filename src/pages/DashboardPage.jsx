@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from '../router/RouterContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
@@ -8,7 +7,7 @@ import Button from '../components/ui/Button';
 import LineChart from '../components/charts/LineChart';
 import DonutChart from '../components/charts/DonutChart';
 import Icon from '../components/icons/Icon';
-import './dashboard.css';
+import './DashboardPage.css';
 import './RepoDetailPage.css';
 
 function toISODate(date) {
@@ -48,7 +47,6 @@ function deltaProps(rate) {
 }
 
 export default function DashboardPage() {
-  const { navigate } = useRouter();
   const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -224,11 +222,7 @@ const parsePrTitle = (title) => {
                 {data.recentAnalyses.map((a) => {
                   const st = STATUS_LABEL[a.status] ?? { label: a.status, variant: 'neutral' };
                   return (
-                    <tr
-                      key={a.analysisId}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`?page=analysis-detail&analysisId=${a.analysisId}`)}
-                    >
+                    <tr key={a.analysisId}>
                       <td>
                         <span className="history-table__file">
                           <Icon name="repo" size={15} />
