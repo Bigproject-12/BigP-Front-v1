@@ -841,24 +841,26 @@ export default function AnalyzePage() {
                   </div>
                   <div className="diff-pane__code">
                     <div className="code-editor">
-                      <div className="code-editor__gutter">
-                        {Array.from({ length: originalLineCount }, (_, i) => (
-                          <div key={i + 1}>{i + 1}</div>
-                        ))}
+                      <div className="code-editor__inner">
+                        <div className="code-editor__gutter">
+                          {Array.from({ length: originalLineCount }, (_, i) => (
+                            <div key={i + 1}>{i + 1}</div>
+                          ))}
+                        </div>
+                        <textarea
+                          ref={originalTextareaRef}
+                          className="code-textarea"
+                          placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
+                          value={originalCode}
+                          onChange={(e) => {
+                            setOriginalCode(e.target.value);
+                            setAnalyzed(false);
+                            setCompareMode(false);
+                          }}
+                          spellCheck={false}
+                          readOnly={compareMode}
+                        />
                       </div>
-                      <textarea
-                        ref={originalTextareaRef}
-                        className="code-textarea"
-                        placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
-                        value={originalCode}
-                        onChange={(e) => {
-                          setOriginalCode(e.target.value);
-                          setAnalyzed(false);
-                          setCompareMode(false);
-                        }}
-                        spellCheck={false}
-                        readOnly={compareMode}
-                      />
                     </div>
                   </div>
                 </div>
@@ -870,16 +872,21 @@ export default function AnalyzePage() {
                   <div className="diff-pane__code">
                     {improvedCode ? (
                       <div className="code-editor">
-                        <div className="code-editor__gutter">
-                          {Array.from({ length: improvedLineCount }, (_, i) => (
-                            <div key={i + 1}>{i + 1}</div>
-                          ))}
+                        <div className="code-editor__inner"> {/* 👈 왼쪽과 동일하게 이 태그로 한 번 더 감싸줍니다 */}
+                          <div className="code-editor__gutter">
+                            {Array.from({ length: improvedLineCount }, (_, i) => (
+                              <div key={i + 1}>{i + 1}</div>
+                            ))}
+                          </div>
+                          <pre className="code-view">{improvedCode}</pre>
                         </div>
-                        <pre className="code-view">{improvedCode}</pre>
                       </div>
                     ) : (
                       <div className="code-view code-view--empty">
-                        {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
+                        {/* 👈 화면 중간을 따라다닐 수 있도록 sticky 박스로 감싸줍니다 */}
+                        <div className="empty-placeholder-sticky">
+                          {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
+                        </div>
                       </div>
                     )}
                   </div>
