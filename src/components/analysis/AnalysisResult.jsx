@@ -44,7 +44,7 @@ function resolveTitle(issue) {
 /* AI 확률을 한 문장으로 해석 */
 function aiVerdict(p) {
   if (p >= 50) return 'AI 생성 코드로 의심됩니다.';
-  if (p >= 25) return '일부 구간에서 AI 생성 패턴이 보입니다.';
+  if (p >= 30) return '일부 구간에서 AI 생성 패턴이 보입니다.';
   return '사람이 작성한 코드입니다.';
 }
 
@@ -52,7 +52,7 @@ function aiVerdict(p) {
 function aiColor(p) {
   if (p >= 70) return '#E11D48';
   if (p >= 50) return '#F59E0B';
-  if (p >= 25) return '#EAB308';
+  if (p >= 30) return '#EAB308';
   return '#10B981';
 }
 
