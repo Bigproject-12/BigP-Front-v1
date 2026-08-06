@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../lib/api';
 // 프롬프트 추천 함수 및 버튼 컴포넌트 추가
 import { recommendPrompt } from '../lib/aiService';
@@ -33,6 +34,7 @@ function getConfidenceLevel(probability) {
 
 export default function AnalysisDetailPage() {
   const { params } = useRouter();
+  const { confirm } = useConfirm();
   const analysisId = params.get('analysisId');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +132,7 @@ export default function AnalysisDetailPage() {
   }, [activeTab, targetSearch]);
 
   const handlePush = async () => {
-    if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
+    if (!(await confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? \n 실제 저장소의 파일이 수정됩니다.', { title: '경고', danger: true }))) return;
     setPushing(true);
     setPushError('');
     try {
