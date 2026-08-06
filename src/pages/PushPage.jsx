@@ -111,14 +111,20 @@ export default function PushPage() {
   const handleBatchPush = async () => {
     if (selectedList.length === 0) return;
     if (!(await confirm(
-      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`
+      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`,
+      { title: '경고', danger: true }
     ))) return;
 
     setPushing(true);
     setPushError('');
     try {
       const ids = selectedList.map((a) => a.id);
-      await api.post('/api/analysis/batch-push', { analysisIds: ids });
+      if (ids.length === 1) {
+        // 파일 1개만 선택한 경우, 기존 단건 push 흐름(코드 분석 후 push)과 동일한 API를 태운다.
+        await api.post(`/api/analysis/${ids[0]}/push`);
+      } else {
+        await api.post('/api/analysis/batch-push', { analysisIds: ids });
+      }
       setLocallyPushedIds((prev) => new Set([...prev, ...ids]));
       setPushedBatch(ids);
       setPushedBranch(lockedBranch);
@@ -135,10 +141,16 @@ export default function PushPage() {
     setCreatingPr(true);
     setPrError('');
     try {
-      const { pullRequestUrl } = await api.post('/api/analysis/batch-pull-request', {
-        analysisIds: pushedBatch,
-      });
-      setPrUrl(pullRequestUrl);
+      if (pushedBatch.length === 1) {
+        // 파일 1개만 push한 경우, 기존 단건 PR 생성 흐름과 동일한 API를 태운다.
+        const { prUrl } = await api.post(`/api/analysis/${pushedBatch[0]}/pr`);
+        setPrUrl(prUrl);
+      } else {
+        const { pullRequestUrl } = await api.post('/api/analysis/batch-pull-request', {
+          analysisIds: pushedBatch,
+        });
+        setPrUrl(pullRequestUrl);
+      }
     } catch (e) {
       setPrError(e.message || 'PR 생성에 실패했습니다.');
     } finally {
