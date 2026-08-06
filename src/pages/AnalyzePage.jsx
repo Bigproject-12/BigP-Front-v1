@@ -10,6 +10,7 @@ import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
 import Modal from '../components/ui/Modal'
@@ -74,6 +75,8 @@ export default function AnalyzePage() {
   
   // 선택된 확장자 필터 상태
   const [selectedExt, setSelectedExt] = useState('');
+  // 폴더/파일 검색어
+  const [fileSearch, setFileSearch] = useState('');
 
   const [originalCode, setOriginalCode] = useState('');
   const [improvedCode, setImprovedCode] = useState('');
@@ -186,36 +189,41 @@ export default function AnalyzePage() {
       if (fileName.includes('.')) {
         exts.add(fileName.split('.').pop());
       } else {
-        exts.add('코드 중복성');
+        exts.add('기타');
       }
     });
     return Array.from(exts).sort();
   }, [files]);
 
-  // 확장자 필터가 적용된 상태로 폴더별 그룹화 수행
+  // 확장자 필터 + 검색어가 적용된 상태로 폴더별 그룹화 수행
   const groupedFiles = useMemo(() => {
+    const keyword = fileSearch.trim().toLowerCase();
     return files.reduce((acc, path) => {
       const parts = path.split('/');
       const fileName = parts[parts.length - 1];
-      const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
+      const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
 
       // 선택한 확장자와 일치하지 않으면 제외
       if (selectedExt && ext !== selectedExt) {
         return acc;
       }
+      // 검색어가 파일명에 포함되지 않으면 제외 (폴더명 일치는 무시)
+      if (keyword && !fileName.toLowerCase().includes(keyword)) {
+        return acc;
+      }
 
       const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '루트 디렉토리';
-      
+
       if (!acc[folder]) acc[folder] = [];
-      
-      acc[folder].push({ 
-        path: path, 
-        name: fileName 
+
+      acc[folder].push({
+        path: path,
+        name: fileName
       });
-      
+
       return acc;
     }, {});
-  }, [files, selectedExt]);
+  }, [files, selectedExt, fileSearch]);
 
   const [activeTab, setActiveTab] = useState('analyze');
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
@@ -655,6 +663,7 @@ export default function AnalyzePage() {
                     setFilePath('');
                     setFileNameOverride('');
                     setSelectedExt('');
+                    setFileSearch('');
                     setOriginalCode('');
                     resetAnalysisOutput();
                   }}
@@ -678,6 +687,7 @@ export default function AnalyzePage() {
                 setFilePath('');
                 setFileNameOverride('');
                 setSelectedExt('');
+                setFileSearch('');
                 setOriginalCode('');
                 resetAnalysisOutput();
               }}
@@ -703,7 +713,7 @@ export default function AnalyzePage() {
                 // 이미 선택된 파일이 새 필터에서 탈락할 때만 초기화
                 if (filePath && nextExt) {
                   const fileName = filePath.split('/').pop();
-                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '코드 중복성';
+                  const ext = fileName.includes('.') ? fileName.split('.').pop() : '기타';
                   if (ext !== nextExt) {
                     setFilePath('');
                     setOriginalCode('');
@@ -747,6 +757,18 @@ export default function AnalyzePage() {
                 </optgroup>
               ))}
             </Select>
+          </div>
+
+          {/* 5. 파일 검색 (경로/파일명 기준) */}
+          <div className="analyze-toolbar__field">
+            <Input
+              label="파일 검색"
+              placeholder="파일명 또는 경로 검색"
+              leftIcon={<Icon name="search" size={16} />}
+              value={fileSearch}
+              onChange={(e) => setFileSearch(e.target.value)}
+              disabled={!branch || analyzing}
+            />
           </div>
           </>
           )}
@@ -841,26 +863,24 @@ export default function AnalyzePage() {
                   </div>
                   <div className="diff-pane__code">
                     <div className="code-editor">
-                      <div className="code-editor__inner">
-                        <div className="code-editor__gutter">
-                          {Array.from({ length: originalLineCount }, (_, i) => (
-                            <div key={i + 1}>{i + 1}</div>
-                          ))}
-                        </div>
-                        <textarea
-                          ref={originalTextareaRef}
-                          className="code-textarea"
-                          placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
-                          value={originalCode}
-                          onChange={(e) => {
-                            setOriginalCode(e.target.value);
-                            setAnalyzed(false);
-                            setCompareMode(false);
-                          }}
-                          spellCheck={false}
-                          readOnly={compareMode}
-                        />
+                      <div className="code-editor__gutter">
+                        {Array.from({ length: originalLineCount }, (_, i) => (
+                          <div key={i + 1}>{i + 1}</div>
+                        ))}
                       </div>
+                      <textarea
+                        ref={originalTextareaRef}
+                        className="code-textarea"
+                        placeholder="분석할 코드를 붙여넣거나 파일을 업로드해주세요."
+                        value={originalCode}
+                        onChange={(e) => {
+                          setOriginalCode(e.target.value);
+                          setAnalyzed(false);
+                          setCompareMode(false);
+                        }}
+                        spellCheck={false}
+                        readOnly={compareMode}
+                      />
                     </div>
                   </div>
                 </div>
@@ -872,21 +892,16 @@ export default function AnalyzePage() {
                   <div className="diff-pane__code">
                     {improvedCode ? (
                       <div className="code-editor">
-                        <div className="code-editor__inner"> {/* 👈 왼쪽과 동일하게 이 태그로 한 번 더 감싸줍니다 */}
-                          <div className="code-editor__gutter">
-                            {Array.from({ length: improvedLineCount }, (_, i) => (
-                              <div key={i + 1}>{i + 1}</div>
-                            ))}
-                          </div>
-                          <pre className="code-view">{improvedCode}</pre>
+                        <div className="code-editor__gutter">
+                          {Array.from({ length: improvedLineCount }, (_, i) => (
+                            <div key={i + 1}>{i + 1}</div>
+                          ))}
                         </div>
+                        <pre className="code-view">{improvedCode}</pre>
                       </div>
                     ) : (
                       <div className="code-view code-view--empty">
-                        {/* 👈 화면 중간을 따라다닐 수 있도록 sticky 박스로 감싸줍니다 */}
-                        <div className="empty-placeholder-sticky">
-                          {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
-                        </div>
+                        {analyzed ? '개선점이 발견되지 않았습니다.' : '분석하기를 실행하면 개선된 코드가 표시됩니다.'}
                       </div>
                     )}
                   </div>
@@ -946,7 +961,7 @@ export default function AnalyzePage() {
               </ul>
           )}
 
-                {pushAnalysisId && (
+                {pushAnalysisId && aiDetection.confidence !== null && aiDetection.confidence >= 30 && (
                 <div
                   className="prompt-section"
                   style={!(aiDetection.confidence !== null && aiDetection.confidence >= 70) ? { borderTop: 'none', paddingTop: 0 } : undefined}
