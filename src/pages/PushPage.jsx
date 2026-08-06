@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { Tabs } from '../components/ui/Tabs';
@@ -25,6 +26,7 @@ export default function PushPage() {
 
   const { repos } = useRepos();
   const repo = repos.find((r) => String(r.id) === repoId) || null;
+  const { confirm } = useConfirm();
 
   const [analyses, setAnalyses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,9 +110,9 @@ export default function PushPage() {
 
   const handleBatchPush = async () => {
     if (selectedList.length === 0) return;
-    if (!window.confirm(
+    if (!(await confirm(
       `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`
-    )) return;
+    ))) return;
 
     setPushing(true);
     setPushError('');
