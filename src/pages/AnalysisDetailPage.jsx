@@ -9,7 +9,8 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
-import AnalysisResult from '../components/analysis/AnalysisResult';  
+import AnalysisResult from '../components/analysis/AnalysisResult';
+import PrCreateModal from '../components/analysis/PrCreateModal';
 import './AnalyzePage.css';
 import './RepoDetailPage.css';
 import { Tabs } from '../components/ui/Tabs';
@@ -42,6 +43,8 @@ export default function AnalysisDetailPage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
+  const [prUrl, setPrUrl] = useState(null);
+  const [isPrModalOpen, setIsPrModalOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // 기본 탭을 코드 비교(code)로 설정
@@ -144,6 +147,8 @@ export default function AnalysisDetailPage() {
         setPushing(false);
     }
   };
+
+  const openPrModal = () => setIsPrModalOpen(true);
 
   // --- 프롬프트 추천 핸들러 함수 ---
   const handleRecommendPrompt = async () => {
@@ -254,6 +259,25 @@ export default function AnalysisDetailPage() {
 
   const pathParts = data.filePath ? data.filePath.split('/') : [];
 
+  // 분석 결과를 바탕으로 PR 제목/설명 기본값을 만든다
+  const buildPrDefaults = () => {
+    const fileName = data.filePath ? data.filePath.split('/').pop() : '코드';
+    const countBy = (cat) => issues.filter((i) => i.category === cat).length;
+    const security = countBy('SECURITY');
+    const performance = countBy('PERFORMANCE');
+    const total = issues.length;
+
+    const title = `GuardrAil: ${fileName} 코드 개선 (이슈 ${total}건)`;
+    const body =
+      `분석 결과: 총 ${total}건의 이슈 개선.\n\n` +
+      `- 파일: \`${data.filePath ?? ''}\`\n` +
+      `- 보안 이슈: ${security}건\n` +
+      `- 비효율 이슈: ${performance}건\n\n` +
+      `분석 세부 내용은 분석 ID: ${analysisId}에서 확인 가능.`;
+
+    return { title, body };
+  };
+
   const handleIssueClick = (issue) => {
     if (issue.line) {
       setTargetSearch({ type: 'line', value: issue.line });
@@ -346,13 +370,28 @@ export default function AnalysisDetailPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
-              <button
-                  className="ui-btn ui-btn--primary ui-btn--md"
-                  onClick={handlePush}
-                  disabled={pushing || pushed}
-              >
-                  {pushed ? '반영 완료 ✓' : pushing ? '반영 중…' : 'GitHub에 Push'}
-              </button>
+              {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
+              {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
+              {prUrl ? (
+                <button
+                    className="ui-btn ui-btn--primary ui-btn--md"
+                    onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}
+                >
+                    GitHub에서 PR 확인
+                </button>
+              ) : pushed ? (
+                <button className="ui-btn ui-btn--primary ui-btn--md" onClick={openPrModal}>
+                    PR 생성 ({data.branch ?? 'main'})
+                </button>
+              ) : (
+                <button
+                    className="ui-btn ui-btn--primary ui-btn--md"
+                    onClick={handlePush}
+                    disabled={pushing}
+                >
+                    {pushing ? '반영 중…' : 'GitHub에 Push'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -458,6 +497,21 @@ export default function AnalysisDetailPage() {
             </div>
           )}
         </>
+      )}
+
+      {isPrModalOpen && (
+        <PrCreateModal
+          analysisIds={[Number(analysisId)]}
+          repoId={data.repoId}
+          headBranch={data.branch}
+          defaultTitle={buildPrDefaults().title}
+          defaultBody={buildPrDefaults().body}
+          onClose={() => setIsPrModalOpen(false)}
+          onCreated={(url) => {
+            setPrUrl(url);
+            setIsPrModalOpen(false);
+          }}
+        />
       )}
 
       {showScrollTop && (

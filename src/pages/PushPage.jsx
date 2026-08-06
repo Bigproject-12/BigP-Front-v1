@@ -314,7 +314,7 @@ export default function PushPage() {
 
             {pushedAnalyses.length > 0 && (
               <Button
-                variant="secondary"
+                variant="primary"
                 onClick={() => setPrModalOpen(true)}
                 disabled={!!prUrl}
               >
@@ -323,9 +323,13 @@ export default function PushPage() {
             )}
 
             {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+            {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
+            {!prUrl && pushedAnalyses.length > 0 && (
+              <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>
+            )}
             {prUrl && (
               <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                PR 보기 →
+                GitHub에서 PR 확인 →
               </a>
             )}
           </div>
