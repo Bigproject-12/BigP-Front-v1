@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { Tabs } from '../components/ui/Tabs';
@@ -11,6 +12,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
+import PrCreateModal from '../components/analysis/PrCreateModal';
 import './RepoDetailPage.css';
 
 const TOP_TABS = [
@@ -25,6 +27,7 @@ export default function PushPage() {
 
   const { repos } = useRepos();
   const repo = repos.find((r) => String(r.id) === repoId) || null;
+  const { confirm } = useConfirm();
 
   const [analyses, setAnalyses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +42,12 @@ export default function PushPage() {
 
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
-  const [pushedBatch, setPushedBatch] = useState([]);
   const [pushedBranch, setPushedBranch] = useState('');
-
-  const [creatingPr, setCreatingPr] = useState(false);
-  const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState('');
+
+  // push된 분석들(1건이든 여러 건이든)을 그대로 보관해뒀다가, PR 생성 모달의 기본 제목/설명을 만드는 데 쓴다.
+  const [pushedAnalyses, setPushedAnalyses] = useState([]);
+  const [prModalOpen, setPrModalOpen] = useState(false);
 
   useEffect(() => {
     if (!repoId) return;
@@ -102,23 +105,29 @@ export default function PushPage() {
       else next.add(item.id);
       return next;
     });
-    setPushedBatch([]);
+    setPushedAnalyses([]);
     setPrUrl('');
   };
 
   const handleBatchPush = async () => {
     if (selectedList.length === 0) return;
-    if (!window.confirm(
-      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`
-    )) return;
+    if (!(await confirm(
+      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`,
+      { title: '경고', danger: true }
+    ))) return;
 
     setPushing(true);
     setPushError('');
     try {
       const ids = selectedList.map((a) => a.id);
-      await api.post('/api/analysis/batch-push', { analysisIds: ids });
+      if (ids.length === 1) {
+        // 파일 1개만 선택한 경우, 기존 단건 push 흐름(코드 분석 후 push)과 동일한 API를 태운다.
+        await api.post(`/api/analysis/${ids[0]}/push`);
+      } else {
+        await api.post('/api/analysis/batch-push', { analysisIds: ids });
+      }
       setLocallyPushedIds((prev) => new Set([...prev, ...ids]));
-      setPushedBatch(ids);
+      setPushedAnalyses(selectedList);
       setPushedBranch(lockedBranch);
       setSelectedIds(new Set());
     } catch (e) {
@@ -128,20 +137,24 @@ export default function PushPage() {
     }
   };
 
-  const handleBatchPr = async () => {
-    if (pushedBatch.length === 0) return;
-    setCreatingPr(true);
-    setPrError('');
-    try {
-      const { pullRequestUrl } = await api.post('/api/analysis/batch-pull-request', {
-        analysisIds: pushedBatch,
-      });
-      setPrUrl(pullRequestUrl);
-    } catch (e) {
-      setPrError(e.message || 'PR 생성에 실패했습니다.');
-    } finally {
-      setCreatingPr(false);
+  // PR 생성 모달의 기본 제목/설명 — 파일 1개면 해당 파일 기준, 여러 개면 개수/파일 목록 기준
+  const buildPrDefaults = (analyses) => {
+    if (analyses.length === 1) {
+      const a = analyses[0];
+      return {
+        title: `GuardrAil: ${a.filePath.split('/').pop()} 코드 개선 (이슈 ${a.issueCount ?? 0}건)`,
+        body:
+          `분석 결과: 총 ${a.issueCount ?? 0}건의 이슈 개선.\n\n` +
+          `- 파일: \`${a.filePath}\`\n\n` +
+          `분석 세부 내용은 분석 ID: ${a.id}에서 확인 가능.`,
+      };
     }
+    const totalIssues = analyses.reduce((sum, a) => sum + (a.issueCount ?? 0), 0);
+    const fileList = analyses.map((a) => `- \`${a.filePath}\``).join('\n');
+    return {
+      title: `GuardrAil: AI 코드 개선 (${analyses.length}개 파일)`,
+      body: `분석 결과: 총 ${totalIssues}건의 이슈 개선.\n\n${fileList}`,
+    };
   };
 
   if (!repoId) {
@@ -172,7 +185,7 @@ export default function PushPage() {
           </button>
           <div>
             <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
-            <span className="text-body-sm">브랜치를 선택하면 여러 파일들을 한번에 Push 할 수 있습니다.</span>
+            <span className="text-body-sm">브랜치를 선택하면 여러 파일들을 한 번에 Push 할 수 있습니다.</span>
           </div>
         </div>
       </div>
@@ -299,14 +312,17 @@ export default function PushPage() {
               {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
             </Button>
 
-            {pushedBatch.length > 0 && (
-              <Button variant="secondary" onClick={handleBatchPr} disabled={creatingPr || !!prUrl}>
-                {prUrl ? 'PR 생성 완료 ✓' : creatingPr ? 'PR 생성 중…' : `PR 생성 (${pushedBranch})`}
+            {pushedAnalyses.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={() => setPrModalOpen(true)}
+                disabled={!!prUrl}
+              >
+                {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
               </Button>
             )}
 
             {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-            {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
             {prUrl && (
               <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
                 PR 보기 →
@@ -314,6 +330,21 @@ export default function PushPage() {
             )}
           </div>
         </>
+      )}
+
+      {prModalOpen && pushedAnalyses.length > 0 && (
+        <PrCreateModal
+          analysisIds={pushedAnalyses.map((a) => a.id)}
+          repoId={repoId}
+          headBranch={pushedBranch}
+          defaultTitle={buildPrDefaults(pushedAnalyses).title}
+          defaultBody={buildPrDefaults(pushedAnalyses).body}
+          onClose={() => setPrModalOpen(false)}
+          onCreated={(url) => {
+            setPrUrl(url);
+            setPrModalOpen(false);
+          }}
+        />
       )}
     </>
   );

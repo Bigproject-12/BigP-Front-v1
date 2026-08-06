@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { RepoProvider } from './context/RepoContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -76,7 +77,9 @@ export default function App() {
         <AuthProvider>
           <FavoritesProvider>
             <RepoProvider>
-              <AppRoutes />
+              <ConfirmProvider>
+                <AppRoutes />
+              </ConfirmProvider>
             </RepoProvider>
           </FavoritesProvider>
         </AuthProvider>
