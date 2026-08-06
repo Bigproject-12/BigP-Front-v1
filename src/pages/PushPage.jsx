@@ -221,7 +221,7 @@ export default function PushPage() {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th></th>
+                  <th style={{ width: 40 }}></th>
                   <th>파일명</th>
                   <th>브랜치</th>
                   <th>분석 ID</th>
@@ -244,7 +244,7 @@ export default function PushPage() {
                     const disabled = branchMismatch || fileTaken;
                     return (
                       <tr key={a.id} style={disabled ? { opacity: 0.4 } : undefined}>
-                        <td>
+                        <td style={{ width: 40 }}>
                           <input
                             type="checkbox"
                             checked={selectedIds.has(a.id)}
@@ -260,7 +260,10 @@ export default function PushPage() {
                           />
                         </td>
                         <td>
-                          <span className="history-table__file">
+                          <span
+                            className="history-table__file file-link"
+                            onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
+                          >
                             <FileTypeIcon name={fileName} size={15} />
                             {fileName}
                           </span>
