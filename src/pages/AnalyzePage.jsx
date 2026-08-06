@@ -5,7 +5,7 @@ import { useConfirm } from '../context/ConfirmContext';
 
 import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
-import { fetchBranches, fetchRepoTree, fetchFileContent, fetchRepoBranches } from '../lib/github';
+import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
 
 import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
@@ -14,7 +14,7 @@ import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
-import Modal from '../components/ui/Modal'
+import PrCreateModal from '../components/analysis/PrCreateModal';
 import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
@@ -91,20 +91,12 @@ export default function AnalyzePage() {
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushed, setPushed] = useState(false);
-  const [creatingPr, setCreatingPr] = useState(false);
-  const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState(null);
   const [isPrModalOpen, setIsPrModalOpen] = useState(false);
-  const [prTitle, setPrTitle] = useState('');        // 사용자가 편집 중인 제목
-  const [prBody, setPrBody] = useState('');          // 사용자가 편집 중인 설명
-   const [isPrEditing, setIsPrEditing] = useState(false);  // 제목·설명 편집 모드 여부
-  const [prBranches, setPrBranches] = useState([]);
-  const [prBaseBranch, setPrBaseBranch] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const fileInputRef = useRef(null);
-  const prDefaultsRef = useRef({ title: '', body: '' });
   const originalTextareaRef = useRef(null);
   const originalLineCount = useMemo(
     () => (originalCode ? originalCode.split('\n').length : 1),
@@ -114,16 +106,6 @@ export default function AnalyzePage() {
     () => (improvedCode ? improvedCode.split('\n').length : 1),
     [improvedCode]
   );
-  const prBodyLines = useMemo(                             // 설명을 줄 단위로 쪼개서 "앞 2줄 + …외 N건" 미리보기용 데이터
-    () => (prBody ? prBody.split('\n').filter((l) => l.trim() !== '') : []),
-    [prBody]
-  );
-  const prBodyPreview = prBodyLines.slice(0, 2);          // 접힘 상태에서 보여줄 2줄
-  const prBodyRestCount = Math.max(prBodyLines.length - 2, 0); // 숨겨진 줄 수
-
-  // 자동 생성 원본과 달라졌을 때만 「초기화」 노출
-  const isPrDirty =
-    prTitle !== prDefaultsRef.current.title || prBody !== prDefaultsRef.current.body;
 
   // 레포/브랜치/파일을 바꿀 때 이전 분석 결과(개선 코드, 이슈, push/PR 상태 등)를 모두 비움
   const resetAnalysisOutput = () => {
@@ -140,11 +122,8 @@ export default function AnalyzePage() {
     setPushAnalysisId(null);
     setPushed(false);
     setPushError('');
-    setCreatingPr(false);
-    setPrError('');
     setPrUrl(null);
-    setPrBranches([]);
-    setPrBaseBranch('');
+    setIsPrModalOpen(false);
   };
 
   // 페이지가 일정 이상 스크롤되면 맨 위로 버튼 노출
@@ -237,18 +216,6 @@ export default function AnalyzePage() {
     }
     fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
   }, [repoId, selectedRepo?.fullName]);
-
-  // Push 성공 후 PR 대상(base) 브랜치 선택지 불러오기
-  useEffect(() => {
-    if (!pushed || !repoId) return;
-    fetchRepoBranches(Number(repoId))
-      .then((list) => {
-        setPrBranches(list ?? []);
-        const defaultBranch = (list ?? []).find((b) => b.isDefault);
-        if (defaultBranch) setPrBaseBranch(defaultBranch.name);
-      })
-      .catch(() => setPrBranches([]));
-  }, [pushed, repoId]);
 
   useEffect(()=>{
     if (!selectedRepo || !branch){
@@ -515,48 +482,9 @@ export default function AnalyzePage() {
 
     return { title, body };
   };
-  // "Pull Request 생성" 버튼 → 기본값을 세팅한 뒤 모달을 연다
+  // "Pull Request 생성" 버튼 → 모달을 연다 (기본 제목/설명은 모달 렌더링 시 buildPrDefaults()로 계산)
   const openPrModal = () => {
-    const defaults = buildPrDefaults();
-    prDefaultsRef.current = defaults; // 초기화용 원본 보관
-    setPrTitle(defaults.title);
-    setPrBody(defaults.body);
-    setIsPrEditing(false); // 항상 표시 모드로 시작
-    setPrError('');
     setIsPrModalOpen(true);
-  };
-
-  // 사용자가 수정한 제목·설명을 자동 생성 원본으로 한 번에 되돌린다
-  const handleResetPrAll = () => {
-    setPrTitle(prDefaultsRef.current.title);
-    setPrBody(prDefaultsRef.current.body);
-  };
-  // 편집 영역 바깥을 클릭하면 자동으로 표시 모드로 복귀
-  // relatedTarget = 포커스를 새로 받는 요소. 그게 편집 영역 안이면 유지
-  const handlePrEditBlur = (e) => {
-    const next = e.relatedTarget;
-    if (next && e.currentTarget.contains(next)) return; // 제목 ↔ 설명 이동은 유지
-    setIsPrEditing(false);
-  };
-
-  const handleCreatePr = async () => {
-    if (!pushAnalysisId) return;
-    setCreatingPr(true);
-    setPrError('');
-    try {
-      const result = await api.post(`/api/analysis/${pushAnalysisId}/pr`, {
-        baseBranch: prBaseBranch,
-        title: prTitle,
-        body: prBody,
-      });
-      setPrUrl(result.prUrl);
-      setIsPrModalOpen(false);   // 성공 시 모달 닫기
-    } catch (e) {
-      // 실패 시엔 모달을 열어둔 채 에러 표시 (브랜치 선택값 보존)
-      setPrError(e.message || 'PR 생성에 실패했습니다.');
-    } finally {
-      setCreatingPr(false);
-    }
   };
 
   const goToMyPage = () =>{
@@ -1016,136 +944,18 @@ export default function AnalyzePage() {
         </>
       )}
 {isPrModalOpen && (
-        <Modal
-          title="Pull Request 생성"
+        <PrCreateModal
+          analysisId={pushAnalysisId}
+          repoId={repoId}
+          headBranch={branch}
+          defaultTitle={buildPrDefaults().title}
+          defaultBody={buildPrDefaults().body}
           onClose={() => setIsPrModalOpen(false)}
-          actions={
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => setIsPrModalOpen(false)}
-                disabled={creatingPr}          // 생성 중엔 닫지 못하게 막음
-              >
-                취소
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleCreatePr}
-                disabled={creatingPr || !prBaseBranch}
-              >
-                {creatingPr ? '생성 중…' : '생성'}
-              </Button>
-            </>
-          }
-        >
-          <div className="pr-modal">
-            {/* 브랜치 — GitHub Compare 스타일 (base ← compare) */}
-            <div className="pr-modal__branch">
-              <Icon name="compare" size={16} className="pr-modal__branch-icon" />
-              <div className="pr-modal__branch-box">
-                {/* base = 병합될 대상. 유일하게 편집 가능한 값 */}
-                <span className="pr-modal__branch-key">base:</span>
-                <Select value={prBaseBranch} onChange={(e) => setPrBaseBranch(e.target.value)}>
-                  {prBranches.length === 0 && <option value="">브랜치 불러오는 중…</option>}
-                  {prBranches.map((b) => (
-                    <option key={b.name} value={b.name}>
-                      {b.name}{b.isDefault ? ' (default)' : ''}
-                    </option>
-                  ))}
-                </Select>
-
-                {/* 화살표 방향: compare의 변경사항이 base로 흘러들어감 */}
-                <span className="pr-modal__branch-arrow">←</span>
-
-                {/* compare = 이미 push한 작업 브랜치. 고정값이라 텍스트로만 표시 */}
-                <span className="pr-modal__branch-key">compare:</span>
-                <span className="pr-modal__branch-name">{branch}</span>
-              </div>
-            </div>
-
-            {/* 제목+설명 — 한 덩어리로 묶어 blur 감지 (내부 이동은 편집 유지) */}
-            <div className="pr-modal__editable" onBlur={handlePrEditBlur}>
-
-              {/* 제목 — 클릭하면 편집 진입 */}
-              <div className="pr-modal__field-head">
-                {isPrEditing ? (
-                  <input
-                    className="pr-modal__title-input"
-                    value={prTitle}
-                    onChange={(e) => setPrTitle(e.target.value)}
-                    placeholder="PR 제목을 입력하세요"
-                    autoFocus
-                  />
-                ) : (
-                  <h3
-                    className="pr-modal__title pr-modal__title--clickable"
-                    onClick={() => setIsPrEditing(true)}
-                    title="클릭해서 수정"
-                  >
-                    {prTitle}
-                  </h3>
-                )}
-                <div className="pr-modal__field-actions">
-                  {isPrEditing ? (
-                    <button
-                      type="button"
-                      className="pr-modal__reset"
-                      // 포커스 이동을 막아야 blur로 편집이 닫히기 전에 onClick이 실행됨
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={handleResetPrAll}
-                      disabled={!isPrDirty}
-                      title="제목·설명을 자동 생성 내용으로 되돌립니다"
-                      aria-label="제목·설명 초기화"
-                    >
-                      ↺
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="pr-modal__more"
-                      onClick={() => setIsPrEditing(true)}
-                    >
-                      편집
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 설명 — 편집 모드면 textarea, 아니면 2줄 미리보기(클릭 시 편집) */}
-              <div className="pr-modal__body">
-              {isPrEditing ? (
-                <textarea
-                  className="pr-modal__body-textarea"
-                  value={prBody}
-                  onChange={(e) => setPrBody(e.target.value)}
-                  rows={10}
-                  placeholder="PR 설명을 입력하세요"
-                />
-              ) : (
-                <div
-                  className="pr-modal__body-preview"
-                  onClick={() => setIsPrEditing(true)}
-                  title="클릭해서 수정"
-                >
-                  {prBodyPreview.map((line, i) => (
-                    <div key={i} className="pr-modal__body-line">{line}</div>
-                  ))}
-                  {prBodyRestCount > 0 && (
-                    <span className="pr-modal__rest">…외 {prBodyRestCount}줄</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            </div>
-
-            <p className="pr-modal__hint">
-              제목과 내용은 자동 생성됩니다. 편집을 눌러 수정할 수 있습니다.
-            </p>
-
-            {prError && <div className="ui-banner ui-banner--error">{prError}</div>}
-          </div>
-        </Modal>
+          onCreated={(url) => {
+            setPrUrl(url);
+            setIsPrModalOpen(false);
+          }}
+        />
       )}
       {showScrollTop && (
         <button
