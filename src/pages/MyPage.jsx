@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRepos } from '../context/RepoContext';
 import { useRouter } from '../router/RouterContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../lib/api';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -67,13 +68,14 @@ function WithdrawModal({ onClose, onConfirm }) {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { confirm: confirmDialog, alertDialog } = useConfirm();
 
   const handleSubmit = async () => {
     if (!password) {
-      alert('비밀번호를 입력해주세요.');
+      alertDialog('비밀번호를 입력해주세요.');
       return;
     }
-    if (!window.confirm('정말 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.')) return;
+    if (!(await confirmDialog('정말 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.'))) return;
 
     setSubmitting(true);
     await onConfirm(password);
@@ -119,6 +121,7 @@ export default function MyPage() {
   const { user, persistUser } = useAuth();
   const { repos, refreshRepos } = useRepos();
   const { params, navigate } = useRouter();
+  const { alertDialog } = useConfirm();
 
   const [name, setName] = useState(user?.name || '');
   const [gitId, setGitId] = useState(user?.gitName || '');
@@ -227,10 +230,10 @@ export default function MyPage() {
       }
       sessionStorage.clear();
 
-      alert('회원 탈퇴가 완료되었습니다.');
+      await alertDialog('회원 탈퇴가 완료되었습니다.');
       window.location.href = '?page=login';
     } catch (error) {
-      alert(error.message);
+      alertDialog(error.message);
     }
   };
 

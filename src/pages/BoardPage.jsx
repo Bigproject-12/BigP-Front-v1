@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { formatDateTime } from '../lib/format';
 import { API_BASE, TOKEN_KEY } from '../lib/api'; // API_BASE와 TOKEN_KEY 임포트 추가
 // api 직접 호출 대신 noticeApi 사용
@@ -134,13 +135,14 @@ function BoardList({ isAdmin, navigate }) {
 
 function BoardDetail({ postId, isAdmin, navigate }) {
   const [post, setPost] = useState(null);
+  const { confirm, alertDialog } = useConfirm();
 
   useEffect(() => {
     fetchNotice(postId).then(setPost);
   }, [postId]);
 
   const handleDelete = async () => {
-    if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
+    if (!(await confirm('이 게시글을 삭제하시겠습니까?'))) return;
     await deleteNotice(postId);
     navigate('?page=board');
   };
@@ -167,7 +169,7 @@ function BoardDetail({ postId, isAdmin, navigate }) {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message);
+      alertDialog(err.message);
     }
   };
 

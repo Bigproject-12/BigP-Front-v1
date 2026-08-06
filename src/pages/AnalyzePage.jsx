@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 import { useRepos } from '../context/RepoContext';
 // fetchBranches 함수 추가
@@ -60,6 +61,7 @@ async function runAnalysis({ repoId, language, code,filePath,branch,onStarted })
 export default function AnalyzePage() {
   const { params, navigate } = useRouter();
   const { user } = useAuth();
+  const { confirm } = useConfirm();
 
   const { repos, reposLoading } = useRepos();
   const [branches, setBranches] = useState([]);
@@ -375,12 +377,13 @@ export default function AnalyzePage() {
   };
 
   // 👈 상단 탭 클릭 시 히스토리(RepoDetailPage)로 돌아가는 기능 추가
-  const handleTopTabChange = (key) => {
+  const handleTopTabChange = async (key) => {
     if (key === 'history') {
       // 💡 코드가 입력되어 있거나, 이미 분석을 돌린 상태라면 경고창을 띄움
       if (originalCode.trim() || analyzed) {
-        const confirmLeave = window.confirm(
-          "화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n히스토리로 이동하시겠습니까?"
+        const confirmLeave = await confirm(
+          "화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n히스토리로 이동하시겠습니까?",
+          { title: '경고' }
         );
         if (!confirmLeave) return; // 사용자가 '취소'를 누르면 탭 이동을 막음
       }
@@ -475,7 +478,7 @@ export default function AnalyzePage() {
   };
 
   const handlepush = async () => {
-    if (!window.confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? 실제 저장소의 파일이 수정됩니다.')) return;
+    if (!(await confirm('개선된 코드를 GitHub에 반영(push)하시겠습니까? \n 실제 저장소의 파일이 수정됩니다.', { title: '경고', danger: true }))) return;
     if (!pushAnalysisId) return;
     setPushing(true);
     setPushError('');
