@@ -8,8 +8,9 @@ import Icon from '../icons/Icon';
 import '../../pages/AnalyzePage.css';
 
 // 코드 분석 페이지의 "Pull Request 생성" 모달과 동일한 흐름(base 브랜치 선택 + 제목/설명 편집)을
-// 단건 분석이 아닌 곳(예: Push 탭)에서도 재사용하기 위한 컴포넌트.
-export default function PrCreateModal({ analysisId, repoId, headBranch, defaultTitle, defaultBody, onClose, onCreated }) {
+// 단건/다건 분석 어디서든(예: Push 탭의 단일·다중 push) 재사용하기 위한 컴포넌트.
+// analysisIds가 1개면 단건 PR API, 여러 개면 배치 PR API를 호출한다.
+export default function PrCreateModal({ analysisIds, repoId, headBranch, defaultTitle, defaultBody, onClose, onCreated }) {
   const [branches, setBranches] = useState([]);
   const [baseBranch, setBaseBranch] = useState('');
   const [title, setTitle] = useState(defaultTitle);
@@ -52,12 +53,22 @@ export default function PrCreateModal({ analysisId, repoId, headBranch, defaultT
     setCreating(true);
     setError('');
     try {
-      const result = await api.post(`/api/analysis/${analysisId}/pr`, {
-        baseBranch,
-        title,
-        body,
-      });
-      onCreated(result.prUrl);
+      if (analysisIds.length === 1) {
+        const result = await api.post(`/api/analysis/${analysisIds[0]}/pr`, {
+          baseBranch,
+          title,
+          body,
+        });
+        onCreated(result.prUrl);
+      } else {
+        const result = await api.post('/api/analysis/batch-pull-request', {
+          analysisIds,
+          baseBranch,
+          title,
+          body,
+        });
+        onCreated(result.pullRequestUrl);
+      }
     } catch (e) {
       setError(e.message || 'PR 생성에 실패했습니다.');
     } finally {

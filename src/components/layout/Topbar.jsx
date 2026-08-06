@@ -89,10 +89,11 @@ export default function Topbar() {
   const deleteOne = async (notificationId) => {
     setNotifications((prev) => prev.filter((n) => n.notificationId !== notificationId));
     try {
-      await fetch(`${NOTIFICATION_API}/${notificationId}`, {
+      const res = await fetch(`${NOTIFICATION_API}/${notificationId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
+      if (!res.ok) throw new Error('알림 삭제에 실패했습니다.');
     } catch {
       fetchNotifications();
     }
@@ -101,10 +102,11 @@ export default function Topbar() {
   const clearAll = async () => {
     setNotifications([]);
     try {
-      await fetch(NOTIFICATION_API, {
+      const res = await fetch(NOTIFICATION_API, {
         method: 'DELETE',
         headers: authHeaders(),
       });
+      if (!res.ok) throw new Error('알림 전체 삭제에 실패했습니다.');
     } catch {
       fetchNotifications();
     }
