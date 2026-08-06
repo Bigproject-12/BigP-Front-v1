@@ -222,8 +222,9 @@ export default function PushPage() {
               <thead>
                 <tr>
                   <th></th>
-                  <th>파일</th>
+                  <th>파일명</th>
                   <th>브랜치</th>
+                  <th>분석 ID</th>
                   <th>분석일시</th>
                   <th>이슈 수</th>
                 </tr>
@@ -231,7 +232,7 @@ export default function PushPage() {
               <tbody>
                 {visible.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <div className="ui-empty">Push 대기 중인 분석 결과가 없습니다.</div>
                     </td>
                   </tr>
@@ -265,6 +266,7 @@ export default function PushPage() {
                           </span>
                         </td>
                         <td>{a.branch}</td>
+                        <td>{a.id}</td>
                         <td>{formatDateTime(a.analyzedAt)}</td>
                         <td>
                           {a.issueCount != null ? (

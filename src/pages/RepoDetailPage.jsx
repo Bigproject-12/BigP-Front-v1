@@ -170,10 +170,11 @@ export default function RepoDetailPage() {
         <table className="history-table">
           <thead>
             <tr>
-              <th>프로젝트 (파일명)</th>
+              <th>파일명</th>
+              <th>브랜치</th>
+              <th>분석 ID</th>
               <th>분석일시</th>
               <th>이슈 수</th>
-              <th>개선 가능률</th>
               <th>상태</th>
               <th></th>
             </tr>
@@ -181,7 +182,7 @@ export default function RepoDetailPage() {
           <tbody>
             {paginatedAnalyses.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className="ui-empty">분석 이력이 없습니다.</div>
                 </td>
               </tr>
@@ -209,8 +210,10 @@ export default function RepoDetailPage() {
                         {fileName}
                       </span>
                     </td>
+                    <td>{a.branch ?? '-'}</td>
+                    <td>{a.id}</td>
                     <td>{formatDateTime(a.analyzedAt)}</td>
-                    
+
                     <td>
                       {a.issueCount != null ? (
                         <Badge variant={a.issueCount === 0 ? 'success' : 'warning'}>
@@ -220,12 +223,7 @@ export default function RepoDetailPage() {
                         '-'
                       )}
                     </td>
-                    
-                    <td>
-                      {typeof a.improvableRatio === 'number'
-                        ? `${a.improvableRatio.toFixed(1)}%`
-                        : '-'}
-                    </td>
+
                     <td>
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </td>
