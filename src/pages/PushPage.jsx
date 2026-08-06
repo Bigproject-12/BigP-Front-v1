@@ -42,15 +42,11 @@ export default function PushPage() {
 
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
-  const [pushedBatch, setPushedBatch] = useState([]);
   const [pushedBranch, setPushedBranch] = useState('');
-
-  const [creatingPr, setCreatingPr] = useState(false);
-  const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState('');
 
-  // 파일 1개만 push한 경우, 코드 분석 페이지와 동일하게 PR 생성 모달을 띄우기 위해 원본 분석 정보를 보관
-  const [singlePushedAnalysis, setSinglePushedAnalysis] = useState(null);
+  // push된 분석들(1건이든 여러 건이든)을 그대로 보관해뒀다가, PR 생성 모달의 기본 제목/설명을 만드는 데 쓴다.
+  const [pushedAnalyses, setPushedAnalyses] = useState([]);
   const [prModalOpen, setPrModalOpen] = useState(false);
 
   useEffect(() => {
@@ -109,8 +105,7 @@ export default function PushPage() {
       else next.add(item.id);
       return next;
     });
-    setPushedBatch([]);
-    setSinglePushedAnalysis(null);
+    setPushedAnalyses([]);
     setPrUrl('');
   };
 
@@ -128,13 +123,11 @@ export default function PushPage() {
       if (ids.length === 1) {
         // 파일 1개만 선택한 경우, 기존 단건 push 흐름(코드 분석 후 push)과 동일한 API를 태운다.
         await api.post(`/api/analysis/${ids[0]}/push`);
-        setSinglePushedAnalysis(selectedList[0]);
       } else {
         await api.post('/api/analysis/batch-push', { analysisIds: ids });
-        setSinglePushedAnalysis(null);
       }
       setLocallyPushedIds((prev) => new Set([...prev, ...ids]));
-      setPushedBatch(ids);
+      setPushedAnalyses(selectedList);
       setPushedBranch(lockedBranch);
       setSelectedIds(new Set());
     } catch (e) {
@@ -144,20 +137,24 @@ export default function PushPage() {
     }
   };
 
-  const handleBatchPr = async () => {
-    if (pushedBatch.length === 0) return;
-    setCreatingPr(true);
-    setPrError('');
-    try {
-      const { pullRequestUrl } = await api.post('/api/analysis/batch-pull-request', {
-        analysisIds: pushedBatch,
-      });
-      setPrUrl(pullRequestUrl);
-    } catch (e) {
-      setPrError(e.message || 'PR 생성에 실패했습니다.');
-    } finally {
-      setCreatingPr(false);
+  // PR 생성 모달의 기본 제목/설명 — 파일 1개면 해당 파일 기준, 여러 개면 개수/파일 목록 기준
+  const buildPrDefaults = (analyses) => {
+    if (analyses.length === 1) {
+      const a = analyses[0];
+      return {
+        title: `GuardrAil: ${a.filePath.split('/').pop()} 코드 개선 (이슈 ${a.issueCount ?? 0}건)`,
+        body:
+          `분석 결과: 총 ${a.issueCount ?? 0}건의 이슈 개선.\n\n` +
+          `- 파일: \`${a.filePath}\`\n\n` +
+          `분석 세부 내용은 분석 ID: ${a.id}에서 확인 가능.`,
+      };
     }
+    const totalIssues = analyses.reduce((sum, a) => sum + (a.issueCount ?? 0), 0);
+    const fileList = analyses.map((a) => `- \`${a.filePath}\``).join('\n');
+    return {
+      title: `GuardrAil: AI 코드 개선 (${analyses.length}개 파일)`,
+      body: `분석 결과: 총 ${totalIssues}건의 이슈 개선.\n\n${fileList}`,
+    };
   };
 
   if (!repoId) {
@@ -315,18 +312,17 @@ export default function PushPage() {
               {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
             </Button>
 
-            {pushedBatch.length > 0 && (
+            {pushedAnalyses.length > 0 && (
               <Button
                 variant="secondary"
-                onClick={() => (singlePushedAnalysis ? setPrModalOpen(true) : handleBatchPr())}
-                disabled={creatingPr || !!prUrl}
+                onClick={() => setPrModalOpen(true)}
+                disabled={!!prUrl}
               >
-                {prUrl ? 'PR 생성 완료 ✓' : creatingPr ? 'PR 생성 중…' : `PR 생성 (${pushedBranch})`}
+                {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
               </Button>
             )}
 
             {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-            {prError && <span className="text-body-sm ui-banner--error">{prError}</span>}
             {prUrl && (
               <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
                 PR 보기 →
@@ -336,17 +332,13 @@ export default function PushPage() {
         </>
       )}
 
-      {prModalOpen && singlePushedAnalysis && (
+      {prModalOpen && pushedAnalyses.length > 0 && (
         <PrCreateModal
-          analysisId={singlePushedAnalysis.id}
+          analysisIds={pushedAnalyses.map((a) => a.id)}
           repoId={repoId}
-          headBranch={singlePushedAnalysis.branch}
-          defaultTitle={`GuardrAil: ${singlePushedAnalysis.filePath.split('/').pop()} 코드 개선 (이슈 ${singlePushedAnalysis.issueCount ?? 0}건)`}
-          defaultBody={
-            `분석 결과: 총 ${singlePushedAnalysis.issueCount ?? 0}건의 이슈 개선.\n\n` +
-            `- 파일: \`${singlePushedAnalysis.filePath}\`\n\n` +
-            `분석 세부 내용은 분석 ID: ${singlePushedAnalysis.id}에서 확인 가능.`
-          }
+          headBranch={pushedBranch}
+          defaultTitle={buildPrDefaults(pushedAnalyses).title}
+          defaultBody={buildPrDefaults(pushedAnalyses).body}
           onClose={() => setPrModalOpen(false)}
           onCreated={(url) => {
             setPrUrl(url);
