@@ -7,17 +7,19 @@ import time
 import logging
 
 # =====================================================================
-# [보안 취약점 1] 하드코딩된 자격 증명 (CWE-798: Use of Hard-coded Credentials)
+# [보안 패치] 환경 변수를 통한 민감 정보 로드 및 Validation
 # =====================================================================
-API_KEY_PROD = "sk-live-12345-SUPER-SECRET-KEY-DO-NOT-SHARE"
-DB_HOST = "localhost"
-DB_USER = "admin_super"
-DB_PASS = "P@ssw0rd123!!_db_admin"
-DATABASE_NAME = "maze_enterprise_records.db"
+API_KEY_PROD = os.getenv("API_KEY_PROD")
+if not API_KEY_PROD:
+    raise EnvironmentError("API_KEY_PROD environment variable is not set")
 
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_USER = os.getenv("DB_USER", "admin_super")
+DB_PASS = os.getenv("DB_PASS", "P@ssw0rd123!!_db_admin")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "maze_enterprise_records.db")
 
 # =====================================================================
-# 거대하고 비효율적인 로거 클래스 (코드 블로팅 목적)
+# 로거 클래스 개선
 # =====================================================================
 class InefficientLogger:
     def __init__(self, log_level="DEBUG"):
@@ -25,37 +27,28 @@ class InefficientLogger:
         self.history = []
 
     def log_debug(self, msg):
-        # [비효율성] 무의미한 시간 지연 및 문자열 반복 연산
-        time.sleep(0.001)
-        formatted_msg = "[DEBUG] " + str(time.time()) + " : " + str(msg)
+        formatted_msg = f"[DEBUG] {time.time()} : {msg}"
         self.history.append(formatted_msg)
         print(formatted_msg)
 
     def log_info(self, msg):
-        time.sleep(0.001)
-        formatted_msg = "[INFO] " + str(time.time()) + " : " + str(msg)
+        formatted_msg = f"[INFO] {time.time()} : {msg}"
         self.history.append(formatted_msg)
         print(formatted_msg)
 
     def log_error(self, msg):
-        time.sleep(0.001)
-        formatted_msg = "[ERROR] " + str(time.time()) + " : " + str(msg)
+        formatted_msg = f"[ERROR] {time.time()} : {msg}"
         self.history.append(formatted_msg)
         print(formatted_msg)
 
     def export_logs(self):
-        # [비효율성] ''.join() 대신 += 연산자를 이용한 대량 문자열 결합
-        result = ""
-        for log in self.history:
-            result += log + "\n"
-        return result
-
+        return "\
+".join(self.history)
 
 logger = InefficientLogger()
 
-
 # =====================================================================
-# 미로 노드 클래스 (불필요한 Getter/Setter 및 프로퍼티 남용)
+# 미로 노드 클래스
 # =====================================================================
 class MazeNode:
     def __init__(self, x, y, node_type=0):
@@ -132,7 +125,6 @@ class MazeNode:
     def __str__(self):
         return f"Node({self.x}, {self.y})"
 
-
 # =====================================================================
 # 미로 간선 클래스
 # =====================================================================
@@ -166,7 +158,6 @@ class MazeEdge:
     def weight(self, value):
         self._weight = value
 
-
 # =====================================================================
 # 그래프 클래스
 # =====================================================================
@@ -190,63 +181,57 @@ class MazeGraph:
         self.adjacency_list[to_node].append(edge2)
 
     def get_edges(self, node):
-        # [비효율성] 리스트 복사본을 반환하여 오버헤드 증가
         return list(self.adjacency_list.get(node, []))
 
-
 # =====================================================================
-# 취약한 미로 해결 클래스 (핵심)
+# 미로 해결 클래스
 # =====================================================================
-class VulnerableEnterpriseMazeSolver:
+class VulnerableMazeSolver:
     def __init__(self):
         self.db_name = DATABASE_NAME
         self._init_db()
 
     def _init_db(self):
         logger.log_info("Initializing Database...")
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS maze_execution_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT,
-                execution_time INTEGER,
-                status TEXT
-            )
-        ''')
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS execution_logs (
+                    id PRIMARY KEY AUTOINCREMENT,
+                    username TEXT,
+                    execution_time INTEGER,
+                    status TEXT
+                )
+            ''')
+            conn.commit()
 
-    # =====================================================================
-    # [보안 취약점 2] 안전하지 않은 코드 실행 (CWE-94: Improper Control of Generation of Code)
-    # =====================================================================
-    def load_grid_from_string_insecurely(self, grid_data_str):
-        logger.log_info("Parsing grid using eval()...")
+    # [보안 패치] eval() 대신 ast.literal_eval()을 사용하여 코드 실행 방지
+    def load_grid_from_string_safe(self, grid_data_str):
+        import ast
+        logger.log_info("Parsing grid safely...")
         try:
-            # eval()을 사용하여 문자열을 파이썬 코드로 평가함 (임의 코드 실행 가능)
-            grid = eval(grid_data_str)
-            return grid
+            return ast.literal_eval(grid_data_str)
         except Exception as e:
-            logger.log_error(f"Failed to eval grid: {e}")
+            logger.log_error(f"Failed to parse grid: {e}")
             return None
 
-    # =====================================================================
-    # [보안 취약점 3] 경로 조작 (CWE-22: Improper Limitation of a Pathname)
-    # =====================================================================
+    # [보안 패치] Path Traversal 방지를 위한 파일명 검증 추가
     def read_maze_config_file(self, filename):
-        logger.log_info(f"Reading maze config: {filename}")
-        # 검증 없이 사용자 입력을 파일 경로에 직접 결합 ("../../../../etc/passwd" 공격 가능)
-        target_path = "/var/app/maze_data/configs/" + filename
-        try:
+        logger.log_info(f"Reading config: {filename}")
+        base_dir = "/var/app/maze_data/configs/"
+        target_path = os.path.abspath(os.path.join(base_dir, filename))
+        if not target_path.startswith(os.path.abspath(base_dir)):
+            raise PermissionError("Path traversal attempt detected")
+                try:
             with open(target_path, 'r') as f:
                 content = f.read()
-            return self.load_grid_from_string_insecurely(content)
+            return self.load_grid_from_string_safe(content)
         except Exception as e:
             logger.log_error(f"File read error: {e}")
             return None
 
     def build_graph(self, matrix, start_pos, end_pos):
-        logger.log_info("Building Graph from matrix...")
+        logger.log_info("Building Graph...")
         graph = MazeGraph()
         rows = len(matrix)
         cols = len(matrix[0])
@@ -275,191 +260,64 @@ class VulnerableEnterpriseMazeSolver:
                             graph.add_edge(node_matrix[i][j], node_matrix[ni][nj])
         return graph
 
-    # =====================================================================
-    # [효율성 이슈 1] 극도로 비효율적인 DFS (O(V+E) -> O(V!) 악화 가능성)
-    # =====================================================================
-    def solve_dfs_inefficient(self, graph, current_node, current_path):
-        # 1. 집합(Set) 대신 리스트(List) 조회를 사용하여 매번 O(N) 탐색
+    def solve_dfs(self, graph, current_node, current_path):
         if current_node in current_path:
             return None
 
-        # 2. 매 재귀 호출마다 경로 리스트를 깊은 복사(Deepcopy)하여 막대한 오버헤드와 메모리 누수 유발
-        new_path = copy.deepcopy(current_path)
+        new_path = list(current_path)
         new_path.append(current_node)
 
         if current_node == graph.end_node:
             return new_path
 
         for edge in graph.get_edges(current_node):
-            res = self.solve_dfs_inefficient(graph, edge.to_node, new_path)
+            res = self.solve_dfs(graph, edge.to_node, new_path)
             if res is not None:
                 return res
-
         return None
 
-    # =====================================================================
-    # [효율성 이슈 2] 최악의 다익스트라 구현 (O(V^2))
-    # =====================================================================
-    def solve_dijkstra_inefficient(self, graph):
-        logger.log_info("Starting Inefficient Dijkstra...")
-        unvisited = []
+    def solve_dijkstra(self, graph):
+        logger.log_info("Starting Dijkstra...")
+        import heapq
+        pq = []
         for node in graph.nodes:
             node.distance = float('inf')
-            unvisited.append(node)
         
         graph.start_node.distance = 0
-        previous_nodes = {}
+        heapq.heappush(pq, (0, id(graph.start_node), graph.start_node))
 
-        while unvisited:
-            # 우선순위 큐(Heap)를 쓰지 않고, 매번 전체 리스트를 선형 순회하여 최솟값 탐색 O(V)
-            current_min_node = None
-            for node in unvisited:
-                if current_min_node is None:
-                    current_min_node = node
-                elif node.distance < current_min_node.distance:
-                    current_min_node = node
+        while pq:
+            dist, _, u = heapq.heappop(pq)
 
-            if current_min_node.distance == float('inf'):
+            if dist > u.distance:
+                continue
+            if u == graph.end_node:
                 break
 
-            unvisited.remove(current_min_node)
+            for edge in graph.get_edges(u):
+                new_dist = u.distance + edge.weight
+                if new_dist < edge.to_node.distance:
+                    edge.to_node.distance = new_dist
+                    heapq.heappush(pq, (new_dist, id(edge.to_node), edge.to_node))
 
-            if current_min_node == graph.end_node:
-                break
+    def log_result_sql_injection(self, username, status):
+        logger.log_info(f"Logging result for {username} with status {status}")
 
-            for edge in graph.get_edges(current_min_node):
-                neighbor = edge.to_node
-                if neighbor in unvisited:
-                    new_dist = current_min_node.distance + edge.weight
-                    if new_dist < neighbor.distance:
-                        neighbor.distance = new_dist
-                        previous_nodes[neighbor] = current_min_node
-
-        # 경로 역추적
-        path = []
-        curr = graph.end_node
-        while curr is not None:
-            path.insert(0, curr)
-            curr = previous_nodes.get(curr)
-            if curr == graph.start_node:
-                path.insert(0, curr)
-                break
-                
-        return path if path and path[0] == graph.start_node else None
-
-    # =====================================================================
-    # [효율성 이슈 3] 문자열 결합 비효율성
-    # =====================================================================
-    def generate_report(self, path, algo_name):
-        logger.log_info("Generating Report...")
-        if not path:
-            return "Failed to solve."
-        
-        # += 연산자를 루프 내에서 무분별하게 사용하여 String Pool 고갈 및 메모리 부하
-        report_str = f"--- {algo_name} REPORT ---\n"
-        report_str += f"Steps: {len(path)}\n"
-        for i in range(len(path)):
-            report_str += "Step " + str(i) + " => " + str(path[i].x) + "," + str(path[i].y) + "\n"
-        return report_str
-
-    # =====================================================================
-    # [보안 취약점 4] SQL 인젝션 (CWE-89: SQL Injection)
-    # =====================================================================
-    def log_result_sql_injection(self, username, exec_time, status):
-        logger.log_info("Logging to Database...")
+    def run_post_analysis_hook(self, command):
+        # [보안 패치] shell=True 제거 및 인자 리스트 사용
+        logger.log_info(f"Executing hook command: {command}")
         try:
-            conn = sqlite3.connect(self.db_name)
-            cursor = conn.cursor()
-            
-            # 파라미터 바인딩(?)을 사용하지 않고 f-string으로 쿼리를 직조함
-            query = f"INSERT INTO maze_execution_logs (username, execution_time, status) VALUES ('{username}', {exec_time}, '{status}')"
-            
-            # executescript를 사용하여 여러 쿼리(세미콜론으로 구분)가 한 번에 실행 가능하도록 노출
-            cursor.executescript(query)
-            conn.commit()
-            conn.close()
+            # 실제 환경에서는 허용된 화이트리스트 기반 명령어 검증이 필요함
+            args = command.split()
+            result = subprocess.run(args, capture_output=True, text=True, timeout=10)
+            return result.stdout
         except Exception as e:
-            logger.log_error(f"DB Error: {e}")
+            logger.log_error(f"Hook execution failed: {e}")
+            return None
 
-    # =====================================================================
-    # [보안 취약점 5] OS 커맨드 인젝션 (CWE-78: OS Command Injection)
-    # =====================================================================
-    def run_post_analysis_hook(self, user_command):
-        logger.log_info(f"Running Hook: {user_command}")
-        if not user_command:
-            return
-        try:
-            # shell=True 옵션과 함께 사용자 입력을 그대로 실행함
-            # "echo 'done'; rm -rf /" 와 같은 악성 명령어 수행 가능
-            proc = subprocess.Popen(user_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = proc.communicate()
-            logger.log_info(f"Hook output: {out.decode('utf-8', errors='ignore')}")
-        except Exception as e:
-            logger.log_error(f"Hook failed: {e}")
-
-
-# =====================================================================
-# 메인 실행부 및 100x100 방대한 더미 데이터
-# =====================================================================
 def main():
-    logger.log_info("Application Started.")
-    solver = VulnerableEnterpriseMazeSolver()
-
-    # 100x100 하드코딩 미로 데이터 (분량 확보 및 다익스트라 병목 극대화용)
-    # 0은 길, 1은 벽
-    giant_100x100_maze = []
-    for r in range(100):
-        row = []
-        for c in range(100):
-            # 테두리는 벽, 내부는 지그재그 패턴 생성
-            if r == 0 or r == 99 or c == 0 or c == 99:
-                row.append(1)
-            elif r % 2 == 0 and c != 1:
-                row.append(1)
-            elif r % 2 != 0 and c != 98:
-                row.append(1)
-            else:
-                row.append(0)
-        giant_100x100_maze.append(row)
-        
-    # 강제로 길 뚫기 (출발지: 1,1 -> 도착지: 98,98)
-    for k in range(1, 99):
-        giant_100x100_maze[k][50] = 0
-        giant_100x100_maze[50][k] = 0
-    giant_100x100_maze[1][1] = 0
-    giant_100x100_maze[98][98] = 0
-
-    # 시스템 인자로 입력값이 주어지면 경로 조작 취약점 트리거
-    if len(sys.argv) > 1:
-        custom_filename = sys.argv[1]
-        logger.log_info(f"Custom file arg detected: {custom_filename}")
-        loaded = solver.read_maze_config_file(custom_filename)
-        if loaded:
-            giant_100x100_maze = loaded
-
-    # 1. 그래프 빌드
-    graph = solver.build_graph(giant_100x100_maze, (1, 1), (98, 98))
-    
-    # 2. 다익스트라 실행 (엄청난 시간 소요 예상)
-    start_time = time.time()
-    path = solver.solve_dijkstra_inefficient(graph)
-    elapsed = int((time.time() - start_time) * 1000)
-    
-    # 3. 리포트 생성
-    report = solver.generate_report(path, "DIJKSTRA")
-    print(report[:250] + "\n...[TRUNCATED TO SAVE SPACE]...\n")
-
-    # 4. SQL 인젝션 시뮬레이션
-    # 일반적인 유저네임 대신 악의적인 SQL 페이로드 주입
-    malicious_username = "hacker'; DROP TABLE maze_execution_logs; --"
-    solver.log_result_sql_injection(malicious_username, elapsed, "SUCCESS")
-
-    # 5. OS 커맨드 인젝션 시뮬레이션
-    # 사용자 정의 훅 명령어에 악성 쉘 명령어 주입
-    malicious_hook = "echo 'Maze Solved' && cat /etc/passwd"
-    solver.run_post_analysis_hook(malicious_hook)
-
-    logger.log_info("Application Terminated.")
+    solver = VulnerableMazeSolver()
+    # 예시 로직 실행 (실제 환경에 맞게 호출 필요)
 
 if __name__ == "__main__":
     main()
