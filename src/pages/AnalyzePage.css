@@ -87,7 +87,8 @@
 .code-textarea,
 .code-view {
   flex: 1;
-  min-width: 650px;
+  width: max-content;  /* 텍스트 길이에 맞춰 늘어나도록 설정 */
+  min-width: 100%;     /* 최소 너비는 패널을 꽉 채우게 변경 (650px 제거) */
   height: auto !important; 
   min-height: 400px;
   resize: none;
@@ -98,10 +99,7 @@
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 21px;
-  
-  /* 👈 내부 고스트 스크롤바 완벽 차단 */
   overflow: hidden !important; 
-  
   user-select: text;
   white-space: pre;
   word-break: normal;
@@ -117,8 +115,8 @@
 }
 
 .code-view {
-  width: 100%;
-  min-width: 650px;
+  width: max-content;
+  min-width: 100%; /* 고정 너비 제거 */
   margin: 0;
   padding: 12px 16px;
   font-family: var(--font-mono);
@@ -133,14 +131,23 @@
 }
 
 /* 2. [핵심] 좌우 비교 뷰어 컨테이너 설정 (스크롤바 위치 일치) */
-.diff-viewer {
+.diff-viewer,
+.diff-viewer-split { /* 👈 이 클래스가 빠져서 페이지가 깨졌습니다! 복구 완료! */
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 100%;
   height: auto !important;
-  align-items: stretch; /* 왼쪽 코드가 길면 오른쪽도 같이 늘림 */
+  align-items: stretch;
   overflow: visible !important; 
   user-select: none;
+}
+
+/* 모바일 화면 대응 */
+@media (max-width: 720px) {
+  .diff-viewer,
+  .diff-viewer-split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .diff-pane {
@@ -233,20 +240,20 @@
   flex: 1; 
   display: block; 
   background: var(--surface-card);
-  min-width: 650px;
+  width: 100%;
+  min-width: 100%; /* 고정 너비 제거 */
   margin: 0;
-  padding: 0;
+  padding: 12px 16px; /* 왼쪽 입력창과 동일한 상단/좌측 여백 부여 */
 }
 
-/* 스크롤을 내려도 텍스트가 화면 중앙에 떠 있도록 유지 */
 .empty-placeholder-sticky {
-  position: sticky;
-  top: 50vh; 
-  transform: translateY(-50%); 
-  text-align: center;
+  text-align: left; /* 중앙 정렬에서 좌측 정렬로 변경 */
   color: var(--text-muted);
-  font-family: var(--font-body);
+  font-family: var(--font-mono); /* 위화감이 없도록 폰트를 왼쪽 라인과 통일 */
+  font-size: 12.5px;
+  line-height: 21px;
   user-select: none;
+  /* 기존에 중앙에 띄우기 위해 사용했던 position: sticky, top, transform 속성 모두 제거 */
 }
 
 /* diff 카드 */
@@ -260,11 +267,28 @@
 .diff-subgrid {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* 👈 그리드 내에서 가로 스크롤을 활성화하기 위해 필수 */
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding-bottom: 12px;
 }
 
 .diff-subgrid .diff-row {
   display: grid;
   grid-template-columns: 40px 20px 1fr;
+}
+
+/* DiffViewer용 두툼하고 보기 편한 스크롤바 디자인 */
+.diff-subgrid::-webkit-scrollbar {
+  height: 12px; 
+}
+.diff-subgrid::-webkit-scrollbar-thumb {
+  background: var(--border-hairline-strong);
+  border-radius: 6px;
+}
+.diff-subgrid::-webkit-scrollbar-track {
+  background: var(--surface-input);
+  border-radius: 6px;
 }
 
 
