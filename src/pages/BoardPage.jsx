@@ -353,7 +353,7 @@ function BoardEditor({ postId, navigate }) {
       });
 
       if (isEdit) {
-        await updateNotice(postId, formData); 
+        await updateNotice(postId, requestDto);
         navigate(`?page=board&postId=${postId}`);
       } else {
         const created = await createNotice(formData); 
@@ -386,20 +386,22 @@ function BoardEditor({ postId, navigate }) {
                 placeholder="내용을 입력해주세요" />
             </div>
 
-            <div className="ui-field">
-              <label className="ui-field__label">첨부파일</label>
-              <input 
-                type="file" 
-                multiple 
-                onChange={handleFileChange} 
-                style={{ fontSize: '14px', padding: '4px 0' }}
-              />
-              {files.length > 0 && (
-                <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
-                  선택된 파일: {files.map(f => f.name).join(', ')}
-                </span>
-              )}
-            </div>
+            {!isEdit && (
+              <div className="ui-field">
+                <label className="ui-field__label">첨부파일</label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  style={{ fontSize: '14px', padding: '4px 0' }}
+                />
+                {files.length > 0 && (
+                  <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                    선택된 파일: {files.map(f => f.name).join(', ')}
+                  </span>
+                )}
+              </div>
+            )}
 
             <label className="ui-field" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <input type="checkbox" checked={isPinned}
