@@ -12,6 +12,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
+import PrCreateModal from '../components/analysis/PrCreateModal';
 import './RepoDetailPage.css';
 
 const TOP_TABS = [
@@ -47,6 +48,10 @@ export default function PushPage() {
   const [creatingPr, setCreatingPr] = useState(false);
   const [prError, setPrError] = useState('');
   const [prUrl, setPrUrl] = useState('');
+
+  // 파일 1개만 push한 경우, 코드 분석 페이지와 동일하게 PR 생성 모달을 띄우기 위해 원본 분석 정보를 보관
+  const [singlePushedAnalysis, setSinglePushedAnalysis] = useState(null);
+  const [prModalOpen, setPrModalOpen] = useState(false);
 
   useEffect(() => {
     if (!repoId) return;
@@ -105,20 +110,29 @@ export default function PushPage() {
       return next;
     });
     setPushedBatch([]);
+    setSinglePushedAnalysis(null);
     setPrUrl('');
   };
 
   const handleBatchPush = async () => {
     if (selectedList.length === 0) return;
     if (!(await confirm(
-      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`
+      `선택한 파일 ${selectedList.length}개를 하나의 커밋으로 GitHub(${lockedBranch})에 반영(Push)하시겠습니까?`,
+      { title: '경고', danger: true }
     ))) return;
 
     setPushing(true);
     setPushError('');
     try {
       const ids = selectedList.map((a) => a.id);
-      await api.post('/api/analysis/batch-push', { analysisIds: ids });
+      if (ids.length === 1) {
+        // 파일 1개만 선택한 경우, 기존 단건 push 흐름(코드 분석 후 push)과 동일한 API를 태운다.
+        await api.post(`/api/analysis/${ids[0]}/push`);
+        setSinglePushedAnalysis(selectedList[0]);
+      } else {
+        await api.post('/api/analysis/batch-push', { analysisIds: ids });
+        setSinglePushedAnalysis(null);
+      }
       setLocallyPushedIds((prev) => new Set([...prev, ...ids]));
       setPushedBatch(ids);
       setPushedBranch(lockedBranch);
@@ -174,7 +188,7 @@ export default function PushPage() {
           </button>
           <div>
             <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
-            <span className="text-body-sm">브랜치를 선택하면 여러 파일들을 한번에 Push 할 수 있습니다.</span>
+            <span className="text-body-sm">브랜치를 선택하면 여러 파일들을 한 번에 Push 할 수 있습니다.</span>
           </div>
         </div>
       </div>
@@ -302,7 +316,11 @@ export default function PushPage() {
             </Button>
 
             {pushedBatch.length > 0 && (
-              <Button variant="secondary" onClick={handleBatchPr} disabled={creatingPr || !!prUrl}>
+              <Button
+                variant="secondary"
+                onClick={() => (singlePushedAnalysis ? setPrModalOpen(true) : handleBatchPr())}
+                disabled={creatingPr || !!prUrl}
+              >
                 {prUrl ? 'PR 생성 완료 ✓' : creatingPr ? 'PR 생성 중…' : `PR 생성 (${pushedBranch})`}
               </Button>
             )}
@@ -316,6 +334,25 @@ export default function PushPage() {
             )}
           </div>
         </>
+      )}
+
+      {prModalOpen && singlePushedAnalysis && (
+        <PrCreateModal
+          analysisId={singlePushedAnalysis.id}
+          repoId={repoId}
+          headBranch={singlePushedAnalysis.branch}
+          defaultTitle={`GuardrAil: ${singlePushedAnalysis.filePath.split('/').pop()} 코드 개선 (이슈 ${singlePushedAnalysis.issueCount ?? 0}건)`}
+          defaultBody={
+            `분석 결과: 총 ${singlePushedAnalysis.issueCount ?? 0}건의 이슈 개선.\n\n` +
+            `- 파일: \`${singlePushedAnalysis.filePath}\`\n\n` +
+            `분석 세부 내용은 분석 ID: ${singlePushedAnalysis.id}에서 확인 가능.`
+          }
+          onClose={() => setPrModalOpen(false)}
+          onCreated={(url) => {
+            setPrUrl(url);
+            setPrModalOpen(false);
+          }}
+        />
       )}
     </>
   );
