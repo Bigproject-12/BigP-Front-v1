@@ -196,8 +196,11 @@ export default function PushPage() {
         <div className="ui-empty">불러오는 중…</div>
       ) : (
         <>
-          <div className="repo-detail__toolbar">
-            <div className="repo-detail__toolbar-left">
+          {/* ▼ 툴바 레이아웃 변경: 브랜치 선택창 아래로 버튼 배치 ▼ */}
+          <div className="repo-detail__toolbar" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            
+            {/* 좌측 영역: 브랜치 선택창과 액션 버튼들을 위아래(column)로 배치 */}
+            <div className="repo-detail__toolbar-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', flex: 1 }}>
               <div style={{ width: '160px' }}>
                 <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
                   <option value="all">브랜치</option>
@@ -206,7 +209,37 @@ export default function PushPage() {
                   ))}
                 </Select>
               </div>
+
+              {/* 진행 순서에 맞게 좌측부터 우측으로 렌더링되도록 정렬 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Button
+                  variant="primary"
+                  onClick={handleBatchPush}
+                  disabled={selectedList.length === 0 || pushing}
+                >
+                  {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
+                </Button>
+
+                {pushedAnalyses.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setPrModalOpen(true)}
+                    disabled={!!prUrl}
+                  >
+                    {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
+                  </Button>
+                )}
+
+                {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
+                {prUrl && (
+                  <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                    PR 보기 →
+                  </a>
+                )}
+              </div>
             </div>
+            
+            {/* 우측 영역: 검색창 (우측 상단에 유지) */}
             <div className="repo-detail__search">
               <Input
                 placeholder="파일명 검색"
@@ -216,6 +249,7 @@ export default function PushPage() {
               />
             </div>
           </div>
+          {/* ▲ 툴바 레이아웃 변경 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
             <table className="history-table">
@@ -303,32 +337,7 @@ export default function PushPage() {
             )}
           </Card>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-            <Button
-              variant="primary"
-              onClick={handleBatchPush}
-              disabled={selectedList.length === 0 || pushing}
-            >
-              {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
-            </Button>
-
-            {pushedAnalyses.length > 0 && (
-              <Button
-                variant="secondary"
-                onClick={() => setPrModalOpen(true)}
-                disabled={!!prUrl}
-              >
-                {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
-              </Button>
-            )}
-
-            {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-            {prUrl && (
-              <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                PR 보기 →
-              </a>
-            )}
-          </div>
+          
         </>
       )}
 

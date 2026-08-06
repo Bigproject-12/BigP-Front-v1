@@ -1,4 +1,3 @@
-package com.security.analyzer;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
