@@ -945,7 +945,7 @@ export default function AnalyzePage() {
       )}
 {isPrModalOpen && (
         <PrCreateModal
-          analysisId={pushAnalysisId}
+          analysisIds={[pushAnalysisId]}
           repoId={repoId}
           headBranch={branch}
           defaultTitle={buildPrDefaults().title}
