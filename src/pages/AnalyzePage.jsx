@@ -694,7 +694,7 @@ export default function AnalyzePage() {
           <div className="analyze-toolbar__field">
             <Input
               label="파일 검색"
-              placeholder="파일명 또는 경로 검색"
+              placeholder="입력 후 파일 검색"
               leftIcon={<Icon name="search" size={16} />}
               value={fileSearch}
               onChange={(e) => setFileSearch(e.target.value)}
@@ -741,6 +741,8 @@ export default function AnalyzePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
               {/* 에러 메시지는 버튼 왼쪽에 나란히 */}
               {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
+              {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
+              {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
 
               {/* 1) 분석 중 → 중지 버튼 + 스피너 */}
               {analyzing ? (
@@ -753,7 +755,7 @@ export default function AnalyzePage() {
               ) : prUrl ? (
                 /* 4) PR 생성 완료 → GitHub에서 확인 */
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}
                 >
                   GitHub에서 PR 확인
@@ -761,7 +763,7 @@ export default function AnalyzePage() {
               ) : pushed ? (
                 /* 3) Push 완료 → PR 생성 */
                 <Button variant="primary" onClick={openPrModal}>
-                  Pull Request 생성
+                  PR 생성 ({branch})
                 </Button>
               ) : analyzed && pushAnalysisId && branch && filePath ? (
                 /* 2) 분석 완료 & GitHub 파일 → Push */
