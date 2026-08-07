@@ -372,16 +372,9 @@ export default function AnalysisDetailPage() {
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
               {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
-              {prUrl ? (
-                <button
-                    className="ui-btn ui-btn--primary ui-btn--md"
-                    onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}
-                >
-                    GitHub에서 PR 확인
-                </button>
-              ) : pushed ? (
-                <button className="ui-btn ui-btn--primary ui-btn--md" onClick={openPrModal}>
-                    PR 생성 ({data.branch ?? 'main'})
+              {pushed ? (
+                <button className="ui-btn ui-btn--primary ui-btn--md" onClick={openPrModal} disabled={!!prUrl}>
+                    {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${data.branch ?? 'main'})`}
                 </button>
               ) : (
                 <button
@@ -391,6 +384,11 @@ export default function AnalysisDetailPage() {
                 >
                     {pushing ? '반영 중…' : 'GitHub에 Push'}
                 </button>
+              )}
+              {prUrl && (
+                <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                  GitHub에서 PR 확인 →
+                </a>
               )}
             </div>
           </div>

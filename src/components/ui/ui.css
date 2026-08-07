@@ -311,6 +311,14 @@
   border-bottom-color: var(--ps-primary);
   font-weight: 700;
 }
+.ui-tabs__item--disabled {
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ui-tabs__item--disabled:hover {
+  color: var(--text-muted);
+}
 
 /* pill-style segmented tabs (status filters) */
 .ui-segment {
