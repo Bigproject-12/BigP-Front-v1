@@ -72,6 +72,8 @@ export default function AnalyzePage() {
   const [branch, setBranch] = useState('');
   const [filePath, setFilePath] = useState('');
   const [fileNameOverride, setFileNameOverride] = useState('');
+  const [isNewFile, setIsNewFile] = useState(false);
+  const [folderSuggestOpen, setFolderSuggestOpen] = useState(false);
 
 
   
@@ -176,6 +178,22 @@ export default function AnalyzePage() {
     return Array.from(exts).sort();
   }, [files]);
 
+  // 새 파일 경로 입력 시 자동완성으로 제안할 기존 폴더 목록
+  const folderPaths = useMemo(() => {
+    const set = new Set();
+    files.forEach((path) => {
+      const parts = path.split('/');
+      if (parts.length > 1) set.add(parts.slice(0, -1).join('/') + '/');
+    });
+    return Array.from(set).sort();
+  }, [files]);
+
+  // 새 파일 경로 입력값과 일치하는 폴더만 추려서 자동완성 목록으로 보여줌
+  const filteredFolderSuggestions = useMemo(() => {
+    const keyword = filePath.toLowerCase();
+    return folderPaths.filter((f) => f.toLowerCase().includes(keyword)).slice(0, 200);
+  }, [folderPaths, filePath]);
+
   // 확장자 필터 + 검색어가 적용된 상태로 폴더별 그룹화 수행
   const groupedFiles = useMemo(() => {
     const keyword = fileSearch.trim().toLowerCase();
@@ -235,7 +253,7 @@ export default function AnalyzePage() {
   }, [params]);
 
   useEffect(() => {
-    if (!filePath || !selectedRepo || !branch) return;
+    if (!filePath || !selectedRepo || !branch || isNewFile) return;
     setFileNameOverride('');
     resetAnalysisOutput();
     fetchRepoFileContent(selectedRepo.id, filePath, branch)
@@ -377,6 +395,10 @@ export default function AnalyzePage() {
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
     if (!repoId) { setDetectError('먼저 분석할 Repository를 선택해주세요'); return; }
+    if (isNewFile && (!filePath.trim() || filePath.endsWith('/'))) {
+      setDetectError('파일명을 마저 입력해 주세요 (폴더 경로만으로는 분석할 수 없습니다)');
+      return;
+    }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
@@ -600,7 +622,7 @@ export default function AnalyzePage() {
           ) : (
             <>
               {/* 1. Repository 선택 (정상적으로 repos 목록 출력) */}
-              <div className="analyze-toolbar__field">
+              <div className="analyze-toolbar__field" style={{ maxWidth: '220px' }}>
                 <label>Repository</label>
                 <Select
                   value={repoId}
@@ -609,6 +631,7 @@ export default function AnalyzePage() {
                     setBranch('');
                     setFilePath('');
                     setFileNameOverride('');
+                    setIsNewFile(false);
                     setSelectedExt('');
                     setFileSearch('');
                     setOriginalCode('');
@@ -625,7 +648,7 @@ export default function AnalyzePage() {
               </div>
 
           {/* 2. 브랜치 선택 */}
-          <div className="analyze-toolbar__field">
+          <div className="analyze-toolbar__field" style={{ maxWidth: '180px' }}>
             <label>Branch</label>
             <Select
               value={branch}
@@ -633,6 +656,7 @@ export default function AnalyzePage() {
                 setBranch(e.target.value);
                 setFilePath('');
                 setFileNameOverride('');
+                setIsNewFile(false);
                 setSelectedExt('');
                 setFileSearch('');
                 setOriginalCode('');
@@ -677,40 +701,94 @@ export default function AnalyzePage() {
             </Select>
           </div>
 
-          {/* 4. 폴더/파일 선택 (확장자 필터 뒤로 이동) */}
-          <div className="analyze-toolbar__field">
-            <label>폴더 / 파일</label>
-            <Select
-              value={filePath || (fileNameOverride ? 'custom' : '')}
-              onChange={(e) => {
-                setFilePath(e.target.value);
-                setFileNameOverride('');
-                setCompareMode(false);
-                setAnalyzed(false);
-              }}
-              disabled={!branch || analyzing}
-            >
-              <option value="">파일 선택</option>
-              {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
+          {/* 다음 필드부터 새 줄에 넓게 배치 */}
+          <div className="analyze-toolbar__break" />
 
-              {/* groupedFiles는 selectedExt가 이미 반영된 결과 */}
-              {Object.entries(groupedFiles).map(([folder, fileList]) => (
-                <optgroup key={folder} label={`📂 ${folder}`}>
-                  {fileList.map((file) => (
-                    <option key={file.path} value={file.path}>
-                      📄 {file.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </Select>
+          {/* 4. 폴더/파일 선택 (확장자 필터 뒤로 이동) */}
+          <div className="analyze-toolbar__field analyze-toolbar__field--wide">
+            <label>폴더 / 파일</label>
+            {isNewFile ? (
+              <div className="file-suggest">
+                <Input
+                  placeholder="경로를 선택 후 파일명을 입력(예: src/utils/newFile.js)"
+                  value={filePath}
+                  onChange={(e) => setFilePath(e.target.value)}
+                  onFocus={() => setFolderSuggestOpen(true)}
+                  onBlur={() => setTimeout(() => setFolderSuggestOpen(false), 120)}
+                  disabled={!branch || analyzing}
+                  autoComplete="off"
+                  rightSlot={
+                    <button
+                      type="button"
+                      className="ui-btn ui-btn--icon"
+                      title="파일 목록에서 선택"
+                      onClick={() => {
+                        setIsNewFile(false);
+                        setFilePath('');
+                        setOriginalCode('');
+                        setCompareMode(false);
+                        setAnalyzed(false);
+                      }}
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  }
+                />
+                {folderSuggestOpen && filteredFolderSuggestions.length > 0 && (
+                  <ul className="file-suggest__list">
+                    {filteredFolderSuggestions.map((f) => (
+                      <li key={f}>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setFilePath(f)}>
+                          <Icon name="folder" size={14} /> {f}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <Select
+                value={filePath || (fileNameOverride ? 'custom' : '')}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    setIsNewFile(true);
+                    setFilePath('');
+                    setFileNameOverride('');
+                    setOriginalCode('');
+                    setCompareMode(false);
+                    setAnalyzed(false);
+                    return;
+                  }
+                  setFilePath(e.target.value);
+                  setFileNameOverride('');
+                  setCompareMode(false);
+                  setAnalyzed(false);
+                }}
+                disabled={!branch || analyzing}
+              >
+                <option value="">파일 선택</option>
+                <option value="__new__">➕ 새 파일 추가</option>
+                {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
+
+                {/* groupedFiles는 selectedExt가 이미 반영된 결과 */}
+                {Object.entries(groupedFiles).map(([folder, fileList]) => (
+                  <optgroup key={folder} label={`📂 ${folder}`}>
+                    {fileList.map((file) => (
+                      <option key={file.path} value={file.path}>
+                        📄 {file.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </Select>
+            )}
           </div>
 
           {/* 5. 파일 검색 (경로/파일명 기준) */}
-          <div className="analyze-toolbar__field">
+          <div className="analyze-toolbar__field analyze-toolbar__field--wide">
             <Input
               label="파일 검색"
-              placeholder="입력 후 파일 검색"
+              placeholder="입력 후 파일 선택을 확인하세요."
               leftIcon={<Icon name="search" size={16} />}
               value={fileSearch}
               onChange={(e) => setFileSearch(e.target.value)}
@@ -786,7 +864,7 @@ export default function AnalyzePage() {
                     <Button
                       variant="primary"
                       onClick={handleAnalyze}
-                      disabled={!originalCode.trim()}
+                      disabled={!originalCode.trim() || (isNewFile && (!filePath.trim() || filePath.endsWith('/')))}
                     >
                       분석하기
                     </Button>
