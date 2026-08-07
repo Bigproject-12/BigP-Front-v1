@@ -18,6 +18,7 @@ const EXT_KIND = {
   docker: 'docker',
   gradle: 'gradle',
   env: 'env',
+  css: 'css',
 };
 
 function kindOf(name) {
@@ -58,6 +59,14 @@ function JsonGlyph({ size, className }) {
   );
 }
 
+function CssGlyph({ size, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <text x="12" y="13" textAnchor="middle" dominantBaseline="central" fontSize="28" fontWeight="700" fill="#1572B6" fontFamily="Consolas, monospace">#</text>
+    </svg>
+  );
+}
+
 const GLYPHS = {
   java: JavaGlyph,
   python: PythonGlyph,
@@ -68,6 +77,7 @@ const GLYPHS = {
   docker: DockerGlyph,
   gradle: GradleGlyph,
   env: EnvGlyph,
+  css: CssGlyph,
 };
 
 // 파일명 확장자별로 브랜드 아이콘을 보여주고, 매칭되는 게 없으면 기존 범용 파일 아이콘을 그대로 쓴다.
