@@ -3,6 +3,9 @@ import javaIcon from '../../assets/icons/java.png';
 import pythonIcon from '../../assets/icons/python.png';
 import javascriptIcon from '../../assets/icons/javascript.png';
 import reactIcon from '../../assets/icons/react.png';
+import dockerIcon from '../../assets/icons/docker.png';
+import gradleIcon from '../../assets/icons/gradle.png';
+import envIcon from '../../assets/icons/env.png';
 
 const EXT_KIND = {
   java: 'java',
@@ -12,6 +15,9 @@ const EXT_KIND = {
   json: 'json',
   js: 'javascript',
   jsx: 'react',
+  docker: 'docker',
+  gradle: 'gradle',
+  env: 'env',
 };
 
 function kindOf(name) {
@@ -29,6 +35,9 @@ const JavaGlyph = ImageGlyph(javaIcon);
 const PythonGlyph = ImageGlyph(pythonIcon);
 const JavaScriptGlyph = ImageGlyph(javascriptIcon);
 const ReactGlyph = ImageGlyph(reactIcon);
+const DockerGlyph = ImageGlyph(dockerIcon);
+const GradleGlyph = ImageGlyph(gradleIcon);
+const EnvGlyph = ImageGlyph(envIcon);
 
 function CGlyph({ size, className }) {
   return (
@@ -55,6 +64,9 @@ const GLYPHS = {
   react: ReactGlyph,
   c: CGlyph,
   json: JsonGlyph,
+  docker: DockerGlyph,
+  gradle: GradleGlyph,
+  env: EnvGlyph,
 };
 
 // 파일명 확장자별로 브랜드 아이콘을 보여주고, 매칭되는 게 없으면 기존 범용 파일 아이콘을 그대로 쓴다.
