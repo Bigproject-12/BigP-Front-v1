@@ -21,6 +21,7 @@ const EXT_KIND = {
 };
 
 function kindOf(name) {
+  if (name.toLowerCase() === 'dockerfile') return 'docker';
   const dot = name.lastIndexOf('.');
   return dot === -1 ? null : EXT_KIND[name.slice(dot + 1).toLowerCase()] ?? null;
 }
