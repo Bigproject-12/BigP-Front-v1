@@ -759,12 +759,12 @@ export default function AnalyzePage() {
 
               {/* 1) 분석 중 → 중지 버튼 + 스피너 */}
               {analyzing ? (
-                <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                   <span className="ui-spinner" aria-hidden="true" />
                   <Button variant="danger" onClick={handleStopAnalysis}>
                     분석 중지
                   </Button>
-                </>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   {pushed ? (
