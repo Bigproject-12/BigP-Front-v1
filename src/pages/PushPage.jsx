@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -37,8 +37,19 @@ export default function PushPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [locallyPushedIds, setLocallyPushedIds] = useState(new Set());
 
-  const [currentPage, setCurrentPage] = useState(1);
+  // URL의 p 파라미터에서 초기값을 읽어서, 분석 결과 상세로 갔다가 뒤로가기 해도 보던 페이지가 유지되게 한다.
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = Number(params.get('p'));
+    return p > 0 ? p : 1;
+  });
   const itemsPerPage = 15;
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    const next = new URLSearchParams(params);
+    next.set('p', String(page));
+    navigate(`?${next.toString()}`, { replace: true });
+  };
 
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
@@ -84,8 +95,15 @@ export default function PushPage() {
     });
   }, [unpushed, branchFilter, query]);
 
+  // 필터 "값"이 실제로 바뀔 때만 1페이지로 리셋 (최초 마운트 시엔 URL의 p값을 그대로 유지)
+  // "처음 한 번만 건너뛰기" 플래그 방식은 StrictMode의 effect 2회 실행 때문에 오작동해서 값 비교 방식으로 대체.
+  const prevFiltersRef = useRef({ branchFilter, query });
   useEffect(() => {
-    setCurrentPage(1);
+    const prev = prevFiltersRef.current;
+    const changed = prev.branchFilter !== branchFilter || prev.query !== query;
+    prevFiltersRef.current = { branchFilter, query };
+    if (changed) goToPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchFilter, query]);
 
   const totalPages = Math.ceil(visible.length / itemsPerPage);
@@ -289,7 +307,7 @@ export default function PushPage() {
                   variant="secondary"
                   size="sm"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() => goToPage(Math.max(1, currentPage - 1))}
                 >
                   이전
                 </Button>
@@ -300,7 +318,7 @@ export default function PushPage() {
                   variant="secondary"
                   size="sm"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                 >
                   다음
                 </Button>
