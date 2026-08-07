@@ -23,6 +23,7 @@ import './AnalyzePage.css';
 // 👈 히스토리 페이지와 동일한 상단 탭 메뉴 추가
 const TOP_TABS = [
   { key: 'history', label: '히스토리' },
+  { key: 'push', label: 'Push' },
   { key: 'analyze', label: '코드 분석' },
 ];
 
@@ -343,24 +344,30 @@ export default function AnalyzePage() {
     reader.readAsText(file);
   };
 
-  // 👈 상단 탭 클릭 시 히스토리(RepoDetailPage)로 돌아가는 기능 추가
+  // 👈 상단 탭 클릭 시 히스토리(RepoDetailPage)/Push 탭으로 이동하는 기능
   const handleTopTabChange = async (key) => {
-    if (key === 'history') {
-      // 💡 코드가 입력되어 있거나, 이미 분석을 돌린 상태라면 경고창을 띄움
-      if (originalCode.trim() || analyzed) {
-        const confirmLeave = await confirm(
-          "화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n히스토리로 이동하시겠습니까?",
-          { title: '경고' }
-        );
-        if (!confirmLeave) return; // 사용자가 '취소'를 누르면 탭 이동을 막음
-      }
+    if (key !== 'history' && key !== 'push') return;
 
-      // '확인'을 누르거나 초기 상태일 때만 이동 허용
+    // 💡 코드가 입력되어 있거나, 이미 분석을 돌린 상태라면 경고창을 띄움
+    if (originalCode.trim() || analyzed) {
+      const destLabel = key === 'history' ? '히스토리' : 'Push';
+      const confirmLeave = await confirm(
+        `화면을 이동하면 현재 작업 중인 코드와 분석 결과가 초기화됩니다.\n${destLabel}로 이동하시겠습니까?`,
+        { title: '경고' }
+      );
+      if (!confirmLeave) return; // 사용자가 '취소'를 누르면 탭 이동을 막음
+    }
+
+    // '확인'을 누르거나 초기 상태일 때만 이동 허용
+    if (key === 'history') {
       if (repoId && repoId !== 'custom') {
         navigate(`/?page=repo-detail&repoId=${repoId}`);
       } else {
         navigate('/?page=repolist');
       }
+    } else {
+      // 'push' 탭은 레포 선택 전엔 비활성화돼있어서, 여기 도달할 때는 repoId가 항상 유효함
+      navigate(`?page=push-tab&repoId=${repoId}`);
     }
   };
 
@@ -563,10 +570,16 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* 👈 여기에 상단 탭 렌더링 (현재 위치는 'analyze'로 활성화) */}
-      {repoId && repoId !== 'custom' && (
-        <Tabs items={TOP_TABS} active="analyze" onChange={handleTopTabChange} />
-      )}
+      {/* 👈 여기에 상단 탭 렌더링 (현재 위치는 'analyze'로 활성화) — 레포 선택 전엔 히스토리 탭을 비활성화만 함 */}
+      <Tabs
+        items={TOP_TABS.map((t) =>
+          t.key === 'history' || t.key === 'push'
+            ? { ...t, disabled: !repoId || repoId === 'custom' }
+            : t
+        )}
+        active="analyze"
+        onChange={handleTopTabChange}
+      />
 
       {/* 파일 선택 툴바 — 탭 공통 영역 */}
 <Card>
@@ -752,18 +765,10 @@ export default function AnalyzePage() {
                     분석 중지
                   </Button>
                 </>
-              ) : prUrl ? (
-                /* 4) PR 생성 완료 → GitHub에서 확인 */
-                <Button
-                  variant="primary"
-                  onClick={() => window.open(prUrl, '_blank', 'noopener,noreferrer')}
-                >
-                  GitHub에서 PR 확인
-                </Button>
               ) : pushed ? (
-                /* 3) Push 완료 → PR 생성 */
-                <Button variant="primary" onClick={openPrModal}>
-                  PR 생성 ({branch})
+                /* 3) Push 완료 → PR 생성 (생성 후엔 완료 표시로 바뀌고 버튼은 그대로 유지) */
+                <Button variant="primary" onClick={openPrModal} disabled={!!prUrl}>
+                  {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${branch})`}
                 </Button>
               ) : analyzed && pushAnalysisId && branch && filePath ? (
                 /* 2) 분석 완료 & GitHub 파일 → Push */
@@ -780,8 +785,14 @@ export default function AnalyzePage() {
                   분석하기
                 </Button>
               )}
+
+              {prUrl && (
+                <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                  GitHub에서 PR 확인 →
+                </a>
+              )}
             </div>
-          </div>    
+          </div>
 
           {analyzed && improvedCode ? (
             <Card className="diff-card">

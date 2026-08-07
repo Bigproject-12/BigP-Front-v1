@@ -8,8 +8,10 @@ export function Tabs({ items, active, onChange }) {
           key={item.key}
           role="tab"
           aria-selected={active === item.key}
-          className={`ui-tabs__item ${active === item.key ? 'ui-tabs__item--active' : ''}`}
-          onClick={() => onChange(item.key)}
+          aria-disabled={item.disabled || undefined}
+          disabled={item.disabled}
+          className={`ui-tabs__item ${active === item.key ? 'ui-tabs__item--active' : ''} ${item.disabled ? 'ui-tabs__item--disabled' : ''}`}
+          onClick={() => !item.disabled && onChange(item.key)}
         >
           {item.label}
         </button>
