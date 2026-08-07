@@ -751,7 +751,7 @@ export default function AnalyzePage() {
               marginBottom: 'var(--space-md)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
               {/* 에러 메시지는 버튼 왼쪽에 나란히 */}
               {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
@@ -765,31 +765,34 @@ export default function AnalyzePage() {
                     분석 중지
                   </Button>
                 </>
-              ) : pushed ? (
-                /* 3) Push 완료 → PR 생성 (생성 후엔 완료 표시로 바뀌고 버튼은 그대로 유지) */
-                <Button variant="primary" onClick={openPrModal} disabled={!!prUrl}>
-                  {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${branch})`}
-                </Button>
-              ) : analyzed && pushAnalysisId && branch && filePath ? (
-                /* 2) 분석 완료 & GitHub 파일 → Push */
-                <Button variant="primary" onClick={handlepush} disabled={pushing}>
-                  {pushing ? '반영 중 …' : 'GitHub에 Push'}
-                </Button>
               ) : (
-                /* 0) 기본 → 분석하기 */
-                <Button
-                  variant="primary"
-                  onClick={handleAnalyze}
-                  disabled={!originalCode.trim()}
-                >
-                  분석하기
-                </Button>
-              )}
-
-              {prUrl && (
-                <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                  GitHub에서 PR 확인 →
-                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  {pushed ? (
+                    /* 3) Push 완료 → PR 생성 (생성 후엔 완료 표시로 바뀌고 버튼은 그대로 유지) */
+                    <Button variant="primary" onClick={openPrModal} disabled={!!prUrl}>
+                      {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${branch})`}
+                    </Button>
+                  ) : analyzed && pushAnalysisId && branch && filePath ? (
+                    /* 2) 분석 완료 & GitHub 파일 → Push */
+                    <Button variant="primary" onClick={handlepush} disabled={pushing}>
+                      {pushing ? '반영 중 …' : 'GitHub에 Push'}
+                    </Button>
+                  ) : (
+                    /* 0) 기본 → 분석하기 */
+                    <Button
+                      variant="primary"
+                      onClick={handleAnalyze}
+                      disabled={!originalCode.trim()}
+                    >
+                      분석하기
+                    </Button>
+                  )}
+                  {prUrl && (
+                    <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                      GitHub에서 PR 확인
+                    </a>
+                  )}
+                </div>
               )}
             </div>
           </div>

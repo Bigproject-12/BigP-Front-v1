@@ -308,7 +308,7 @@ export default function PushPage() {
             )}
           </Card>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 16 }}>
             <Button
               variant="primary"
               onClick={handleBatchPush}
@@ -318,24 +318,26 @@ export default function PushPage() {
             </Button>
 
             {pushedAnalyses.length > 0 && (
-              <Button
-                variant="primary"
-                onClick={() => setPrModalOpen(true)}
-                disabled={!!prUrl}
-              >
-                {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
-              </Button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <Button
+                  variant="primary"
+                  onClick={() => setPrModalOpen(true)}
+                  disabled={!!prUrl}
+                >
+                  {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
+                </Button>
+                {prUrl && (
+                  <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                    GitHub에서 PR 확인
+                  </a>
+                )}
+              </div>
             )}
 
             {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
             {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
             {!prUrl && pushedAnalyses.length > 0 && (
               <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>
-            )}
-            {prUrl && (
-              <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                GitHub에서 PR 확인 →
-              </a>
             )}
           </div>
         </>
