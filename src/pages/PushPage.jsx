@@ -308,7 +308,7 @@ export default function PushPage() {
             )}
           </Card>
 
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
             <Button
               variant="primary"
               onClick={handleBatchPush}

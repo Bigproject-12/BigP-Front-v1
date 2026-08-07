@@ -368,7 +368,7 @@ export default function AnalysisDetailPage() {
               onChange={setActiveTab}
             />
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
               {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}

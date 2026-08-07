@@ -751,7 +751,7 @@ export default function AnalyzePage() {
               marginBottom: 'var(--space-md)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
               {/* 에러 메시지는 버튼 왼쪽에 나란히 */}
               {detectError && <span className="text-body-sm ui-banner--error">{detectError}</span>}
               {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
