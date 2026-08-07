@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -37,8 +37,19 @@ export default function PushPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [locallyPushedIds, setLocallyPushedIds] = useState(new Set());
 
-  const [currentPage, setCurrentPage] = useState(1);
+  // URL의 p 파라미터에서 초기값을 읽어서, 분석 결과 상세로 갔다가 뒤로가기 해도 보던 페이지가 유지되게 한다.
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = Number(params.get('p'));
+    return p > 0 ? p : 1;
+  });
   const itemsPerPage = 15;
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    const next = new URLSearchParams(params);
+    next.set('p', String(page));
+    navigate(`?${next.toString()}`, { replace: true });
+  };
 
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
@@ -84,8 +95,15 @@ export default function PushPage() {
     });
   }, [unpushed, branchFilter, query]);
 
+  // 필터 "값"이 실제로 바뀔 때만 1페이지로 리셋 (최초 마운트 시엔 URL의 p값을 그대로 유지)
+  // "처음 한 번만 건너뛰기" 플래그 방식은 StrictMode의 effect 2회 실행 때문에 오작동해서 값 비교 방식으로 대체.
+  const prevFiltersRef = useRef({ branchFilter, query });
   useEffect(() => {
-    setCurrentPage(1);
+    const prev = prevFiltersRef.current;
+    const changed = prev.branchFilter !== branchFilter || prev.query !== query;
+    prevFiltersRef.current = { branchFilter, query };
+    if (changed) goToPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchFilter, query]);
 
   const totalPages = Math.ceil(visible.length / itemsPerPage);
@@ -196,11 +214,13 @@ export default function PushPage() {
         <div className="ui-empty">불러오는 중…</div>
       ) : (
         <>
-          {/* ▼ 툴바 레이아웃: 양쪽 배치 및 우측 정렬로 수정 ▼ */}
-          <div className="repo-detail__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+{/* ▼ 수정된 상단 툴바 영역 ▼ */}
+          <div className="repo-detail__toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' }}>
             
-            {/* 좌측 영역: 브랜치 선택창 */}
-            <div className="repo-detail__toolbar-left" style={{ flex: '0 0 auto' }}>
+            {/* 💡 좌측 영역: flexDirection을 'column'으로 설정하여 아래로 쌓이게 함 */}
+            <div className="repo-detail__toolbar-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', flex: 1 }}>
+              
+              {/* 1열: 브랜치 선택창 */}
               <div style={{ width: '160px' }}>
                 <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
                   <option value="all">브랜치</option>
@@ -209,22 +229,8 @@ export default function PushPage() {
                   ))}
                 </Select>
               </div>
-            </div>
 
-            {/* 💡 우측 영역: 전체를 세로(column)로 배치하고, 안의 요소들을 우측(flex-end)으로 정렬 */}
-            <div className="repo-detail__toolbar-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flex: '1 1 auto' }}>
-              
-              {/* 1열: 검색창 (가장 위) */}
-              <div className="repo-detail__search" style={{ width: '240px' }}>
-                <Input
-                  placeholder="파일명 검색"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  leftIcon={<Icon name="search" size={16} />}
-                />
-              </div>
-
-              {/* 2열: Push 버튼 (검색창 아래) */}
+              {/* 2열: Push 버튼 (브랜치 선택창 아래) */}
               <Button
                 variant="primary"
                 onClick={handleBatchPush}
@@ -233,37 +239,45 @@ export default function PushPage() {
                 {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
               </Button>
 
-              {/* 3열: 추가 요소들 (Push 버튼 아래) */}
+              {/* 3열: 추가 요소들 (Push 버튼 아래에 가로로 나열) */}
               {(pushedAnalyses.length > 0 || pushError || prUrl) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   {pushedAnalyses.length > 0 && (
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       onClick={() => setPrModalOpen(true)}
                       disabled={!!prUrl}
                     >
                       {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
                     </Button>
                   )}
-
-                  {pushError && (
-                    <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>
-                      {pushError}
-                    </span>
-                  )}
                   
                   {prUrl && (
                     <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                      PR 보기 →
+                      GitHub에서 PR 확인
                     </a>
+                  )}
+
+                  {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
+                  {prUrl && <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>PR 생성에 성공했습니다.</span>}
+                  {!prUrl && pushedAnalyses.length > 0 && (
+                    <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>GitHub Push에 성공했습니다.</span>
                   )}
                 </div>
               )}
             </div>
-            {/* ▲ 우측 영역 끝 ▲ */}
 
+            {/* 우측 영역: 검색창 */}
+            <div className="repo-detail__search">
+              <Input
+                placeholder="파일명 검색"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                leftIcon={<Icon name="search" size={16} />}
+              />
+            </div>
           </div>
-          {/* ▲ 툴바 레이아웃 수정 끝 ▲ */}
+          {/* ▲ 수정된 상단 툴바 영역 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
             <table className="history-table">
@@ -337,7 +351,7 @@ export default function PushPage() {
                   variant="secondary"
                   size="sm"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() => goToPage(Math.max(1, currentPage - 1))}
                 >
                   이전
                 </Button>
@@ -348,15 +362,13 @@ export default function PushPage() {
                   variant="secondary"
                   size="sm"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                 >
                   다음
                 </Button>
               </div>
             )}
           </Card>
-
-          
         </>
       )}
 
