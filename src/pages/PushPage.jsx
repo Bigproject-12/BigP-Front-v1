@@ -196,11 +196,11 @@ export default function PushPage() {
         <div className="ui-empty">불러오는 중…</div>
       ) : (
         <>
-          {/* ▼ 툴바 레이아웃 변경: 브랜치 선택창 아래로 버튼 배치 ▼ */}
-          <div className="repo-detail__toolbar" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          {/* ▼ 툴바 레이아웃: 양쪽 배치 및 우측 정렬로 수정 ▼ */}
+          <div className="repo-detail__toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             
-            {/* 좌측 영역: 브랜치 선택창과 액션 버튼들을 위아래(column)로 배치 */}
-            <div className="repo-detail__toolbar-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', flex: 1 }}>
+            {/* 좌측 영역: 브랜치 선택창 */}
+            <div className="repo-detail__toolbar-left" style={{ flex: '0 0 auto' }}>
               <div style={{ width: '160px' }}>
                 <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
                   <option value="all">브랜치</option>
@@ -209,47 +209,61 @@ export default function PushPage() {
                   ))}
                 </Select>
               </div>
+            </div>
 
-              {/* 진행 순서에 맞게 좌측부터 우측으로 렌더링되도록 정렬 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Button
-                  variant="primary"
-                  onClick={handleBatchPush}
-                  disabled={selectedList.length === 0 || pushing}
-                >
-                  {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
-                </Button>
-
-                {pushedAnalyses.length > 0 && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setPrModalOpen(true)}
-                    disabled={!!prUrl}
-                  >
-                    {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
-                  </Button>
-                )}
-
-                {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
-                {prUrl && (
-                  <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                    PR 보기 →
-                  </a>
-                )}
+            {/* 💡 우측 영역: 전체를 세로(column)로 배치하고, 안의 요소들을 우측(flex-end)으로 정렬 */}
+            <div className="repo-detail__toolbar-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flex: '1 1 auto' }}>
+              
+              {/* 1열: 검색창 (가장 위) */}
+              <div className="repo-detail__search" style={{ width: '240px' }}>
+                <Input
+                  placeholder="파일명 검색"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  leftIcon={<Icon name="search" size={16} />}
+                />
               </div>
+
+              {/* 2열: Push 버튼 (검색창 아래) */}
+              <Button
+                variant="primary"
+                onClick={handleBatchPush}
+                disabled={selectedList.length === 0 || pushing}
+              >
+                {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
+              </Button>
+
+              {/* 3열: 추가 요소들 (Push 버튼 아래) */}
+              {(pushedAnalyses.length > 0 || pushError || prUrl) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {pushedAnalyses.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setPrModalOpen(true)}
+                      disabled={!!prUrl}
+                    >
+                      {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
+                    </Button>
+                  )}
+
+                  {pushError && (
+                    <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>
+                      {pushError}
+                    </span>
+                  )}
+                  
+                  {prUrl && (
+                    <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                      PR 보기 →
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
-            
-            {/* 우측 영역: 검색창 (우측 상단에 유지) */}
-            <div className="repo-detail__search">
-              <Input
-                placeholder="파일명 검색"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                leftIcon={<Icon name="search" size={16} />}
-              />
-            </div>
+            {/* ▲ 우측 영역 끝 ▲ */}
+
           </div>
-          {/* ▲ 툴바 레이아웃 변경 끝 ▲ */}
+          {/* ▲ 툴바 레이아웃 수정 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
             <table className="history-table">

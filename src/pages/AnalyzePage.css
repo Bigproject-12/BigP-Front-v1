@@ -49,16 +49,16 @@
   flex: 1;
 }
 
-
-
 /* 1. 에디터 래퍼: 전체 코드 높이만큼 늘어나도록 제한 해제 */
 .code-editor,
 .code-editor__inner {
   display: flex;
   flex: 1;
+  width: 100%; /* 💡 100%로 복구 */
+  min-width: 0; 
   height: auto !important; 
   min-height: 400px;
-  overflow: visible !important; /* 내부 세로 스크롤 방지, 외부로 넘김 */
+  overflow: hidden !important; 
 }
 
 /* 줄 번호 영역: 높이 제한 해제 */
@@ -87,10 +87,19 @@
 .code-textarea,
 .code-view {
   flex: 1;
-  width: max-content;  /* 텍스트 길이에 맞춰 늘어나도록 설정 */
-  min-width: calc(100% - 48px);  
+  width: 100%; /* 💡 100%로 복구 */
+  min-width: 0;  
   height: auto !important; 
   min-height: 400px;
+  
+  white-space: pre !important; 
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  
+  /* 💡 핵심: 텍스트 영역 내부에 가로 스크롤 생성 */
+  overflow-x: auto !important; 
+  overflow-y: hidden !important; 
+  
   resize: none;
   background: none;
   color: var(--text-primary);
@@ -100,8 +109,6 @@
   font-size: 12.5px;
   line-height: 21px;
   user-select: text;
-  white-space: pre;
-  word-break: normal;
   box-sizing: border-box;
 
   margin: 0;
@@ -191,13 +198,12 @@
   line-height: 21px;
   user-select: text;
   
-  /* 👈 핵심: 25줄 제한 등 모든 높이 제한 해제 */
   height: auto !important;
   max-height: none !important; 
   
-  /* 👈 세로 스크롤은 끄고, 가로 스크롤만 켬 (스크롤바는 맨 아래 렌더링됨) */
-  overflow-y: hidden !important; 
-  overflow-x: auto !important;    
+  /* 💡 중복 스크롤 방지를 위해 부모 영역은 스크롤 숨김 */
+  overflow-x: hidden !important; 
+  overflow-y: hidden !important;    
   
   width: 100%;
   box-sizing: border-box;
