@@ -455,14 +455,15 @@ function MySpaceRepoView({ repoId, branch }) {
             />
           </div>
 
-          <div className="recent-grid" style={{ marginTop: 'var(--space-lg)', gridTemplateColumns: '1fr 0.7fr' }}>
-            <Card style={{ padding: 0, height: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+          <div className="recent-grid myspace-responsive-grid" style={{ marginTop: 'var(--space-lg)' }}>
+            {/* 💡 수정 1: height 대신 minHeight를 사용하여, 원 그래프 카드가 늘어날 때 이 카드도 같이 늘어나도록 설정 */}
+            <Card style={{ padding: 0, minHeight: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
               <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="score" size={18} />
                 <h2 className="text-heading-md" style={{ margin: 0 }}>파일 별 위험도 TOP5</h2>
               </div>
               <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <table className="history-table">
+                <table className="history-table myspace-risk-table">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -475,11 +476,12 @@ function MySpaceRepoView({ repoId, branch }) {
                     {Array.from({ length: 5 }, (_, idx) => riskFiles[idx]).map((f, idx) => (
                       <tr key={f?.path ?? `empty-${idx}`}>
                         <td>{f ? idx + 1 : ''}</td>
-                        <td>
+                        {/* 💡 수정 2: td에 title 속성을 추가하여, 마우스를 올리면 브라우저 기본 툴팁으로 잘리지 않은 전체 경로가 표시되게 함 */}
+                        <td title={f ? f.path : ''}>
                           {f ? (
                             <span className="history-table__file">
                               <FileTypeIcon name={f.path} size={15} />
-                              {f.path}
+                              <span className="myspace-truncate-text">{f.path}</span>
                             </span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>-</span>
@@ -494,12 +496,14 @@ function MySpaceRepoView({ repoId, branch }) {
               </div>
             </Card>
 
-            <Card className="chart-card" style={{ height: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+            {/* 💡 수정 3: 원 그래프 카드 역시 height 대신 minHeight 적용. 범례가 아래로 내려가면 카드 높이가 자연스럽게 늘어남 */}
+            <Card className="chart-card" style={{ minHeight: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column', paddingBottom: '16px' }}>
               <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="bug" size={18} />
                 <h2 className="text-heading-md" style={{ margin: 0 }}>이슈 유형 분포</h2>
               </div>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center' }}>
+              {/* 내부 콘텐츠가 카드 중앙에 잘 정렬되도록 justifyContent: 'center' 추가 */}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {repoIssueDistribution.length > 0 ? (
                   <DonutChart data={repoIssueDistribution} />
                 ) : (
@@ -507,30 +511,42 @@ function MySpaceRepoView({ repoId, branch }) {
                 )}
               </div>
             </Card>
+            
           </div>
 
-          <div className="recent-grid" style={{ marginTop: 'var(--space-lg)', gridTemplateColumns: '0.8fr 1.2fr', alignItems: 'start' }}>
-            <Card style={{ padding: 0, height: STRUCTURE_ISSUES_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+          {/* 부모 그리드 */}
+          <div className="recent-grid myspace-responsive-grid-alt" style={{ marginTop: 'var(--space-lg)', alignItems: 'stretch' }}>
+            
+            {/* 💡 왼쪽 카드 ('프로젝트 구조') */}
+            {/* 수정: minHeight를 제거하여 억지로 540px이 되지 않도록 변경 */}
+            <Card className="myspace-project-card" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="folder" size={18} />
                 <h2 className="text-heading-md" style={{ margin: 0 }}>프로젝트 구조</h2>
               </div>
-              <div style={{ padding: '8px 8px 16px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                <ProjectTree files={files} />
+              
+              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px 8px 16px', overflowY: 'auto' }}>
+                  <ProjectTree files={files} />
+                </div>
               </div>
             </Card>
 
-            <Card style={{ padding: 0, height: STRUCTURE_ISSUES_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+            {/* 💡 오른쪽 카드 ('우선 해결해야 할 이슈') */}
+            {/* 수정: minHeight를 제거하여 내용물(이슈 4개) 높이에 딱 맞게 카드 크기가 줄어들도록 변경 */}
+            <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                 <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                   <Icon name="bug" size={18} />
                   <h2 className="text-heading-md" style={{ margin: 0 }}>우선 해결해야 할 이슈</h2>
                 </div>
+                
                 {extrasLoading ? (
                   <div className="ui-empty">불러오는 중…</div>
                 ) : topIssues.length === 0 ? (
                   <div className="ui-empty">발견된 이슈가 없습니다.</div>
                 ) : (
-                  <div style={{ padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  
+                  <div style={{ padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
                     {topIssues.map((issue, idx) => (
                       <div
                         key={idx}
@@ -544,21 +560,25 @@ function MySpaceRepoView({ repoId, branch }) {
                           borderRadius: 'var(--radius-sm)',
                         }}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
-                          <Badge
-                            variant="neutral"
-                            style={{
-                              alignSelf: 'flex-start',
-                              color: ISSUE_TYPE_COLOR[issue.type] ?? '#64748B',
-                              background: `${ISSUE_TYPE_COLOR[issue.type] ?? '#64748B'}22`,
-                            }}
-                          >
-                            {ISSUE_TYPE_LABEL[issue.type] ?? issue.type}
-                          </Badge>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                            <Badge variant={SEVERITY_VARIANT[issue.severity] ?? 'neutral'} style={{ alignSelf: 'flex-start', flex: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0, flex: 1 }}>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                            <Badge
+                              variant="neutral"
+                              style={{
+                                color: ISSUE_TYPE_COLOR[issue.type] ?? '#64748B',
+                                background: `${ISSUE_TYPE_COLOR[issue.type] ?? '#64748B'}22`,
+                                alignSelf: 'flex-start'
+                              }}
+                            >
+                              {ISSUE_TYPE_LABEL[issue.type] ?? issue.type}
+                            </Badge>
+                            <Badge variant={SEVERITY_VARIANT[issue.severity] ?? 'neutral'} style={{ alignSelf: 'flex-start' }}>
                               {issue.severity}
                             </Badge>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
                             <span
                               className="text-body-sm"
                               style={{
@@ -568,23 +588,27 @@ function MySpaceRepoView({ repoId, branch }) {
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
+                                marginTop: '2px',
                               }}
                             >
                               {issue.description || issue.suggestion || '이슈'}
                             </span>
+                            
+                            <span
+                              className="text-caption-md"
+                              style={{
+                                color: 'var(--text-muted)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {issue.filePath}{issue.line ? ` : ${issue.line}줄` : ''}
+                            </span>
                           </div>
-                          <span
-                            className="text-caption-md"
-                            style={{
-                              color: 'var(--text-muted)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {issue.filePath}{issue.line ? ` : ${issue.line}줄` : ''}
-                          </span>
+
                         </div>
+
                         <Button
                           variant="secondary"
                           size="sm"
