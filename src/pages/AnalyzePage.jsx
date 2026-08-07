@@ -373,7 +373,7 @@ export default function AnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!originalCode.trim()) return;
-    if (!repoId) { setDetectError('먼저 분석할 Repository를 선택하거나 직접 입력을 선택해 주세요'); return; }
+    if (!repoId) { setDetectError('먼저 분석할 Repository를 선택해주세요'); return; }
     setAnalyzing(true);
     setCompareMode(false);
     setAiDetection(null);
@@ -753,6 +753,7 @@ export default function AnalyzePage() {
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)' }}>
               {/* 에러 메시지는 버튼 왼쪽에 나란히 */}
+              {detectError && <span className="text-body-sm ui-banner--error">{detectError}</span>}
               {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
               {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
@@ -855,12 +856,6 @@ export default function AnalyzePage() {
                 </div>
               </div>
             </Card>
-          )}
-
-          {detectError && (
-            <div className="ui-banner ui-banner--error">
-              <Icon name="close" size={16} /> {detectError}
-            </div>
           )}
 
         </>
