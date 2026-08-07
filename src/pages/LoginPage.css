@@ -116,6 +116,27 @@
   }
 }
 
+.login-shell__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--fs-body-sm, 13px);
+  color: var(--text-muted);
+  margin-top: var(--space-xs, 4px);
+}
+.login-shell__footer button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.login-shell__footer button:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 /* 개인정보 처리방침 모달 스타일 */
 .privacy-modal-overlay {
   position: fixed;
