@@ -14,6 +14,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
 import PrCreateModal from '../components/analysis/PrCreateModal';
+import FileTreeSelect from '../components/analysis/FileTreeSelect';
 import DiffViewer from '../components/ui/DiffViewer';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
@@ -223,6 +224,12 @@ export default function AnalyzePage() {
       return acc;
     }, {});
   }, [files, selectedExt, fileSearch]);
+
+  // groupedFiles(확장자/검색 필터 적용됨)를 트리 드롭다운이 쓸 수 있게 경로 배열로 펼침
+  const filteredFilePaths = useMemo(
+    () => Object.values(groupedFiles).flatMap((list) => list.map((f) => f.path)),
+    [groupedFiles]
+  );
 
   const [activeTab, setActiveTab] = useState('analyze');
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
@@ -747,40 +754,26 @@ export default function AnalyzePage() {
                 )}
               </div>
             ) : (
-              <Select
-                value={filePath || (fileNameOverride ? 'custom' : '')}
-                onChange={(e) => {
-                  if (e.target.value === '__new__') {
-                    setIsNewFile(true);
-                    setFilePath('');
-                    setFileNameOverride('');
-                    setOriginalCode('');
-                    setCompareMode(false);
-                    setAnalyzed(false);
-                    return;
-                  }
-                  setFilePath(e.target.value);
+              <FileTreeSelect
+                files={filteredFilePaths}
+                value={filePath}
+                fallbackLabel={fileNameOverride}
+                disabled={!branch || analyzing}
+                onCreateNew={() => {
+                  setIsNewFile(true);
+                  setFilePath('');
+                  setFileNameOverride('');
+                  setOriginalCode('');
+                  setCompareMode(false);
+                  setAnalyzed(false);
+                }}
+                onSelect={(path) => {
+                  setFilePath(path);
                   setFileNameOverride('');
                   setCompareMode(false);
                   setAnalyzed(false);
                 }}
-                disabled={!branch || analyzing}
-              >
-                <option value="">파일 선택</option>
-                <option value="__new__">➕ 새 파일 추가</option>
-                {fileNameOverride && <option value="custom" disabled>{fileNameOverride}</option>}
-
-                {/* groupedFiles는 selectedExt가 이미 반영된 결과 */}
-                {Object.entries(groupedFiles).map(([folder, fileList]) => (
-                  <optgroup key={folder} label={`📂 ${folder}`}>
-                    {fileList.map((file) => (
-                      <option key={file.path} value={file.path}>
-                        📄 {file.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
+              />
             )}
           </div>
 
