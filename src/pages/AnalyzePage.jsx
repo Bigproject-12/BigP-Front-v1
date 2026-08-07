@@ -4,8 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmContext';
 
 import { useRepos } from '../context/RepoContext';
-// fetchBranches 함수 추가
-import { fetchBranches, fetchRepoTree, fetchFileContent } from '../lib/github';
+import { fetchRepoBranches, fetchRepoTreeWithIssues, fetchRepoFileContent } from '../lib/github';
 
 import { recommendPrompt } from '../lib/aiService';
 import { api } from '../lib/api';
@@ -211,20 +210,24 @@ export default function AnalyzePage() {
   const selectedRepo = repos.find((r) => String(r.id) === repoId);
 
   useEffect(() => {
-    if (!selectedRepo) { 
-      setBranches([]); 
-      return; 
+    if (!selectedRepo) {
+      setBranches([]);
+      return;
     }
-    fetchBranches(selectedRepo.fullName).then(setBranches).catch(() => setBranches([]));
-  }, [repoId, selectedRepo?.fullName]);
+    fetchRepoBranches(selectedRepo.id)
+      .then((data) => setBranches(data.map((b) => b.name)))
+      .catch(() => setBranches([]));
+  }, [repoId]);
 
   useEffect(()=>{
     if (!selectedRepo || !branch){
       setFiles([]);
       return;
     }
-    fetchRepoTree(selectedRepo.fullName, branch).then(setFiles).catch(()=>setFiles([]));
-  }, [branch, selectedRepo?.fullName]);
+    fetchRepoTreeWithIssues(selectedRepo.id, branch)
+      .then((data) => setFiles((data.items ?? []).filter((i) => i.type === 'blob').map((i) => i.path)))
+      .catch(()=>setFiles([]));
+  }, [branch, repoId]);
 
   useEffect(() => {
     const initialRepoId = params.get('repoId');
@@ -235,10 +238,10 @@ export default function AnalyzePage() {
     if (!filePath || !selectedRepo || !branch) return;
     setFileNameOverride('');
     resetAnalysisOutput();
-    fetchFileContent(selectedRepo.fullName, filePath, branch)
+    fetchRepoFileContent(selectedRepo.id, filePath, branch)
       .then((content) => { setOriginalCode(content); })
       .catch(() => {});
-  }, [filePath, branch, selectedRepo?.fullName]);
+  }, [filePath, branch, repoId]);
 
   // 히스토리에서 analysisId를 들고 들어왔을 때 기존 분석 결과 불러오기
   useEffect(() => {
