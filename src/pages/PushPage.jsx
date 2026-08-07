@@ -214,8 +214,13 @@ export default function PushPage() {
         <div className="ui-empty">불러오는 중…</div>
       ) : (
         <>
-          <div className="repo-detail__toolbar">
-            <div className="repo-detail__toolbar-left">
+{/* ▼ 수정된 상단 툴바 영역 ▼ */}
+          <div className="repo-detail__toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' }}>
+            
+            {/* 💡 좌측 영역: flexDirection을 'column'으로 설정하여 아래로 쌓이게 함 */}
+            <div className="repo-detail__toolbar-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', flex: 1 }}>
+              
+              {/* 1열: 브랜치 선택창 */}
               <div style={{ width: '160px' }}>
                 <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
                   <option value="all">브랜치</option>
@@ -224,7 +229,45 @@ export default function PushPage() {
                   ))}
                 </Select>
               </div>
+
+              {/* 2열: Push 버튼 (브랜치 선택창 아래) */}
+              <Button
+                variant="primary"
+                onClick={handleBatchPush}
+                disabled={selectedList.length === 0 || pushing}
+              >
+                {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
+              </Button>
+
+              {/* 3열: 추가 요소들 (Push 버튼 아래에 가로로 나열) */}
+              {(pushedAnalyses.length > 0 || pushError || prUrl) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {pushedAnalyses.length > 0 && (
+                    <Button
+                      variant="primary"
+                      onClick={() => setPrModalOpen(true)}
+                      disabled={!!prUrl}
+                    >
+                      {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
+                    </Button>
+                  )}
+                  
+                  {prUrl && (
+                    <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                      GitHub에서 PR 확인
+                    </a>
+                  )}
+
+                  {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
+                  {prUrl && <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>PR 생성에 성공했습니다.</span>}
+                  {!prUrl && pushedAnalyses.length > 0 && (
+                    <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>GitHub Push에 성공했습니다.</span>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* 우측 영역: 검색창 */}
             <div className="repo-detail__search">
               <Input
                 placeholder="파일명 검색"
@@ -234,6 +277,7 @@ export default function PushPage() {
               />
             </div>
           </div>
+          {/* ▲ 수정된 상단 툴바 영역 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
             <table className="history-table">
@@ -325,39 +369,6 @@ export default function PushPage() {
               </div>
             )}
           </Card>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-            <Button
-              variant="primary"
-              onClick={handleBatchPush}
-              disabled={selectedList.length === 0 || pushing}
-            >
-              {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
-            </Button>
-
-            {pushedAnalyses.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <Button
-                  variant="primary"
-                  onClick={() => setPrModalOpen(true)}
-                  disabled={!!prUrl}
-                >
-                  {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
-                </Button>
-                {prUrl && (
-                  <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                    GitHub에서 PR 확인
-                  </a>
-                )}
-              </div>
-            )}
-
-            {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
-            {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
-            {!prUrl && pushedAnalyses.length > 0 && (
-              <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>
-            )}
-          </div>
         </>
       )}
 

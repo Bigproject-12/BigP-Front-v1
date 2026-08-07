@@ -105,101 +105,115 @@
   color: var(--text-muted);
 }
 
-.code-editor {
+/* 1. 에디터 래퍼: 전체 코드 높이만큼 늘어나도록 제한 해제 */
+.code-editor,
+.code-editor__inner {
   display: flex;
-  min-height: 340px;
+  flex: 1;
+  width: 100%; /* 💡 100%로 복구 */
+  min-width: 0; 
+  height: auto !important; 
+  min-height: 400px;
+  overflow: hidden !important; 
 }
+
+/* 줄 번호 영역: 높이 제한 해제 */
 .code-editor__gutter {
   flex: none;
-  width: 40px;
-  padding: 0 8px;
+  width: 48px;
+  padding: 12px 0 24px 0;
   text-align: right;
   font-family: var(--font-mono);
   font-size: 12.5px;
-  line-height: 1.65;
+  line-height: 21px;
   color: var(--text-muted);
   border-right: 1px solid var(--border-hairline);
   user-select: none;
+  background: var(--surface-input);
+  box-sizing: border-box;
+  height: auto !important; /* 전체 높이 연동 */
 }
-.code-editor__gutter div { min-height: 21px; }
-.code-textarea {
+
+.code-editor__gutter div {
+  height: 21px;
+  padding-right: 8px;
+}
+
+/* 텍스트 입력창 및 뷰어: 전체 코드 높이만큼 늘어남 */
+.code-textarea,
+.code-view {
   flex: 1;
-  min-height: 340px;
+  width: 100%; /* 💡 100%로 복구 */
+  min-width: 0;  
+  height: auto !important; 
+  min-height: 400px;
+  
+  white-space: pre !important; 
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  
+  /* 💡 핵심: 텍스트 영역 내부에 가로 스크롤 생성 */
+  overflow-x: auto !important; 
+  overflow-y: hidden !important; 
+  
   resize: none;
   background: none;
   color: var(--text-primary);
   border: none;
-  padding: 0 16px;
+  padding: 12px 16px 24px 16px;
   font-family: var(--font-mono);
   font-size: 12.5px;
-  line-height: 1.65;
-  overflow: hidden;
+  line-height: 21px;
   user-select: text;
+  box-sizing: border-box;
+
+  margin: 0;
+  border-radius: 0;
+  -webkit-appearance: none;
 }
+
+.code-textarea:placeholder-shown {
+  width: 100%;
+}
+
 .code-textarea:focus {
   outline: none;
 }
-.code-view {
-  width: 100%;
-  min-height: 340px;
-  margin: 0;
-  padding: 0 16px;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-  user-select: text;
-}
+
 .code-editor .code-view {
-  flex: 1;
   width: auto;
 }
-.code-view--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  font-family: var(--font-body);
+
+.code-view {
+  width: max-content;
+  min-width: calc(100% - 48px);
+  margin: 0;
+  padding: 12px 16px 24px 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 21px;
+  color: var(--text-primary);
+  white-space: pre;
+  word-break: normal;
+  user-select: text;
+  box-sizing: border-box;
+}
+
+/* 2. [핵심] 좌우 비교 뷰어 컨테이너 설정 (스크롤바 위치 일치) */
+.diff-viewer,
+.diff-viewer-split { /* 👈 이 클래스가 빠져서 페이지가 깨졌습니다! 복구 완료! */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: auto !important;
+  align-items: stretch;
+  overflow: visible !important; 
   user-select: none;
 }
 
-/* diff 카드 */
-.diff-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-/* diff 뷰어 구조 개선: 좌우 패널 독립 선택 보장 */
-.diff-viewer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 340px;
-  overflow: auto;
-  user-select: none; /* 전체 영역은 기본 선택 방지하여 교차 선택 원천 차단 */
-}
-/* 좌우 패널을 담는 분할 컨테이너 */
-.diff-viewer-split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 340px;
-  overflow: auto;
-  user-select: text;
-}
-
-/* 개별 하위 그리드 (줄 높이 및 정렬 유지) */
-.diff-subgrid {
-  display: flex;
-  flex-direction: column;
-}
-
-.diff-subgrid .diff-row {
-  display: grid;
-  grid-template-columns: 40px 20px 1fr;
-}
-
+/* 모바일 화면 대응 */
 @media (max-width: 720px) {
+  .diff-viewer,
   .diff-viewer-split {
     grid-template-columns: 1fr;
   }
@@ -209,12 +223,13 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  user-select: text; /* 패널 내부에서는 텍스트 선택 허용 */
+  height: 100%;
 }
 
 .diff-pane--left {
   border-right: 1px solid var(--border-hairline);
 }
+
 .diff-pane__label {
   padding: 8px 12px;
   font-size: var(--fs-caption-md);
@@ -223,13 +238,128 @@
   border-bottom: 1px solid var(--border-hairline);
   background: var(--surface-input);
   user-select: none;
+  position: sticky; /* 라벨은 스크롤해도 보이도록 상단 고정 */
+  top: 0;
+  z-index: 10;
 }
+
+/* 3. [핵심] 좌우 패널의 코드 영역에 가로 스크롤바를 동일한 높이(하단)에 배치 */
+/* 좌우 스크롤바가 완벽하게 일치하는 곳 */
 .diff-pane__code {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-mono);
   font-size: 12.5px;
-  line-height: 1.65;
+  line-height: 21px;
   user-select: text;
+  
+  height: auto !important;
+  max-height: none !important; 
+  
+  /* 💡 중복 스크롤 방지를 위해 부모 영역은 스크롤 숨김 */
+  overflow-x: hidden !important; 
+  overflow-y: hidden !important;    
+  
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 0;
 }
+
+/* 두툼하고 보기 편한 공통 스크롤바 디자인 */
+.diff-pane__code::-webkit-scrollbar {
+  height: 12px; /* 가로 스크롤바 두께 */
+  width: 8px; /* 세로 스크롤바 두께 */
+}
+.diff-pane__code::-webkit-scrollbar-thumb {
+  background: var(--border-hairline-strong);
+  border-radius: 6px;
+}
+.diff-pane__code::-webkit-scrollbar-track {
+  background: var(--surface-input);
+  border-radius: 6px;
+}
+
+.code-view {
+  width: 100%;
+  min-width: 650px;
+  min-height: 340px;
+  margin: 0;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 21px;
+  color: var(--text-primary);
+  white-space: pre;
+  word-break: normal;
+  user-select: text;
+  box-sizing: border-box;
+}
+
+.code-editor .code-view {
+  flex: 1;
+  width: auto;
+  flex-direction: column;
+  background: var(--surface-card);
+}
+
+/* 빈 화면 플레이스홀더 */
+.code-view--empty {
+  flex: 1; 
+  display: block; 
+  background: var(--surface-card);
+  width: 100%;
+  min-width: 100%; /* 고정 너비 제거 */
+  margin: 0;
+  padding: 12px 16px 24px 16px; /* 왼쪽 입력창과 동일한 상단/좌측 여백 부여 */
+  box-sizing: border-box; /* 패딩으로 인한 삐져나옴 방지 */
+}
+
+.empty-placeholder-sticky {
+  text-align: left; /* 중앙 정렬에서 좌측 정렬로 변경 */
+  color: var(--text-muted);
+  font-family: var(--font-mono); /* 위화감이 없도록 폰트를 왼쪽 라인과 통일 */
+  font-size: 12.5px;
+  line-height: 21px;
+  user-select: none;
+  /* 기존에 중앙에 띄우기 위해 사용했던 position: sticky, top, transform 속성 모두 제거 */
+}
+
+/* diff 카드 */
+.diff-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+
+/* 개별 하위 그리드 (줄 높이 및 정렬 유지) */
+.diff-subgrid {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* 👈 그리드 내에서 가로 스크롤을 활성화하기 위해 필수 */
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding-bottom: 12px;
+}
+
+.diff-subgrid .diff-row {
+  display: grid;
+  grid-template-columns: 40px 20px 1fr;
+}
+
+/* DiffViewer용 두툼하고 보기 편한 스크롤바 디자인 */
+.diff-subgrid::-webkit-scrollbar {
+  height: 12px; 
+}
+.diff-subgrid::-webkit-scrollbar-thumb {
+  background: var(--border-hairline-strong);
+  border-radius: 6px;
+}
+.diff-subgrid::-webkit-scrollbar-track {
+  background: var(--surface-input);
+  border-radius: 6px;
+}
+
 
 /* 분석 결과 비교(DiffViewer Grid 세부 조정) */
 .diff-compare__labels {
@@ -845,4 +975,18 @@ body.dark .ai-banner__icon-wrapper,
   color: var(--text-muted);
   opacity: 0.4;
   cursor: default;
+}
+
+/* 좌측 입력창의 안내 문구(플레이스홀더) 스타일 명시적 통일 */
+.code-textarea::placeholder {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  opacity: 1; /* 브라우저(크롬/사파리 등)가 강제로 먹이는 반투명 효과 제거 */
+  font-weight: 400;
+}
+
+/* 우측 빈 화면 안내 문구 색상 및 굵기를 좌측과 동일하게 맞춤 */
+.code-view.code-view--empty {
+  color: var(--text-muted);
+  font-weight: 400;
 }

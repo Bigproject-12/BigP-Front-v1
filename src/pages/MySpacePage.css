@@ -81,3 +81,89 @@ body.dark .myspace-ghost-select option,
   background-color: var(--surface-input, #1f2937);
   color: var(--text-primary, #f3f4f6);
 }
+
+/* ===== 파일 별 위험도 테이블 반응형 및 말줄임표 설정 ===== */
+.myspace-risk-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.myspace-risk-table th:nth-child(1) { width: 40px; } /* # */
+.myspace-risk-table th:nth-child(2) { width: auto; } /* 파일명 (나머지 공간 전부 차지) */
+.myspace-risk-table th:nth-child(3) { width: 80px; } /* 품질점수 */
+.myspace-risk-table th:nth-child(4) { width: 60px; } /* 이슈 */
+
+/* Flexbox 내부에서 텍스트가 줄어들 수 있도록 설정 */
+.myspace-risk-table .history-table__file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0; 
+}
+
+.myspace-truncate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== 반응형 그리드 (화면이 좁아지면 카드를 아래로 내림) ===== */
+.myspace-responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr;
+  gap: var(--space-md);
+}
+
+.myspace-responsive-grid-alt {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: var(--space-md);
+}
+
+/* 💡 세 번째 줄(AI PR / 최근 PR) 영역 반응형 그리드 */
+.myspace-responsive-grid-equal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+/* 💡 핵심: Grid 아이템들이 내부 콘텐츠 길이에 구애받지 않고 비율대로 줄어들도록 강제 */
+.myspace-responsive-grid > *,
+.myspace-responsive-grid-alt > *,
+.myspace-responsive-grid-equal > * {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .myspace-responsive-grid,
+  .myspace-responsive-grid-alt,
+  .myspace-responsive-grid-equal {
+    grid-template-columns: 1fr !important; /* 1단으로 변경하여 카드가 아래로 이동 */
+  }
+}
+
+/* ===== 💡 최근 생성 PR 테이블 축약 처리 ===== */
+.myspace-pr-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.myspace-pr-table th:nth-child(1) { width: auto; } /* 제목 넓게 */
+.myspace-pr-table th:nth-child(2) { width: 140px; } /* 브랜치 */
+.myspace-pr-table th:nth-child(3) { width: 70px; } /* 상태 */
+
+.myspace-pr-table .history-table__file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ===== 프로젝트 구조 카드 모바일/태블릿(1단) 높이 보장 ===== */
+@media (max-width: 1024px) {
+  .myspace-project-card {
+    min-height: 400px !important; /* 세로로 떨어졌을 때 트리가 보이도록 최소 높이 부여 */
+  }
+}
