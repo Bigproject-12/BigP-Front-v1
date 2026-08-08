@@ -214,23 +214,30 @@ export default function PushPage() {
         <div className="ui-empty">불러오는 중…</div>
       ) : (
         <>
-{/* ▼ 수정된 상단 툴바 영역 ▼ */}
-          <div className="repo-detail__toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' }}>
-            
-            {/* 💡 좌측 영역: flexDirection을 'column'으로 설정하여 아래로 쌓이게 함 */}
-            <div className="repo-detail__toolbar-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', flex: 1 }}>
-              
-              {/* 1열: 브랜치 선택창 */}
-              <div style={{ width: '160px' }}>
-                <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
-                  <option value="all">브랜치</option>
-                  {branches.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </Select>
+{/* ▼ 상단 툴바 영역: 브랜치(좌) — 검색창 + Push 버튼(우) 한 줄 배치 ▼ */}
+          <div className="repo-detail__toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+
+            {/* 좌측: 브랜치 선택창 */}
+            <div style={{ width: '160px' }}>
+              <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
+                <option value="all">브랜치</option>
+                {branches.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* 우측: 검색창(왼쪽) + Push 버튼(오른쪽) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div className="repo-detail__search">
+                <Input
+                  placeholder="파일명 검색"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  leftIcon={<Icon name="search" size={16} />}
+                />
               </div>
 
-              {/* 2열: Push 버튼 (브랜치 선택창 아래) */}
               <Button
                 variant="primary"
                 onClick={handleBatchPush}
@@ -238,46 +245,36 @@ export default function PushPage() {
               >
                 {pushing ? '반영 중…' : `선택한 ${selectedList.length}개 파일 Push`}
               </Button>
-
-              {/* 3열: 추가 요소들 (Push 버튼 아래에 가로로 나열) */}
-              {(pushedAnalyses.length > 0 || pushError || prUrl) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  {pushedAnalyses.length > 0 && (
-                    <Button
-                      variant="primary"
-                      onClick={() => setPrModalOpen(true)}
-                      disabled={!!prUrl}
-                    >
-                      {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
-                    </Button>
-                  )}
-                  
-                  {prUrl && (
-                    <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
-                      GitHub에서 PR 확인
-                    </a>
-                  )}
-
-                  {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
-                  {prUrl && <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>PR 생성에 성공했습니다.</span>}
-                  {!prUrl && pushedAnalyses.length > 0 && (
-                    <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>GitHub Push에 성공했습니다.</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 우측 영역: 검색창 */}
-            <div className="repo-detail__search">
-              <Input
-                placeholder="파일명 검색"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                leftIcon={<Icon name="search" size={16} />}
-              />
             </div>
           </div>
-          {/* ▲ 수정된 상단 툴바 영역 끝 ▲ */}
+
+          {/* Push 완료 후 PR 생성 버튼/상태 — 툴바 아래 오른쪽 정렬 */}
+          {(pushedAnalyses.length > 0 || pushError || prUrl) && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+              {pushedAnalyses.length > 0 && (
+                <Button
+                  variant="primary"
+                  onClick={() => setPrModalOpen(true)}
+                  disabled={!!prUrl}
+                >
+                  {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${pushedBranch})`}
+                </Button>
+              )}
+
+              {prUrl && (
+                <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-body-sm">
+                  GitHub에서 PR 확인
+                </a>
+              )}
+
+              {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
+              {prUrl && <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>PR 생성에 성공했습니다.</span>}
+              {!prUrl && pushedAnalyses.length > 0 && (
+                <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>GitHub Push에 성공했습니다.</span>
+              )}
+            </div>
+          )}
+          {/* ▲ 상단 툴바 영역 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
             <table className="history-table">
