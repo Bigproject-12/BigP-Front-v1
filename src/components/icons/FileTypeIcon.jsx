@@ -6,6 +6,8 @@ import reactIcon from '../../assets/icons/react.png';
 import dockerIcon from '../../assets/icons/docker.png';
 import gradleIcon from '../../assets/icons/gradle.png';
 import envIcon from '../../assets/icons/env.png';
+import viteIcon from '../../assets/icons/vite.png';
+import jsonIcon from '../../assets/icons/json.png';
 
 const EXT_KIND = {
   java: 'java',
@@ -13,12 +15,14 @@ const EXT_KIND = {
   c: 'c',
   h: 'c',
   json: 'json',
+  jsonl: 'json',
   js: 'javascript',
   jsx: 'react',
   docker: 'docker',
   gradle: 'gradle',
   env: 'env',
   css: 'css',
+  vite: 'vite',
 };
 
 function kindOf(name) {
@@ -40,21 +44,14 @@ const ReactGlyph = ImageGlyph(reactIcon);
 const DockerGlyph = ImageGlyph(dockerIcon);
 const GradleGlyph = ImageGlyph(gradleIcon);
 const EnvGlyph = ImageGlyph(envIcon);
+const ViteGlyph = ImageGlyph(viteIcon);
+const JsonGlyph = ImageGlyph(jsonIcon);
 
 function CGlyph({ size, className }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
       <circle cx="12" cy="12" r="10" fill="#004482" />
       <text x="12" y="16.3" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Consolas, monospace">C</text>
-    </svg>
-  );
-}
-
-function JsonGlyph({ size, className }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="#5b6270" />
-      <text x="12" y="15.8" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#fff" fontFamily="Consolas, monospace">{'{ }'}</text>
     </svg>
   );
 }
@@ -78,6 +75,7 @@ const GLYPHS = {
   gradle: GradleGlyph,
   env: EnvGlyph,
   css: CssGlyph,
+  vite: ViteGlyph
 };
 
 // 파일명 확장자별로 브랜드 아이콘을 보여주고, 매칭되는 게 없으면 기존 범용 파일 아이콘을 그대로 쓴다.
