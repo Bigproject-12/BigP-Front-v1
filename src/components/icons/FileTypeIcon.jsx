@@ -8,12 +8,23 @@ import gradleIcon from '../../assets/icons/gradle.png';
 import envIcon from '../../assets/icons/env.png';
 import viteIcon from '../../assets/icons/vite.png';
 import jsonIcon from '../../assets/icons/json.png';
+import cIcon from '../../assets/icons/C.png';
+import cppIcon from '../../assets/icons/C++.png';
+import csharpIcon from '../../assets/icons/csharp.png';
+import htmlIcon from '../../assets/icons/html.png';
+import cssIcon from '../../assets/icons/css.png';
 
 const EXT_KIND = {
   java: 'java',
   py: 'python',
   c: 'c',
   h: 'c',
+  cpp: 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
+  hxx: 'cpp',
+  cs: 'csharp',
   json: 'json',
   jsonl: 'json',
   js: 'javascript',
@@ -23,6 +34,7 @@ const EXT_KIND = {
   env: 'env',
   css: 'css',
   vite: 'vite',
+  html: 'html',
 };
 
 function kindOf(name) {
@@ -46,23 +58,11 @@ const GradleGlyph = ImageGlyph(gradleIcon);
 const EnvGlyph = ImageGlyph(envIcon);
 const ViteGlyph = ImageGlyph(viteIcon);
 const JsonGlyph = ImageGlyph(jsonIcon);
-
-function CGlyph({ size, className }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" fill="#004482" />
-      <text x="12" y="16.3" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Consolas, monospace">C</text>
-    </svg>
-  );
-}
-
-function CssGlyph({ size, className }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <text x="12" y="13" textAnchor="middle" dominantBaseline="central" fontSize="28" fontWeight="700" fill="#1572B6" fontFamily="Consolas, monospace">#</text>
-    </svg>
-  );
-}
+const CGlyph = ImageGlyph(cIcon);
+const CppGlyph = ImageGlyph(cppIcon);
+const CSharpGlyph = ImageGlyph(csharpIcon);
+const HtmlGlyph = ImageGlyph(htmlIcon);
+const CssGlyph = ImageGlyph(cssIcon);
 
 const GLYPHS = {
   java: JavaGlyph,
@@ -70,12 +70,15 @@ const GLYPHS = {
   javascript: JavaScriptGlyph,
   react: ReactGlyph,
   c: CGlyph,
+  cpp: CppGlyph,
+  csharp: CSharpGlyph,
   json: JsonGlyph,
   docker: DockerGlyph,
   gradle: GradleGlyph,
   env: EnvGlyph,
   css: CssGlyph,
-  vite: ViteGlyph
+  vite: ViteGlyph,
+  html: HtmlGlyph,
 };
 
 // 파일명 확장자별로 브랜드 아이콘을 보여주고, 매칭되는 게 없으면 기존 범용 파일 아이콘을 그대로 쓴다.
