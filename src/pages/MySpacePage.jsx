@@ -70,7 +70,7 @@ function ratioDeltaProps(change) {
   };
 }
 
-const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
+// const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
 const RISK_DONUT_CARD_HEIGHT = 360;
 const AI_PR_CARD_HEIGHT = 360;
 
@@ -515,10 +515,9 @@ function MySpaceRepoView({ repoId, branch }) {
           </div>
 
           {/* 부모 그리드 */}
-          <div className="recent-grid myspace-responsive-grid-alt" style={{ marginTop: 'var(--space-lg)', alignItems: 'stretch' }}>
+          <div className="recent-grid myspace-responsive-grid-alt" style={{ marginTop: 'var(--space-lg)', alignItems: 'stretch', minHeight: '450px' }}>
             
             {/* 💡 왼쪽 카드 ('프로젝트 구조') */}
-            {/* 수정: minHeight를 제거하여 억지로 540px이 되지 않도록 변경 */}
             <Card className="myspace-project-card" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                 <Icon name="folder" size={18} />
@@ -533,7 +532,6 @@ function MySpaceRepoView({ repoId, branch }) {
             </Card>
 
             {/* 💡 오른쪽 카드 ('우선 해결해야 할 이슈') */}
-            {/* 수정: minHeight를 제거하여 내용물(이슈 4개) 높이에 딱 맞게 카드 크기가 줄어들도록 변경 */}
             <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                 <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
                   <Icon name="bug" size={18} />
