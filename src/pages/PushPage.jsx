@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import PushSuccessNotice from '../components/ui/PushSuccessNotice';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
 import PrCreateModal from '../components/analysis/PrCreateModal';
@@ -266,7 +267,7 @@ export default function PushPage() {
                 </a>
               )}
               {!prUrl && pushedAnalyses.length > 0 && (
-                <span className="text-body-sm ui-banner--success" style={{ margin: 0, padding: '4px 8px' }}>GitHub Push에 성공했습니다.</span>
+                <PushSuccessNotice branch={pushedBranch} />
               )}
             </div>
           </div>

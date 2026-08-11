@@ -16,6 +16,7 @@ import Icon from '../components/icons/Icon';
 import PrCreateModal from '../components/analysis/PrCreateModal';
 import FileTreeSelect from '../components/analysis/FileTreeSelect';
 import DiffViewer from '../components/ui/DiffViewer';
+import PushSuccessNotice from '../components/ui/PushSuccessNotice';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import { Tabs } from '../components/ui/Tabs';
 import './AnalyzePage.css';
@@ -830,7 +831,7 @@ export default function AnalyzePage() {
               {detectError && <span className="text-body-sm ui-banner--error">{detectError}</span>}
               {pushError && <span className="text-body-sm ui-banner--error">{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
-              {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
+              {!prUrl && pushed && <PushSuccessNotice branch={branch} />}
 
               {/* 1) 분석 중 → 중지 버튼 + 스피너 */}
               {analyzing ? (

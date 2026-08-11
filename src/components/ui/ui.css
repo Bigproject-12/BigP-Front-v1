@@ -406,6 +406,67 @@
   color: var(--ps-good);
 }
 
+/* Push 성공 안내 (PushSuccessNotice) */
+.push-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 340px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline-strong);
+  border-left: 3px solid var(--ps-good);
+  background: rgba(27, 175, 122, 0.08);
+  text-align: left;
+}
+.push-notice__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ps-good);
+}
+.push-notice__icon {
+  flex-shrink: 0;
+}
+.push-notice__desc {
+  margin: 0;
+  color: var(--text-secondary, var(--text-muted));
+  line-height: 1.5;
+}
+.push-notice__cmd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+}
+.push-notice__cmd code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.push-notice__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.push-notice__copy:hover {
+  color: var(--ps-primary);
+}
+
 .toast-stack {
   position: fixed;
   top: 76px;
@@ -437,6 +498,18 @@
 }
 .toast-item--announcement {
   border-left-color: var(--ps-good);
+}
+/* 밀려난 알림 개수를 안내하는 토스트. 클릭하면 알림 벨이 열리므로 눌러야 함을 표시한다. */
+.toast-item--more {
+  border-left-color: var(--text-muted);
+  background: var(--surface-subtle, var(--surface-card));
+  cursor: pointer;
+}
+.toast-item--more:hover {
+  border-color: var(--ps-primary);
+}
+.toast-item--more .toast-item__icon {
+  color: var(--text-muted);
 }
 .toast-item__icon {
   flex-shrink: 0;

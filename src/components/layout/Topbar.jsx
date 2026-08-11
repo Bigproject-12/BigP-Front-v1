@@ -38,17 +38,52 @@ export default function Topbar() {
   });
 
   const seenIdsRef = useRef(null);
-  const [toasts, setToasts] = useState([]);
+
   // 알림이 한꺼번에 여러 개 들어와도 화면 한쪽을 뒤덮지 않도록, 최근 N개만 토스트로 띄운다.
-  // 그 이상은 토스트로는 안 보이고 알림 벨(드롭다운)에서 전체 확인 가능.
+  // 밀려난 알림은 개수만 세어서 "나머지 N개의 알림도 확인하세요" 안내 토스트 하나로 합치고,
+  // 그걸 누르면 알림 벨(드롭다운)이 열려 전체를 볼 수 있다.
   const MAX_VISIBLE_TOASTS = 3;
+  // ui.css 의 .toast-item 페이드아웃(3.8s)과 맞춰야 "안 보이는데 남아있는" 상태가 안 생긴다.
+  const TOAST_DURATION_MS = 4000;
+
+  // items(보이는 토스트)와 overflow(밀려난 개수)를 한 state로 묶는다.
+  // 따로 두면 setState 업데이터 안에서 다른 setState를 부르게 되는데,
+  // StrictMode가 개발모드에서 업데이터를 두 번 실행해 중복 집계될 수 있어서 하나로 합침.
+  const [toastState, setToastState] = useState({ items: [], overflow: 0 });
+
   const showToast = (message, variant = 'success') => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, variant }].slice(-MAX_VISIBLE_TOASTS));
+    setToastState((prev) => {
+      const items = [...prev.items, { id, message, variant }];
+      const dropped = Math.max(0, items.length - MAX_VISIBLE_TOASTS);
+      return {
+        items: items.slice(-MAX_VISIBLE_TOASTS),
+        overflow: prev.overflow + dropped,
+      };
+    });
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id ));
-    }, 4000);
+      setToastState((prev) => ({
+        ...prev,
+        items: prev.items.filter((t) => t.id !== id),
+      }));
+    }, TOAST_DURATION_MS);
   }
+
+  // 안내 토스트도 스스로 사라지게 한다. overflow가 늘 때마다 타이머가 새로 걸리므로,
+  // 알림이 계속 들어오는 동안에는 유지되고 마지막 알림 후 TOAST_DURATION_MS 뒤에 없어진다.
+  useEffect(() => {
+    if (toastState.overflow === 0) return undefined;
+    const timerId = setTimeout(
+      () => setToastState((prev) => ({ ...prev, overflow: 0 })),
+      TOAST_DURATION_MS,
+    );
+    return () => clearTimeout(timerId);
+  }, [toastState.overflow]);
+
+  const openAllNotifications = () => {
+    setOpen(true);
+    setToastState((prev) => ({ ...prev, overflow: 0 }));
+  };
 
   const fetchNotifications = () => {
     if (!user) return;
@@ -203,12 +238,34 @@ const handleNotificationClick = async (n) => {
       </Button>
     
       <div className="toast-stack">
-        {toasts.map((t) => (
+        {toastState.items.map((t) => (
           <div key={t.id} className={`toast-item toast-item--${t.variant}`}>
             <Icon name={t.variant === 'failed' ? 'close' : 'check'} size={16} className="toast-item__icon" />
             <span className="text-body-sm">{t.message}</span>
           </div>
         ))}
+        {toastState.overflow > 0 && (
+          // key에 개수를 넣어, 밀려난 알림이 추가될 때마다 다시 마운트되면서
+          // 등장/사라짐 애니메이션이 처음부터 다시 돌게 한다.
+          <div
+            key={`toast-more-${toastState.overflow}`}
+            className="toast-item toast-item--more"
+            role="button"
+            tabIndex={0}
+            onClick={openAllNotifications}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openAllNotifications();
+              }
+            }}
+          >
+            <Icon name="bell" size={16} className="toast-item__icon" />
+            <span className="text-body-sm">
+              나머지 {toastState.overflow}개의 알림도 확인하세요
+            </span>
+          </div>
+        )}
       </div>
     </header>
   );
