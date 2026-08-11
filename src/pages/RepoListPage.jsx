@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useRepos } from '../context/RepoContext';
-import { api } from '../lib/api';
 import { formatDate, languageColor } from '../lib/format';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -14,28 +13,7 @@ import './RepoListPage.css';
 
 const UNASSIGNED_ORG = '미분류';
 
-// '최근 분석 실행됨' 판단 기준: 기간(예: 7일 이내)이 아니라, 로그인한 사용자 기준으로
-// 가장 최근 분석 N건(RECENT_ANALYSIS_COUNT)에 포함된 레포지토리인지로 판단한다.
-// /api/dashboard(회사 전체 집계, 접근 권한 체크 없이 company_id만으로 노출됨)는 다른 팀/조직의
-// 레포·분석 정보까지 보일 수 있어 쓰지 않고, 로그인 사용자 소유 데이터만 돌려주는
-// /api/my-space/overview(recentAnalyses)를 재사용한다.
-//
-// RECENT_ANALYSIS_WINDOW_DAYS: 이 API는 My Space 페이지 전체(추이 차트, 위험 레포 랭킹,
-// 이전 기간 대비 비교 등)를 위한 무거운 집계 엔드포인트라, from~to 폭이 넓을수록
-// (특히 일별 추이 계산 + "이전 기간" 비교가 그 폭만큼 두 배로 돌아서) 응답이 느려진다.
-// 배지 용도로는 "최근 N건"만 있으면 되므로 폭을 짧게 잡아 불필요한 연산을 줄인다.
-// 프로젝트 호흡이 더 길어지면(예: 몇 주씩 분석이 뜸해지면) 이 값을 늘려야 배지가 계속 뜬다.
-const RECENT_ANALYSIS_WINDOW_DAYS = 45;
-const RECENT_ANALYSIS_COUNT = 5;
-
-function toISODate(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function RepoCard({ repo, isFavorite, onToggleFavorite, onClick, recentlyAnalyzed }) {
+function RepoCard({ repo, isFavorite, onToggleFavorite, onClick }) {
   return (
     <Card className="repo-card" onClick={onClick}>
       <div className="repo-card__head">
@@ -67,11 +45,6 @@ function RepoCard({ repo, isFavorite, onToggleFavorite, onClick, recentlyAnalyze
           {repo.language}
         </span>
         <span className="text-caption-md">업데이트 {formatDate(repo.updatedAt)}</span>
-        {recentlyAnalyzed && (
-          <Badge variant="success" title="내가 최근 실행한 분석 목록에 포함된 레포지토리">
-            최근 분석됨
-          </Badge>
-        )}
       </div>
     </Card>
   );
@@ -87,24 +60,6 @@ export default function RepoListPage() {
   const [organization, setOrganization] = useState('all');
   const [sort, setSort] = useState('recent');
   const [collapsedOrgs, setCollapsedOrgs] = useState(new Set());
-  const [recentlyAnalyzedIds, setRecentlyAnalyzedIds] = useState(new Set());
-
-  useEffect(() => {
-    const to = toISODate(new Date());
-    const from = toISODate(new Date(Date.now() - RECENT_ANALYSIS_WINDOW_DAYS * 24 * 60 * 60 * 1000));
-    api.get(`/api/my-space/overview?from=${from}&to=${to}`)
-      .then((d) => {
-        // 실패(FAILED)한 분석은 결과가 없어 확인할 게 없으므로 배지 대상에서 제외한다.
-        const ids = new Set(
-          (d.recentAnalyses ?? [])
-            .slice(0, RECENT_ANALYSIS_COUNT)
-            .filter((a) => a.status !== 'FAILED')
-            .map((a) => a.repoId)
-        );
-        setRecentlyAnalyzedIds(ids);
-      })
-      .catch(() => setRecentlyAnalyzedIds(new Set()));
-  }, []);
 
   // GitHub 연동 여부는 localStorage(개인 토큰)가 아니라
   // 백엔드(/api/repos, DB)에서 실제로 데이터를 받았는지로 판단한다.
@@ -122,11 +77,16 @@ export default function RepoListPage() {
   );
 
   const visible = useMemo(() => {
+    // 검색어는 한 번만 소문자로 만들어 재사용한다(레포마다 toLowerCase를 반복하지 않도록).
+    const keyword = query.trim().toLowerCase();
     let list = repos.filter((r) => {
+      // 조직명도 검색 대상에 포함한다. 조직 셀렉트를 열지 않고도
+      // 'bigproject'만 쳐서 해당 조직 레포를 추릴 수 있다.
       const matchesQuery =
-        !query.trim() ||
-        r.name.toLowerCase().includes(query.toLowerCase()) ||
-        (r.description ?? '').toLowerCase().includes(query.toLowerCase());
+        !keyword ||
+        r.name.toLowerCase().includes(keyword) ||
+        (r.description ?? '').toLowerCase().includes(keyword) ||
+        (r.organization ?? '').toLowerCase().includes(keyword);
       const matchesVisibility =
         visibility === 'all' || (visibility === 'private' ? r.private : !r.private);
       const matchesLanguage = language === 'all' || r.language === language;
@@ -192,7 +152,7 @@ export default function RepoListPage() {
       <div className="repo-toolbar">
         <div className="repo-toolbar__search">
           <Input
-            placeholder="Repository명 또는 설명 검색"
+            placeholder="Repository명, 조직, 설명 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Icon name="search" size={16} />}
@@ -314,7 +274,6 @@ export default function RepoListPage() {
                         isFavorite={isFavorite(repo.id)}
                         onToggleFavorite={(e) => handleToggleFavorite(e, repo)}
                         onClick={() => navigate(`?page=repo-detail&repoId=${repo.id}`)}
-                        recentlyAnalyzed={recentlyAnalyzedIds.has(repo.id)}
                       />
                     ))}
                   </div>

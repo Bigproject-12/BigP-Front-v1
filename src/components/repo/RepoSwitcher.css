@@ -1,0 +1,131 @@
+.repo-switcher {
+  position: relative;
+}
+
+/* 기존 h1과 동일하게 보이도록, 버튼의 기본 스타일을 모두 지우고 font/color를 상속받는다.
+   (h1은 index.css에서 margin:0 이 이미 적용되어 있어 레이아웃이 밀리지 않는다.) */
+.repo-switcher__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.repo-switcher__chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.15s ease, color 0.12s ease;
+}
+.repo-switcher__trigger:hover .repo-switcher__chevron {
+  color: var(--ps-primary);
+}
+.repo-switcher__chevron--open {
+  transform: rotate(180deg);
+  color: var(--ps-primary);
+}
+
+.repo-switcher__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 260px;
+  max-width: 340px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline-strong);
+  box-shadow: var(--shadow-active);
+}
+
+.repo-switcher__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-muted);
+}
+.repo-switcher__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  color: var(--text-primary);
+}
+
+/* 레포가 많아 목록이 길어지면 드롭다운 자체가 화면을 넘지 않도록 내부에서 스크롤한다.
+   그룹 헤더(organization)는 스크롤 중에도 어느 조직을 보고 있는지 알 수 있게 상단에 고정. */
+.repo-switcher__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.repo-switcher__group + .repo-switcher__group {
+  border-top: 1px solid var(--border-hairline);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.repo-switcher__label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px 4px;
+  color: var(--text-muted);
+  background: var(--surface-card);
+  font-weight: 600;
+}
+.repo-switcher__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.repo-switcher__item:hover {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.1));
+}
+.repo-switcher__item--active {
+  color: var(--ps-primary);
+  font-weight: 600;
+}
+.repo-switcher__item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-switcher__item-star {
+  flex: none;
+  color: var(--ps-warning, #eda100);
+}
+.repo-switcher__empty {
+  padding: 12px 8px;
+  color: var(--text-muted);
+  text-align: center;
+}

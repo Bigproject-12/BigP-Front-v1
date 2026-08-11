@@ -16,9 +16,12 @@
 
 .myspace-breadcrumb__slash {
   color: var(--text-muted);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 300;
   padding: 0 4px;
-  font-size: 10;
+  /* 기존 값은 'font-size: 10' 으로 단위가 빠져 있어 무시되고 있었다.
+     셀렉트와 같은 heading-lg(22px)로 맞춘다. */
+  font-size: var(--fs-heading-lg);
   line-height: 1.2;
 }
 
@@ -38,12 +41,16 @@
   border: none !important;
   background-color: transparent !important;
   box-shadow: none !important;
-  font-size: 10 !important;
-  font-weight: 400 !important;
+  /* 기존 값은 'font-size: 10' 으로 단위가 빠져 무시되고 있었다(실제로는 기본 크기로 렌더). */
+  font-size: var(--fs-heading-lg) !important;
+  /* .ui-select 가 --font-body(Inter)를 쓰고 있어서, 같은 300 굵기여도
+     --font-display(Roboto)인 'My Space'보다 획이 두꺼워 보였다. 글꼴을 제목과 맞춘다. */
+  font-family: var(--font-display) !important;
+  font-weight: 300 !important;
   color: var(--text-primary, #24292e) !important;
-  
-  /* 오른쪽 화살표가 들어갈 공간(24px)을 위해 패딩 확보 */
-  padding: 2px 28px 2px 6px !important; 
+
+  /* 오른쪽 화살표가 들어갈 공간을 글자 크기에 맞춰 확보 */
+  padding: 2px 30px 2px 7px !important;
   
   border-radius: 6px !important;
   cursor: pointer;
@@ -52,7 +59,7 @@
   transition: background-color 0.15s ease;
 
   width: auto !important;
-  max-width: 300px;
+  max-width: 360px;
 
   /* 브라우저 기본 화살표 제거 후, 깔끔한 커스텀 아래 삼각형 SVG를 배경으로 삽입 */
   appearance: none;
@@ -60,8 +67,15 @@
   -moz-appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23586069' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
-  background-position: right 6px center !important;
-  background-size: 14px !important;
+  background-position: right 7px center !important;
+  background-size: 16px !important;
+}
+
+/* 펼쳐진 옵션 목록은 select의 큰 글자를 그대로 물려받으면 지나치게 커진다.
+   본문에 가까운 크기로 따로 지정해 목록만 읽기 좋게 유지한다. */
+.myspace-ghost-select option {
+  font-size: var(--fs-body-md);
+  font-weight: 400;
 }
 
 /* 마우스 올렸을 때와 클릭(포커스)했을 때 음영(배경색) 처리 및 화살표 색상 진하게 */
@@ -80,6 +94,19 @@ body.dark .myspace-ghost-select option,
 [data-theme='dark'] .myspace-ghost-select option {
   background-color: var(--surface-input, #1f2937);
   color: var(--text-primary, #f3f4f6);
+}
+
+/* 분석 이력이 없는 브랜치는 흐리게 표시한다(선택은 그대로 가능).
+   위 다크모드 규칙이 option에 color를 지정하고 있어서, 그보다 우선하도록
+   .myspace-ghost-select option.— 형태로 선택자 우선순위를 맞춘다.
+   참고: 네이티브 select의 option 색상은 Windows의 Chrome/Firefox에서는 적용되지만
+   일부 브라우저(특히 macOS Safari)는 무시한다. 그 경우에도 '이력 있는 브랜치를
+   먼저 선택해주는' 동작은 그대로라 기능상 문제는 없다. */
+.myspace-ghost-select option.myspace-branch-option--empty,
+html.dark .myspace-ghost-select option.myspace-branch-option--empty,
+body.dark .myspace-ghost-select option.myspace-branch-option--empty,
+[data-theme='dark'] .myspace-ghost-select option.myspace-branch-option--empty {
+  color: var(--text-muted, #9aa0a6);
 }
 
 /* ===== 파일 별 위험도 테이블 반응형 및 말줄임표 설정 ===== */

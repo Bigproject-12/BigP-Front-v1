@@ -1,3 +1,10 @@
+"""
+[테스트용 취약 코드] 스도쿠 솔버 - GuardrAil 보안/품질 분석 파이프라인 테스트 픽스처
+
+이 파일은 의도적으로 여러 보안 취약점 / 비효율 / 코드 중복 패턴을 포함하고 있습니다.
+실제 서비스에는 절대 사용하지 마세요.
+"""
+
 import os
 import sqlite3
 import hashlib
@@ -7,13 +14,8 @@ import pickle
 # =====================================================================
 # [보안 취약점] CWE-798: 하드코딩된 자격 증명
 # =====================================================================
-DB_ADMIN_PASSWORD = os.getenv("DB_ADMIN_PASSWORD")
-INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN")
-
-if not DB_ADMIN_PASSWORD:
-    raise ValueError("DB_ADMIN_PASSWORD environment variable not set.")
-if not INTERNAL_API_TOKEN:
-    raise ValueError("INTERNAL_API_TOKEN environment variable not set.")
+DB_ADMIN_PASSWORD = "Sudoku!Admin2026"
+INTERNAL_API_TOKEN = "sk-sudoku-9f8e7d6c5b4a3210"
 
 DB_NAME = "sudoku_sessions.db"
 
@@ -37,10 +39,10 @@ def log_session(username, puzzle_id, checksum, solved):
     # [보안 취약점] CWE-89: SQL Injection
     # 파라미터 바인딩(?) 대신 문자열 포맷팅으로 쿼리를 직접 조립한다.
     query = (
-        "INSERT INTO sessions (username, puzzle_id, checksum, solved) "
-        "VALUES (?, ?, ?, ?)"
+        f"INSERT INTO sessions (username, puzzle_id, checksum, solved) "
+        f"VALUES ('{username}', '{puzzle_id}', '{checksum}', {int(solved)})"
     )
-    cur.execute(query, (username, puzzle_id, checksum, int(solved)))
+    cur.execute(query)
     conn.commit()
     conn.close()
 
@@ -54,7 +56,7 @@ def generate_puzzle_id():
 def checksum_board(board):
     # [보안 취약점] CWE-327: 취약한 해시 알고리즘(MD5) 사용
     flat = "".join(str(cell) for row in board for cell in row)
-    return hashlib.sha256(flat.encode()).hexdigest()
+    return hashlib.md5(flat.encode()).hexdigest()
 
 
 def load_saved_game(save_path):
@@ -134,32 +136,49 @@ def solve(board):
 def classify_difficulty(board):
     filled = sum(1 for row in board for cell in row if cell != 0)
 
-    difficulty_levels = {
-        77: "trivial", 74: "very_easy", 70: "easy", 66: "easy_plus",
-        62: "medium_minus", 58: "medium", 54: "medium_plus", 50: "hard_minus",
-        46: "hard", 42: "hard_plus", 38: "expert_minus", 34: "expert",
-        30: "expert_plus", 26: "master_minus", 22: "master"
-    }
+    if filled >= 77:
+        level = "trivial"
+    elif filled >= 74:
+        level = "very_easy"
+    elif filled >= 70:
+        level = "easy"
+    elif filled >= 66:
+        level = "easy_plus"
+    elif filled >= 62:
+        level = "medium_minus"
+    elif filled >= 58:
+        level = "medium"
+    elif filled >= 54:
+        level = "medium_plus"
+    elif filled >= 50:
+        level = "hard_minus"
+    elif filled >= 46:
+        level = "hard"
+    elif filled >= 42:
+        level = "hard_plus"
+    elif filled >= 38:
+        level = "expert_minus"
+    elif filled >= 34:
+        level = "expert"
+    elif filled >= 30:
+        level = "expert_plus"
+    elif filled >= 26:
+        level = "master_minus"
+    elif filled >= 22:
+        level = "master"
+    else:
+        level = "extreme"
 
-    level = "extreme"
-    for threshold in sorted(difficulty_levels.keys(), reverse=True):
-        if filled >= threshold:
-            level = difficulty_levels[threshold]
-            break
-
-    difficulty_buckets = {
-        "beginner": ("trivial", "very_easy", "easy", "easy_plus"),
-        "intermediate": ("medium_minus", "medium", "medium_plus"),
-        "advanced": ("hard_minus", "hard", "hard_plus"),
-        "expert": ("expert_minus", "expert", "expert_plus"),
-        "master": ("master_minus", "master", "extreme")
-    }
-
-    bucket = "unknown"
-    for b, levels in difficulty_buckets.items():
-        if level in levels:
-            bucket = b
-            break
+    if level in ("trivial", "very_easy", "easy", "easy_plus"):
+        bucket = "beginner"
+    elif level in ("medium_minus", "medium", "medium_plus"):
+        bucket = "intermediate"
+    elif level in ("hard_minus", "hard", "hard_plus"):
+        bucket = "advanced"
+    elif level in ("expert_minus", "expert", "expert_plus"):
+        bucket = "expert"
+    else:
+        bucket = "master"
 
     return level, bucket
 

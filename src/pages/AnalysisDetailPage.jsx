@@ -9,7 +9,6 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import DiffViewer from '../components/ui/DiffViewer';
-import PushSuccessNotice from '../components/ui/PushSuccessNotice';
 import AnalysisResult from '../components/analysis/AnalysisResult';
 import PrCreateModal from '../components/analysis/PrCreateModal';
 import './AnalyzePage.css';
@@ -372,7 +371,7 @@ export default function AnalysisDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {pushError && <span className="text-body-sm ui-banner--error" style={{ margin: 0, padding: '4px 8px' }}>{pushError}</span>}
               {prUrl && <span className="text-body-sm ui-banner--success">PR 생성에 성공했습니다.</span>}
-              {!prUrl && pushed && <PushSuccessNotice branch={data.branch} />}
+              {!prUrl && pushed && <span className="text-body-sm ui-banner--success">GitHub Push에 성공했습니다.</span>}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 {pushed ? (
                   <button className="ui-btn ui-btn--primary ui-btn--md" onClick={openPrModal} disabled={!!prUrl}>

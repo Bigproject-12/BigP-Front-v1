@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
-import { formatDateTime, languageColor } from '../lib/format';
+import { formatDateTime, formatDateTimeCompact, languageColor } from '../lib/format';
 import { Tabs, Segment } from '../components/ui/Tabs';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -9,6 +9,7 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
+import RepoSwitcher from '../components/repo/RepoSwitcher';
 import Select from '../components/ui/Select';
 import { api } from '../lib/api'; 
 import './RepoDetailPage.css';
@@ -18,10 +19,6 @@ const TOP_TABS = [
   { key: 'push', label: 'Push'},
   { key: 'analyze', label: '코드 분석' },
 ];
-
-// '최근 실행된 분석' 기준: 시간(예: 최근 7일) 대신, 로그인 사용자 기준으로
-// 가장 최근 분석 N건에 배지를 표시한다. 프로젝트 호흡이 짧아 기간보다 건수 기준이 더 유효함.
-const RECENT_ANALYSIS_COUNT = 5;
 
 const STATUS_FILTERS = [
   { key: 'all', label: '전체' },
@@ -66,21 +63,18 @@ export default function RepoDetailPage() {
       .catch(() => setAnalyses([]));
   }, [repoId]);
 
-  // '최근 실행된 분석' 기준: 필터/검색과 무관하게 이 레포 전체 히스토리에서
-  // analyzedAt이 가장 최신인 상위 N건(RECENT_ANALYSIS_COUNT)에 "최근" 배지를 표시한다.
-  // 단, 실패(FAILED)한 분석은 결과가 없어 확인할 게 없으므로 배지 대상에서 제외한다
-  // (상위 N건 중 실패가 섞여 있으면 배지가 N개보다 적게 붙을 수 있음).
-  const recentAnalysisIds = useMemo(() => {
-    const sorted = [...analyses]
-      .filter((a) => a.analyzedAt)
-      .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt));
-    return new Set(
-      sorted
-        .slice(0, RECENT_ANALYSIS_COUNT)
-        .filter((a) => a.status !== 'FAILED')
-        .map((a) => a.id)
-    );
-  }, [analyses]);
+  // 상단 드롭다운으로 레포를 전환해도 이 컴포넌트는 언마운트되지 않아 필터 상태가 그대로 남는다.
+  // 이전 레포의 검색어·필터·페이지가 남으면 결과가 비어 보여 혼란스러우므로 직접 초기화한다.
+  const prevRepoIdRef = useRef(repoId);
+  useEffect(() => {
+    if (prevRepoIdRef.current === repoId) return;
+    prevRepoIdRef.current = repoId;
+    setStatus('all');
+    setQuery('');
+    setIssueFilter('all');
+    setSortBy('latest');
+    setCurrentPage(1);
+  }, [repoId]);
 
   const visibleAnalyses = useMemo(() => {
     // 1. 먼저 필터링된 배열을 'filtered' 변수에 담습니다.
@@ -158,7 +152,7 @@ export default function RepoDetailPage() {
             <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
           </button>
           <div>
-            <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
+            <RepoSwitcher repo={repo} targetPage="repo-detail" />
             <span className="text-body-sm">
               {repo ? `${repo.name} Repository의 히스토리입니다.` : ''}
             </span>
@@ -209,23 +203,23 @@ export default function RepoDetailPage() {
       </div>
 
       <Card style={{ padding: 0, overflowX: 'auto' }}>
-        <table className="history-table">
+        <table className="history-table history-table--fixed">
           <thead>
+            {/* 파일명만 남는 너비를 모두 흡수하고(--flex), 나머지 칸은 내용 너비로 고정된다.
+                덕분에 화면이 좁아져도 파일명만 줄어들고 다른 칸은 뭉개지지 않는다. */}
             <tr>
-              <th>파일명</th>
-              <th>브랜치</th>
-              <th>분석 ID</th>
-              <th>분석일시</th>
-              <th>이슈 수</th>
-              <th>상태</th>
-              <th>Push</th>
-              <th></th>
+              <th className="history-table__col-file">파일명</th>
+              <th className="history-table__col-branch">브랜치</th>
+              <th className="history-table__col-id">분석 ID</th>
+              <th className="history-table__col-date">분석일시</th>
+              <th className="history-table__col-issue">이슈 수</th>
+              <th className="history-table__col-status">상태</th>
             </tr>
           </thead>
           <tbody>
             {paginatedAnalyses.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={6}>
                   <div className="ui-empty">분석 이력이 없습니다.</div>
                 </td>
               </tr>
@@ -244,23 +238,35 @@ export default function RepoDetailPage() {
                 
                 return (
                   <tr key={a.id}>
-                    <td>
+                    <td className="history-table__col-file">
                       <span
                         className="history-table__file file-link"
                         onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
+                        title={a.filePath ?? undefined}
                       >
                         <FileTypeIcon name={fileName} size={15} />
-                        {fileName}
-                        {recentAnalysisIds.has(a.id) && (
-                          <Badge variant="info" style={{ marginLeft: 6 }}>최근</Badge>
-                        )}
+                        {/* 파일명만 말줄임 처리한다. 아이콘은 잘리면 안 되므로 밖에 둔다. */}
+                        <span className="history-table__file-name">{fileName}</span>
                       </span>
                     </td>
-                    <td>{a.branch ?? '-'}</td>
-                    <td>{a.id}</td>
-                    <td>{formatDateTime(a.analyzedAt)}</td>
+                    <td className="history-table__col-branch">{a.branch ?? '-'}</td>
+                    <td className="history-table__col-id">{a.id}</td>
+                    {/* 넓은 화면에선 전체 일시, 좁아지면 축약 표기로 전환한다.
+                        JS 리사이즈 감지 대신 두 값을 함께 렌더하고 CSS로 하나만 보여준다.
+                        리렌더 없이 즉시 전환되고, 상태도 필요 없다. */}
+                    <td
+                      className="history-table__date history-table__col-date"
+                      title={formatDateTime(a.analyzedAt)}
+                    >
+                      <span className="history-table__date-full">
+                        {formatDateTime(a.analyzedAt)}
+                      </span>
+                      <span className="history-table__date-compact">
+                        {formatDateTimeCompact(a.analyzedAt)}
+                      </span>
+                    </td>
 
-                    <td>
+                    <td className="history-table__col-issue">
                       {a.issueCount != null ? (
                         <Badge variant={a.issueCount === 0 ? 'success' : 'warning'}>
                           {a.issueCount}건
@@ -270,18 +276,13 @@ export default function RepoDetailPage() {
                       )}
                     </td>
 
-                    <td>
-                      <Badge variant={st.variant}>{st.label}</Badge>
-                    </td>
-                    <td>
-                      {a.pushed ? (
-                        <Badge variant="success">Push됨</Badge>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>-</span>
-                      )}
-                    </td>
-                    <td>
-
+                    {/* 상태와 Push는 둘 다 배지라 한 칸으로 합쳤다.
+                        컬럼이 하나 줄지만 정보 손실은 없다. Push 안 된 건은 배지를 생략한다. */}
+                    <td className="history-table__col-status">
+                      <span className="history-table__status">
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                        {a.pushed && <Badge variant="success">Push됨</Badge>}
+                      </span>
                     </td>
                   </tr>
                 );

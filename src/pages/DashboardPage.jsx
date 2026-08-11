@@ -200,7 +200,7 @@ const parsePrTitle = (title) => {
         </Card>
       </div>
 
-      <div className="recent-grid">
+      <div className="recent-grid recent-grid--tables">
         <Card style={{ padding: 0 }}>
           <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
             <Icon name="code" size={18} />
@@ -228,7 +228,8 @@ const parsePrTitle = (title) => {
                         <td>
                           <span className="history-table__file">
                             <Icon name="repo" size={15} />
-                            {a.repoName}
+                            {/* 좁아졌을 때 여러 줄로 접히지 않고 …로 잘리도록 텍스트를 감싼다 */}
+                            <span className="history-table__file-name">{a.repoName}</span>
                           </span>
                         </td>
                         <td>{a.language}</td>
@@ -275,7 +276,8 @@ const parsePrTitle = (title) => {
                       <td>
                         <span className="history-table__file">
                           <Icon name="repo" size={15} />
-                          {pr.repoName}
+                          {/* 좁아졌을 때 여러 줄로 접히지 않고 …로 잘리도록 텍스트를 감싼다 */}
+                          <span className="history-table__file-name">{pr.repoName}</span>
                         </span>
                       </td>
                       <td>

@@ -32,6 +32,124 @@
   width: 100%;
   border-collapse: collapse;
 }
+
+/* --- 히스토리/Push 탭 전용 레이아웃 ----------------------------------------
+   .history-table 은 대시보드의 '최근 분석'·'최근 PR' 요약표도 함께 쓰는
+   공용 클래스다(DashboardPage.jsx가 이 파일을 import 한다).
+   그래서 컬럼이 6개인 히스토리/Push 표에만 필요한 규칙은 이 수식 클래스 안에 가둔다.
+   공용 클래스에 직접 걸면 4컬럼짜리 대시보드 표까지 최소 폭에 묶여
+   '최근 PR' 카드가 화면 밖으로 밀려난다. */
+.history-table--fixed {
+  /* auto 레이아웃은 내용에 따라 칸 너비가 제멋대로 늘어난다.
+     fixed로 두면 아래 col 규칙(비율 배분)이 그대로 지켜지고,
+     파일명 말줄임도 정상 동작한다. */
+  table-layout: fixed;
+  /* 이보다 좁아지면 비율로 눌러 담지 말고 가로 스크롤로 넘긴다(최후의 보루).
+     px 고정 칸(이슈 수 92 + 상태 170 = 262)을 빼고도 파일명·브랜치·분석일시가
+     각자 최소 폭을 확보할 수 있는 값으로 잡았다. */
+  min-width: 700px;
+}
+/* table-layout:fixed 에서 칸보다 내용이 길면 넘쳐서 옆 칸 글자와 겹친다.
+   (분석일시가 이슈 수를 뚫고 나오던 문제) 어떤 경우에도 칸 밖으로 새지 않게 막는다.
+   아래 비율 배분이 정상이면 여기까지 올 일은 없고, 예외 상황의 안전망이다. */
+.history-table--fixed th,
+.history-table--fixed td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- 컬럼 폭 배분 ---------------------------------------------------------
+   두 종류로 나눠서 다룬다.
+
+   (1) 내용 크기가 고정된 칸 — 체크박스, 분석 ID, 이슈 수, 상태 → px 고정
+       배지·숫자라 넓어져 봐야 여백만 늘어난다. 특히 상태 칸을 비율로 두면
+       화면이 넓을수록 배지 오른쪽에 빈 공간이 커져서, 짧은 '상태' 헤더가
+       넓은 배지 묶음 위에 떠 있는 것처럼 어긋나 보인다.
+       배지 묶음(완료+Push됨)이 약 152px이라 170px로 잡아 딱 맞게 감싼다.
+
+   (2) 길이가 유동적인 칸 — 파일명, 브랜치, 분석일시 → 비율(%)
+       (1)을 뺀 나머지 폭을 이 비율대로 나눠 갖는다. 남는 공간이 한 칸에
+       몰리지 않고 세 칸에 분산돼, 파일명 오른쪽만 휑해지는 문제도 안 생긴다. */
+.history-table__col-check {
+  width: 40px;
+}
+.history-table__col-id {
+  width: 80px;
+}
+.history-table__col-issue {
+  width: 92px;
+}
+.history-table__col-status {
+  width: 170px;
+}
+/* '상태' 헤더만 살짝 오른쪽으로 민다.
+   글자('상태' 약 28px)가 아래 배지 묶음(약 152px)보다 훨씬 짧아서,
+   왼쪽 끝이 정확히 맞아 있어도 무게중심 차이 때문에 왼쪽으로 밀려 보인다.
+   그 착시를 상쇄하는 시각 보정이므로 헤더에만 적용하고 셀은 건드리지 않는다.
+   값만 바꾸면 조절되고, 0으로 두면 원래대로 완전한 왼쪽 정렬이 된다. */
+.history-table--fixed th.history-table__col-status {
+  padding-left: calc(14px + var(--status-header-nudge, 6px));
+}
+
+.history-table__col-file {
+  width: 55%;
+}
+.history-table__col-branch {
+  width: 15%;
+  /* 브랜치명이 길어도 표를 밀어내지 않게 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 전체 일시("2026. 08. 11. 오전 10:05")는 175px 정도가 필요하다.
+   축약 표기로 바뀌는 지점(아래 미디어쿼리)까지는 이 폭을 확보해야 겹치지 않는다. */
+.history-table__col-date {
+  width: 30%;
+}
+
+/* 파일명이 길면 잘라서 …로 표시. 전체 경로는 title로 확인 가능.
+   확장자가 잘려도 앞의 FileTypeIcon이 파일 종류를 알려준다. */
+.history-table__file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 상태 + Push 배지를 한 칸에 나란히 */
+.history-table__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* 좁아지면 '분석 ID'부터 접는다. 목록을 훑을 때 쓰는 값이 아니고
+   상세 페이지에 그대로 있어서, 가장 먼저 숨겨도 되는 컬럼이다.
+   같은 지점에서 분석일시가 축약 표기로 바뀌므로 비중도 함께 낮춘다.
+
+   기준을 1100px → 1300px 로 올린 이유:
+   미디어쿼리는 '창 너비'를 보지만 표가 실제로 쓰는 폭은 사이드바(약 240px)와
+   여백(약 48px)을 뺀 값이다. 창 1180px이면 표는 약 890px뿐이라
+   분석일시 칸(19%)이 약 170px밖에 안 나와 전체 일시가 넘쳐 이슈 수와 겹쳤다.
+   전체 일시에 필요한 175px를 확보하려면 표가 약 950px, 즉 창이 약 1250px 이상이어야 한다. */
+@media (max-width: 1300px) {
+  .history-table__col-id {
+    display: none;
+  }
+  /* 축약 표기('10:05')는 60px이면 충분하므로 비중을 크게 낮춘다.
+     그만큼 파일명이 더 넓어진다. 상태는 px 고정이라 건드릴 필요가 없다. */
+  .history-table__col-date {
+    width: 12%;
+  }
+}
+/* 더 좁아지면 브랜치까지 접는다. 여기까지 오면 남는 컬럼은
+   파일명 / 일시 / 이슈 수 / 상태 네 개라 가로 스크롤 없이 들어간다. */
+@media (max-width: 820px) {
+  .history-table__col-branch {
+    display: none;
+  }
+}
 .history-table th {
   text-align: left;
   padding: 10px 14px;
@@ -49,12 +167,41 @@
 .history-table tr:last-child td {
   border-bottom: none;
 }
+/* 분석일시: 어느 표기든 줄바꿈되지 않게 한 줄로 유지 */
+.history-table__date {
+  white-space: nowrap;
+  color: var(--text-secondary, var(--text-muted));
+}
+/* 기본(넓은 화면)은 기존과 동일한 전체 일시 표기 */
+.history-table__date-compact {
+  display: none;
+}
+/* 좁아지면 축약 표기로 교체.
+   기준(1300px)은 위 컬럼 접기 미디어쿼리와 반드시 같아야 한다.
+   두 값이 어긋나면 그 구간에서 전체 일시가 좁은 칸에 들어가 옆 칸을 침범한다.
+   전체 일시는 <td>의 title에 남아 있어 마우스 오버로 확인 가능. */
+@media (max-width: 1300px) {
+  .history-table__date-full {
+    display: none;
+  }
+  .history-table__date-compact {
+    display: inline;
+  }
+}
 .history-table__file {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
   color: var(--text-primary);
+  /* flex 자식(파일명)이 말줄임되려면 컨테이너가 줄어들 수 있어야 한다. */
+  min-width: 0;
+  max-width: 100%;
+}
+/* 아이콘과 '최근' 배지는 잘리면 안 되므로 축소 대상에서 제외 */
+.history-table__file > svg,
+.history-table__file > .ui-badge {
+  flex: none;
 }
 
 /* 파일명 링크 스타일 */
@@ -62,7 +209,9 @@
   cursor: pointer;
   color: var(--text-primary); /* 기본 텍스트 색상(보통 검은색/어두운 회색) */
   text-decoration: none;      /* 밑줄 제거 */
-  display: inline-flex;
+  /* inline-flex는 내용만큼만 커져서 칸 너비에 갇히지 않는다.
+     그러면 말줄임이 안 걸리고 그대로 넘쳐흐르므로 flex로 둔다. */
+  display: flex;
   align-items: center;
   gap: 6px;
   transition: color 0.2s ease;
