@@ -19,6 +19,10 @@ const TOP_TABS = [
   { key: 'analyze', label: '코드 분석' },
 ];
 
+// '최근 실행된 분석' 기준: 시간(예: 최근 7일) 대신, 로그인 사용자 기준으로
+// 가장 최근 분석 N건에 배지를 표시한다. 프로젝트 호흡이 짧아 기간보다 건수 기준이 더 유효함.
+const RECENT_ANALYSIS_COUNT = 5;
+
 const STATUS_FILTERS = [
   { key: 'all', label: '전체' },
   { key: 'in_progress', label: '진행중' },
@@ -61,6 +65,22 @@ export default function RepoDetailPage() {
       .then(setAnalyses)
       .catch(() => setAnalyses([]));
   }, [repoId]);
+
+  // '최근 실행된 분석' 기준: 필터/검색과 무관하게 이 레포 전체 히스토리에서
+  // analyzedAt이 가장 최신인 상위 N건(RECENT_ANALYSIS_COUNT)에 "최근" 배지를 표시한다.
+  // 단, 실패(FAILED)한 분석은 결과가 없어 확인할 게 없으므로 배지 대상에서 제외한다
+  // (상위 N건 중 실패가 섞여 있으면 배지가 N개보다 적게 붙을 수 있음).
+  const recentAnalysisIds = useMemo(() => {
+    const sorted = [...analyses]
+      .filter((a) => a.analyzedAt)
+      .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt));
+    return new Set(
+      sorted
+        .slice(0, RECENT_ANALYSIS_COUNT)
+        .filter((a) => a.status !== 'FAILED')
+        .map((a) => a.id)
+    );
+  }, [analyses]);
 
   const visibleAnalyses = useMemo(() => {
     // 1. 먼저 필터링된 배열을 'filtered' 변수에 담습니다.
@@ -198,13 +218,14 @@ export default function RepoDetailPage() {
               <th>분석일시</th>
               <th>이슈 수</th>
               <th>상태</th>
+              <th>Push</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {paginatedAnalyses.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="ui-empty">분석 이력이 없습니다.</div>
                 </td>
               </tr>
@@ -224,12 +245,15 @@ export default function RepoDetailPage() {
                 return (
                   <tr key={a.id}>
                     <td>
-                      <span 
-                        className="history-table__file file-link" 
+                      <span
+                        className="history-table__file file-link"
                         onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
                       >
                         <FileTypeIcon name={fileName} size={15} />
                         {fileName}
+                        {recentAnalysisIds.has(a.id) && (
+                          <Badge variant="info" style={{ marginLeft: 6 }}>최근</Badge>
+                        )}
                       </span>
                     </td>
                     <td>{a.branch ?? '-'}</td>
@@ -248,6 +272,13 @@ export default function RepoDetailPage() {
 
                     <td>
                       <Badge variant={st.variant}>{st.label}</Badge>
+                    </td>
+                    <td>
+                      {a.pushed ? (
+                        <Badge variant="success">Push됨</Badge>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                      )}
                     </td>
                     <td>
 

@@ -39,9 +39,12 @@ export default function Topbar() {
 
   const seenIdsRef = useRef(null);
   const [toasts, setToasts] = useState([]);
+  // 알림이 한꺼번에 여러 개 들어와도 화면 한쪽을 뒤덮지 않도록, 최근 N개만 토스트로 띄운다.
+  // 그 이상은 토스트로는 안 보이고 알림 벨(드롭다운)에서 전체 확인 가능.
+  const MAX_VISIBLE_TOASTS = 3;
   const showToast = (message, variant = 'success') => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, variant }]);
+    setToasts((prev) => [...prev, { id, message, variant }].slice(-MAX_VISIBLE_TOASTS));
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id ));
     }, 4000);
