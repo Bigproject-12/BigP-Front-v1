@@ -5,13 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
+import java.sql.Statement;
 import java.util.Scanner;
-import java.util.function.DoubleBinaryOperator;
-import java.util.function.DoubleUnaryOperator;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
@@ -24,15 +20,8 @@ import javax.script.ScriptEngineManager;
 public class VulnerableCalculatorEngine {
 
     // [보안 취약점] CWE-798: 하드코딩된 관리자 비밀번호
-    private static final String ADMIN_OVERRIDE_PASSWORD;
+    private static final String ADMIN_OVERRIDE_PASSWORD = "calc-master-2026!";
     private static final String DB_URL = "jdbc:sqlite:calc_history.db";
-
-    static {
-        ADMIN_OVERRIDE_PASSWORD = System.getenv("ADMIN_PASSWORD");
-        if (ADMIN_OVERRIDE_PASSWORD == null || ADMIN_OVERRIDE_PASSWORD.isEmpty()) {
-            throw new IllegalArgumentException("ADMIN_PASSWORD environment variable not set.");
-        }
-    }
 
     // =====================================================================
     // [보안 취약점] CWE-94: 코드 인젝션
@@ -49,13 +38,11 @@ public class VulnerableCalculatorEngine {
     // PreparedStatement 대신 문자열을 이어붙여 계산 기록을 저장한다.
     // =====================================================================
     public void logCalculation(String username, String expression, String result) {
-        String sql = "INSERT INTO history (username, expression, result) VALUES (?, ?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, username);
-            pstmt.setString(2, expression);
-            pstmt.setString(3, result);
-            pstmt.executeUpdate();
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            Statement stmt = conn.createStatement();
+            String sql = "INSERT INTO history (username, expression, result) VALUES ('"
+                    + username + "', '" + expression + "', '" + result + "')";
+            stmt.executeUpdate(sql);
         } catch (SQLException e) {
             System.out.println("기록 저장 실패: " + e.getMessage());
         }
@@ -89,88 +76,81 @@ public class VulnerableCalculatorEngine {
     // [코드 중복] 사칙연산 4개 메서드가 입력 파싱/로깅 로직을 거의 그대로 복붙하고 있다.
     // 공통 템플릿 메서드나 함수형 인터페이스로 합칠 수 있는 전형적인 중복 패턴.
     // =====================================================================
-    private double performCalculation(String username, double a, double b, String operatorSymbol, DoubleBinaryOperator operation) {
-        double result = operation.applyAsDouble(a, b);
-        System.out.println(username + "님의 계산: " + a + " " + operatorSymbol + " " + b + " = " + result);
-        logCalculation(username, a + " " + operatorSymbol + " " + b, String.valueOf(result));
+    public double add(String username, double a, double b) {
+        double result = a + b;
+        System.out.println(username + "님의 계산: " + a + " + " + b + " = " + result);
+        logCalculation(username, a + " + " + b, String.valueOf(result));
         return result;
     }
 
-    public double add(String username, double a, double b) {
-        return performCalculation(username, a, b, "+", (x, y) -> x + y);
-    }
-
     public double subtract(String username, double a, double b) {
-        return performCalculation(username, a, b, "-", (x, y) -> x - y);
+        double result = a - b;
+        System.out.println(username + "님의 계산: " + a + " - " + b + " = " + result);
+        logCalculation(username, a + " - " + b, String.valueOf(result));
+        return result;
     }
 
     public double multiply(String username, double a, double b) {
-        return performCalculation(username, a, b, "*", (x, y) -> x * y);
+        double result = a * b;
+        System.out.println(username + "님의 계산: " + a + " * " + b + " = " + result);
+        logCalculation(username, a + " * " + b, String.valueOf(result));
+        return result;
     }
 
     public double divide(String username, double a, double b) {
-        if (b == 0) {
-            throw new IllegalArgumentException("0으로 나눌 수 없습니다.");
-        }
-        return performCalculation(username, a, b, "/", (x, y) -> x / y);
+        // [비효율/안정성] 0으로 나누는 경우에 대한 예외 처리가 없다.
+        double result = a / b;
+        System.out.println(username + "님의 계산: " + a + " / " + b + " = " + result);
+        logCalculation(username, a + " / " + b, String.valueOf(result));
+        return result;
     }
 
-    private static final Map<String, DoubleBinaryOperator> binaryOperations = new HashMap<>();
-    private static final Map<String, DoubleUnaryOperator> unaryOperations = new HashMap<>();
-
-    static {
-        binaryOperations.put("add", (a, b) -> a + b);
-        binaryOperations.put("+", (a, b) -> a + b);
-        binaryOperations.put("sub", (a, b) -> a - b);
-        binaryOperations.put("-", (a, b) -> a - b);
-        binaryOperations.put("mul", (a, b) -> a * b);
-        binaryOperations.put("*", (a, b) -> a * b);
-        binaryOperations.put("div", (a, b) -> {
-            if (b == 0) throw new IllegalArgumentException("0으로 나눌 수 없습니다.");
-            return a / b;
-        });
-        binaryOperations.put("/", (a, b) -> {
-            if (b == 0) throw new IllegalArgumentException("0으로 나눌 수 없습니다.");
-            return a / b;
-        });
-        binaryOperations.put("pow", Math::pow);
-        binaryOperations.put("mod", (a, b) -> a % b);
-        binaryOperations.put("max", Math::max);
-        binaryOperations.put("min", Math::min);
-        binaryOperations.put("hypot", Math::hypot);
-
-        unaryOperations.put("sqrt", Math::sqrt);
-        unaryOperations.put("sin", Math::sin);
-        unaryOperations.put("cos", Math::cos);
-        unaryOperations.put("tan", Math::tan);
-        unaryOperations.put("log", Math::log);
-        unaryOperations.put("log10", Math::log10);
-        unaryOperations.put("exp", Math::exp);
-        unaryOperations.put("abs", Math::abs);
-        unaryOperations.put("floor", Math::floor);
-        unaryOperations.put("ceil", Math::ceil);
-        unaryOperations.put("round", (a) -> (double) Math.round(a));
-    }
-
+    // =====================================================================
+    // [비효율] 순환 복잡도가 매우 높은 연산자 분기 함수 (분기 20개 이상)
+    // Map<String, Function> 기반 디스패치 테이블로 대체 가능한데
+    // 연산자 하나마다 if/else if 브랜치를 추가하는 방식으로 작성되어 있다.
+    // =====================================================================
     public double parseAndCompute(String username, String op, double a, double b) {
-        if (binaryOperations.containsKey(op)) {
-            DoubleBinaryOperator operation = binaryOperations.get(op);
-            String operatorSymbol = op;
-            if (op.equals("add")) operatorSymbol = "+";
-            else if (op.equals("sub")) operatorSymbol = "-";
-            else if (op.equals("mul")) operatorSymbol = "*";
-            else if (op.equals("div")) operatorSymbol = "/";
-
-            double result = operation.applyAsDouble(a, b);
-            System.out.println(username + "님의 계산: " + a + " " + operatorSymbol + " " + b + " = " + result);
-            logCalculation(username, a + " " + operatorSymbol + " " + b, String.valueOf(result));
-            return result;
-        } else if (unaryOperations.containsKey(op)) {
-            DoubleUnaryOperator operation = unaryOperations.get(op);
-            double result = operation.applyAsDouble(a);
-            System.out.println(username + "님의 계산: " + op + "(" + a + ") = " + result);
-            logCalculation(username, op + "(" + a + ")", String.valueOf(result));
-            return result;
+        if (op.equals("add") || op.equals("+")) {
+            return add(username, a, b);
+        } else if (op.equals("sub") || op.equals("-")) {
+            return subtract(username, a, b);
+        } else if (op.equals("mul") || op.equals("*")) {
+            return multiply(username, a, b);
+        } else if (op.equals("div") || op.equals("/")) {
+            return divide(username, a, b);
+        } else if (op.equals("pow")) {
+            return Math.pow(a, b);
+        } else if (op.equals("mod")) {
+            return a % b;
+        } else if (op.equals("sqrt")) {
+            return Math.sqrt(a);
+        } else if (op.equals("sin")) {
+            return Math.sin(a);
+        } else if (op.equals("cos")) {
+            return Math.cos(a);
+        } else if (op.equals("tan")) {
+            return Math.tan(a);
+        } else if (op.equals("log")) {
+            return Math.log(a);
+        } else if (op.equals("log10")) {
+            return Math.log10(a);
+        } else if (op.equals("exp")) {
+            return Math.exp(a);
+        } else if (op.equals("abs")) {
+            return Math.abs(a);
+        } else if (op.equals("floor")) {
+            return Math.floor(a);
+        } else if (op.equals("ceil")) {
+            return Math.ceil(a);
+        } else if (op.equals("round")) {
+            return Math.round(a);
+        } else if (op.equals("max")) {
+            return Math.max(a, b);
+        } else if (op.equals("min")) {
+            return Math.min(a, b);
+        } else if (op.equals("hypot")) {
+            return Math.hypot(a, b);
         } else {
             throw new IllegalArgumentException("지원하지 않는 연산자: " + op);
         }
@@ -183,7 +163,7 @@ public class VulnerableCalculatorEngine {
         System.out.println("사용자 이름을 입력하세요:");
         String username = scanner.nextLine();
 
-        System.out.println("계산할 수식을 입력하세요 (예: 3 * (2 + 5)): ");
+        System.out.println("계산할 수식을 입력하세요 (예: 3 * (2 + 5)):");
         String expression = scanner.nextLine();
         Object result = calc.evaluateExpression(expression);
         System.out.println("결과: " + result);
