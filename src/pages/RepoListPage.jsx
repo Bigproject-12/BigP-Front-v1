@@ -77,11 +77,16 @@ export default function RepoListPage() {
   );
 
   const visible = useMemo(() => {
+    // 검색어는 한 번만 소문자로 만들어 재사용한다(레포마다 toLowerCase를 반복하지 않도록).
+    const keyword = query.trim().toLowerCase();
     let list = repos.filter((r) => {
+      // 조직명도 검색 대상에 포함한다. 조직 셀렉트를 열지 않고도
+      // 'bigproject'만 쳐서 해당 조직 레포를 추릴 수 있다.
       const matchesQuery =
-        !query.trim() ||
-        r.name.toLowerCase().includes(query.toLowerCase()) ||
-        (r.description ?? '').toLowerCase().includes(query.toLowerCase());
+        !keyword ||
+        r.name.toLowerCase().includes(keyword) ||
+        (r.description ?? '').toLowerCase().includes(keyword) ||
+        (r.organization ?? '').toLowerCase().includes(keyword);
       const matchesVisibility =
         visibility === 'all' || (visibility === 'private' ? r.private : !r.private);
       const matchesLanguage = language === 'all' || r.language === language;
@@ -147,7 +152,7 @@ export default function RepoListPage() {
       <div className="repo-toolbar">
         <div className="repo-toolbar__search">
           <Input
-            placeholder="Repository명 또는 설명 검색"
+            placeholder="Repository명, 조직, 설명 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Icon name="search" size={16} />}

@@ -91,6 +91,8 @@ export default function MySpacePage() {
   const [repoId, setRepoId] = useState('');
   const [branches, setBranches] = useState([]);
   const [branch, setBranch] = useState('');
+  // 분석 이력이 있는 브랜치 이름 집합. 드롭다운에서 나머지를 흐리게 처리하는 데 쓴다.
+  const [branchesWithHistory, setBranchesWithHistory] = useState(new Set());
   const branchSelectRef = useRef(null);
 
   const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
@@ -112,11 +114,37 @@ export default function MySpacePage() {
   useEffect(() => {
     setBranch('');
     setBranches([]);
+    setBranchesWithHistory(new Set());
     if (!repoId) return;
-    fetchRepoBranches(Number(repoId))
-      .then((list) => {
+
+    // 브랜치 목록과 분석 이력을 함께 받는다.
+    // 이력(/api/repos/{id}/history)은 로그인 사용자 기준으로 스코핑된 데이터이고
+    // 각 분석의 branch를 담고 있어서, 어느 브랜치에 볼 게 있는지 프론트에서 알 수 있다.
+    // 이력 조회가 실패해도 브랜치 선택 자체는 되어야 하므로 개별로 catch 한다.
+    Promise.all([
+      fetchRepoBranches(Number(repoId)),
+      api.get(`/api/repos/${repoId}/history`).catch(() => []),
+    ])
+      .then(([list, history]) => {
         setBranches(list);
-        setBranch(list.find((b) => b.isDefault)?.name || list[0]?.name || '');
+
+        // 실패(FAILED)한 분석은 결과가 없어 볼 게 없으므로 '유효한 이력'에서 제외한다.
+        // (히스토리 탭의 '최근' 배지와 같은 기준)
+        const analyzed = (history ?? []).filter(
+          (h) => h.branch && h.status !== 'FAILED'
+        );
+        setBranchesWithHistory(new Set(analyzed.map((h) => h.branch)));
+
+        // 가장 최근에 분석한 브랜치를 우선 선택한다.
+        // 기본 브랜치(main)를 골라놓고 "데이터가 없네" 하는 상황을 피하기 위함.
+        // 해당 브랜치가 이미 삭제됐을 수 있으므로 목록에 실제로 있는지 확인한다.
+        const latest = analyzed
+          .filter((h) => h.analyzedAt)
+          .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt))[0];
+        const preferred =
+          latest && list.some((b) => b.name === latest.branch) ? latest.branch : null;
+
+        setBranch(preferred || list.find((b) => b.isDefault)?.name || list[0]?.name || '');
 
         setTimeout(() => {
           if (branchSelectRef.current) {
@@ -163,9 +191,20 @@ export default function MySpacePage() {
                     disabled={branches.length === 0}
                   >
                     {branches.length === 0 && <option value="">로딩 중...</option>}
-                    {branches.map((b) => (
-                      <option key={b.name} value={b.name}>{b.name}</option>
-                    ))}
+                    {branches.map((b) => {
+                      // 분석 이력이 없는 브랜치는 흐리게 표시한다. 선택은 그대로 가능하다.
+                      const hasHistory = branchesWithHistory.has(b.name);
+                      return (
+                        <option
+                          key={b.name}
+                          value={b.name}
+                          className={hasHistory ? undefined : 'myspace-branch-option--empty'}
+                          title={hasHistory ? undefined : '이 브랜치에는 분석 이력이 없습니다.'}
+                        >
+                          {b.name}
+                        </option>
+                      );
+                    })}
                   </Select>
                 </div>
               </>

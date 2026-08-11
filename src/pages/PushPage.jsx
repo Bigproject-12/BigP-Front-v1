@@ -3,7 +3,7 @@ import { useRouter } from '../router/RouterContext';
 import { useRepos } from '../context/RepoContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../lib/api';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, formatDateTimeCompact } from '../lib/format';
 import { Tabs } from '../components/ui/Tabs';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -12,6 +12,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import Icon from '../components/icons/Icon';
 import FileTypeIcon from '../components/icons/FileTypeIcon';
+import RepoSwitcher from '../components/repo/RepoSwitcher';
 import PrCreateModal from '../components/analysis/PrCreateModal';
 import './RepoDetailPage.css';
 
@@ -67,6 +68,23 @@ export default function PushPage() {
       .then(setAnalyses)
       .catch(() => setAnalyses([]))
       .finally(() => setLoading(false));
+  }, [repoId]);
+
+  // 상단 드롭다운으로 레포를 전환해도 이 컴포넌트는 언마운트되지 않는다.
+  // 특히 선택 목록과 Push 성공 상태가 남으면 다른 레포의 결과가 잘못 보이므로 반드시 초기화한다.
+  const prevRepoIdRef = useRef(repoId);
+  useEffect(() => {
+    if (prevRepoIdRef.current === repoId) return;
+    prevRepoIdRef.current = repoId;
+    setBranchFilter('all');
+    setQuery('');
+    setSelectedIds(new Set());
+    setLocallyPushedIds(new Set());
+    setCurrentPage(1);
+    setPushError('');
+    setPushedBranch('');
+    setPrUrl('');
+    setPushedAnalyses([]);
   }, [repoId]);
 
   // 완료 + 브랜치/파일경로 있는 것만 (같은 파일이어도 분석 건마다 전부 표시)
@@ -202,7 +220,7 @@ export default function PushPage() {
             <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
           </button>
           <div>
-            <h1 className="text-display-md">{repo ? repo.name : '불러오는 중…'}</h1>
+            <RepoSwitcher repo={repo} targetPage="push-tab" />
             <span className="text-body-sm">브랜치를 선택하면 여러 파일들을 한 번에 Push 할 수 있습니다.</span>
           </div>
         </div>
@@ -273,15 +291,16 @@ export default function PushPage() {
           {/* ▲ 상단 툴바 영역 끝 ▲ */}
 
           <Card style={{ padding: 0, overflowX: 'auto' }}>
-            <table className="history-table">
+            <table className="history-table history-table--fixed">
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}></th>
-                  <th>파일명</th>
-                  <th>브랜치</th>
-                  <th>분석 ID</th>
-                  <th>분석일시</th>
-                  <th>이슈 수</th>
+                  <th className="history-table__col-check"></th>
+                  {/* 히스토리 표와 동일한 규칙: 파일명만 남는 너비를 흡수하고 나머지는 고정 */}
+                  <th className="history-table__col-file">파일명</th>
+                  <th className="history-table__col-branch">브랜치</th>
+                  <th className="history-table__col-id">분석 ID</th>
+                  <th className="history-table__col-date">분석일시</th>
+                  <th className="history-table__col-issue">이슈 수</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,7 +318,7 @@ export default function PushPage() {
                     const disabled = branchMismatch || fileTaken;
                     return (
                       <tr key={a.id} style={disabled ? { opacity: 0.4 } : undefined}>
-                        <td style={{ width: 40 }}>
+                        <td className="history-table__col-check">
                           <input
                             type="checkbox"
                             checked={selectedIds.has(a.id)}
@@ -314,19 +333,30 @@ export default function PushPage() {
                             }
                           />
                         </td>
-                        <td>
+                        <td className="history-table__col-file">
                           <span
                             className="history-table__file file-link"
                             onClick={() => navigate(`?page=analysis-detail&analysisId=${a.id}`)}
+                            title={a.filePath}
                           >
                             <FileTypeIcon name={fileName} size={15} />
-                            {fileName}
+                            <span className="history-table__file-name">{fileName}</span>
                           </span>
                         </td>
-                        <td>{a.branch}</td>
-                        <td>{a.id}</td>
-                        <td>{formatDateTime(a.analyzedAt)}</td>
-                        <td>
+                        <td className="history-table__col-branch">{a.branch}</td>
+                        <td className="history-table__col-id">{a.id}</td>
+                        <td
+                          className="history-table__date history-table__col-date"
+                          title={formatDateTime(a.analyzedAt)}
+                        >
+                          <span className="history-table__date-full">
+                            {formatDateTime(a.analyzedAt)}
+                          </span>
+                          <span className="history-table__date-compact">
+                            {formatDateTimeCompact(a.analyzedAt)}
+                          </span>
+                        </td>
+                        <td className="history-table__col-issue">
                           {a.issueCount != null ? (
                             <Badge variant={a.issueCount === 0 ? 'success' : 'warning'}>{a.issueCount}건</Badge>
                           ) : '-'}

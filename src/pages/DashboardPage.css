@@ -63,10 +63,35 @@
   gap: var(--space-lg);
   align-items: stretch;
 }
-@media (max-width: 900px) {
-  .recent-grid {
+/* 그리드 아이템은 기본값이 min-width:auto 라서, 안에 든 표의 min-content 너비
+   (예: 'Usermanager.java' 같이 끊을 수 없는 문자열) 아래로 줄어들지 않는다.
+   그 결과 창을 좁히면 카드가 안 줄고 페이지 자체에 가로 스크롤이 생긴다.
+   min-width:0 을 줘야 비로소 카드가 그리드 칸에 맞춰 줄어든다. */
+.recent-grid > * {
+  min-width: 0;
+}
+
+/* 아래 두 규칙은 대시보드의 '최근 분석 / 최근 PR' 카드에만 적용한다.
+   .recent-grid 는 MySpace 페이지도 함께 쓰는 공용 클래스라(MySpacePage.jsx가
+   이 파일을 import 한다) 수식 클래스로 한 번 더 좁혀야 한다. */
+
+/* 두 표 모두 컬럼이 4개라 2열로 나란히 두면 한 칸당 폭이 금방 부족해진다.
+   공용 브레이크포인트(900px)보다 이르게 1열로 접어 각 카드가 전체 폭을 쓰게 한다. */
+@media (max-width: 1200px) {
+  .recent-grid--tables {
     grid-template-columns: 1fr;
   }
+}
+
+/* 카드 폭을 넘지 않도록 고정 레이아웃으로 두고, 셀 내용은 …로 자른다. */
+.recent-grid--tables .history-table {
+  table-layout: fixed;
+}
+.recent-grid--tables .history-table th,
+.recent-grid--tables .history-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 2. 카드 내부를 flex 구조로 만들어 내용물이 늘어나도 스크롤 영역이 잡히도록 함 */
