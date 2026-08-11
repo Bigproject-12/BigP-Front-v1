@@ -79,24 +79,30 @@
   margin-top: 4px;
   padding-top: 4px;
 }
+/* 조직(organization)은 레포보다 상위 분류이므로 글자를 아래 항목(14px)보다 크게 잡는다.
+   기존에는 caption(13px)이라 오히려 작아서 하위 항목처럼 보였다. */
 .repo-switcher__label {
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 8px 4px;
-  color: var(--text-muted);
+  gap: 7px;
+  padding: 9px 8px 6px;
+  color: var(--text-secondary, var(--text-primary));
   background: var(--surface-card);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
   font-weight: 600;
+  letter-spacing: -0.2px;
 }
 .repo-switcher__item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px;
+  /* 왼쪽만 더 들여써서 조직 아래에 속한 항목임을 드러낸다. */
+  padding: 8px 8px 8px 16px;
   border: none;
   border-radius: var(--radius-sm);
   background: none;

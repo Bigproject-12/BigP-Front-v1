@@ -164,8 +164,8 @@ export default function RepoSwitcher({ repo, targetPage = 'repo-detail' }) {
             ) : (
               groups.map(([org, list]) => (
                 <div key={org} className="repo-switcher__group">
-                  <div className="repo-switcher__label text-caption-md">
-                    <Icon name="folder" size={12} />
+                  <div className="repo-switcher__label">
+                    <Icon name="organization" size={15} />
                     <span>{org}</span>
                   </div>
                   {list.map(renderItem)}
