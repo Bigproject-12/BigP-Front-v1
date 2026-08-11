@@ -53,22 +53,29 @@ export default function PrCreateModal({ analysisIds, repoId, headBranch, default
     setCreating(true);
     setError('');
     try {
-      if (analysisIds.length === 1) {
-        const result = await api.post(`/api/analysis/${analysisIds[0]}/pr`, {
-          baseBranch,
-          title,
-          body,
-        });
-        onCreated(result.prUrl);
-      } else {
-        const result = await api.post('/api/analysis/batch-pull-request', {
-          analysisIds,
-          baseBranch,
-          title,
-          body,
-        });
-        onCreated(result.pullRequestUrl);
+      // 단건은 { prUrl }, 배치는 { pullRequestUrl } 로 키 이름이 다르다.
+      const isSingle = analysisIds.length === 1;
+      const result = isSingle
+        ? await api.post(`/api/analysis/${analysisIds[0]}/pr`, { baseBranch, title, body })
+        : await api.post('/api/analysis/batch-pull-request', {
+            analysisIds,
+            baseBranch,
+            title,
+            body,
+          });
+
+      // 두 키를 모두 받아본다. 응답 형태가 바뀌어도 링크를 놓치지 않기 위함.
+      const prUrl = result?.prUrl ?? result?.pullRequestUrl ?? result?.url;
+      if (!prUrl) {
+        // URL을 못 찾으면 조용히 닫지 말고 알린다.
+        // 그냥 닫히면 "PR은 만들어졌는데 링크가 안 뜬다"로 보여 원인 파악이 어렵다.
+        setError(
+          'PR 요청은 성공했지만 응답에서 PR 주소를 찾지 못했습니다. ' +
+            `응답 내용: ${JSON.stringify(result)}`
+        );
+        return;
       }
+      onCreated(prUrl);
     } catch (e) {
       setError(e.message || 'PR 생성에 실패했습니다.');
     } finally {
@@ -82,10 +89,25 @@ export default function PrCreateModal({ analysisIds, repoId, headBranch, default
       onClose={onClose}
       actions={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={creating}>
+          {/* onMouseDown 기본동작(포커스 이동)을 막는다.
+              이걸 막지 않으면 편집 중에 이 버튼을 누를 때 textarea에서 포커스가 빠져
+              아래 handleEditBlur가 먼저 실행되고, 편집 화면이 미리보기로 되돌아갔다가
+              클릭이 처리되면서 '입력한 내용이 사라졌다가 닫히는' 것처럼 보인다.
+              (입력값 자체는 title/body state에 남아 있어 실제로는 그대로 전송된다) */}
+          <Button
+            variant="secondary"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onClose}
+            disabled={creating}
+          >
             취소
           </Button>
-          <Button variant="primary" onClick={handleCreate} disabled={creating || !baseBranch}>
+          <Button
+            variant="primary"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleCreate}
+            disabled={creating || !baseBranch}
+          >
             {creating ? '생성 중…' : '생성'}
           </Button>
         </>
