@@ -7,6 +7,21 @@ import Select from '../ui/Select';
 import Icon from '../icons/Icon';
 import '../../pages/AnalyzePage.css';
 
+// 백엔드 에러 코드를 사용자 언어로 다시 쓴다.
+// 백엔드 기본 문구는 원인을 그대로 옮긴 편이라, 무엇을 하면 되는지가 드러나지 않는다.
+// (백엔드 수정이 어려운 단계라 프론트에서 바꾼다. code는 api.js가 error.code로 실어 보낸다.)
+const ERROR_MESSAGES = {
+  GITHUB_PR_ALREADY_OPEN:
+    '같은 브랜치로 열려 있는 Pull Request가 이미 있습니다. 새로 만드는 대신 GitHub에서 기존 PR을 확인해 주세요.',
+  GITHUB_PR_ALREADY_CREATED:
+    '이 분석 결과로 만든 Pull Request가 이미 있습니다. GitHub에서 기존 PR을 확인해 주세요.',
+  GITHUB_PR_SAME_BRANCH:
+    '분석한 브랜치와 대상(base) 브랜치가 같습니다. 위에서 다른 base 브랜치를 선택해 주세요.',
+  GITHUB_PR_HEAD_MISMATCH:
+    'Push 이후 브랜치가 변경되어 Pull Request를 만들 수 없습니다. 최신 코드로 다시 분석한 뒤 시도해 주세요.',
+  ANALYSIS_NOT_COMPLETED: '완료된 분석만 Pull Request로 만들 수 있습니다.',
+};
+
 // 코드 분석 페이지의 "Pull Request 생성" 모달과 동일한 흐름(base 브랜치 선택 + 제목/설명 편집)을
 // 단건/다건 분석 어디서든(예: Push 탭의 단일·다중 push) 재사용하기 위한 컴포넌트.
 // analysisIds가 1개면 단건 PR API, 여러 개면 배치 PR API를 호출한다.
@@ -77,7 +92,7 @@ export default function PrCreateModal({ analysisIds, repoId, headBranch, default
       }
       onCreated(prUrl);
     } catch (e) {
-      setError(e.message || 'PR 생성에 실패했습니다.');
+      setError(ERROR_MESSAGES[e.code] ?? e.message ?? 'PR 생성에 실패했습니다.');
     } finally {
       setCreating(false);
     }
