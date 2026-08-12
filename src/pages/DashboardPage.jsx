@@ -37,13 +37,28 @@ const PR_STATUS_LABEL = {
   CLOSED: { label: '닫힘', variant: 'neutral' },
 };
 
-function deltaProps(rate) {
+/**
+ * 증감률을 StatCard용 props로 변환한다.
+ *
+ * 색(deltaTone)은 '올랐는지'가 아니라 '좋은 소식인지'를 뜻한다.
+ * 지표마다 증가의 의미가 반대라서 방향만으로는 정할 수 없다.
+ *   - 이슈 건수: 늘어나면 악재  → higherIsBetter = false
+ *   - 품질 점수: 오르면 호재    → higherIsBetter = true
+ *   - 분석 건수: 많이 돌렸다고 좋은 것도, 적게 돌렸다고 나쁜 것도 아님 → null(중립, 회색)
+ *
+ * @param {number}        rate           증감률 또는 증감폭
+ * @param {boolean|null}  higherIsBetter 증가가 호재면 true, 악재면 false, 판단 불가면 null
+ * @param {string}        unit           표시 단위 ('%' | '점')
+ */
+function deltaProps(rate, higherIsBetter, unit = '%') {
   const rounded = Math.round(rate * 10) / 10;
-  if (rounded === 0) return { delta: '변화 없음', deltaDirection: 'up' };
-  return {
-    delta: `${rounded > 0 ? '+' : ''}${rounded}%`,
-    deltaDirection: rounded >= 0 ? 'up' : 'down',
-  };
+  if (rounded === 0) return { delta: '변화 없음', deltaTone: 'neutral' };
+
+  const delta = `${rounded > 0 ? '+' : ''}${rounded}${unit}`;
+  if (higherIsBetter === null) return { delta, deltaTone: 'neutral' };
+
+  const isGoodNews = rounded > 0 ? higherIsBetter : !higherIsBetter;
+  return { delta, deltaTone: isGoodNews ? 'good' : 'bad' };
 }
 
 export default function DashboardPage() {
@@ -141,28 +156,31 @@ const parsePrTitle = (title) => {
       <div className="stat-grid">
 
         
-        <StatCard icon="repo" 
-          label="연동 레포지토리" 
-          value={`${data.repositoryCount}개`} 
+        <StatCard
+          icon="repo"
+          label="연동 레포지토리"
+          value={`${data.repositoryCount}개`}
         />
+        {/* 분석을 많이 돌렸다고 좋은 것도, 적게 돌렸다고 나쁜 것도 아니므로 중립(회색) */}
         <StatCard
           icon="code"
           label="전체 분석 건수"
           value={`${data.totalAnalysisCount}건`}
-          {...deltaProps(data.comparison.analysisChangeRate)}
+          {...deltaProps(data.comparison.analysisChangeRate, null)}
         />
+        {/* 이슈는 늘어나면 악재 → 증가가 빨강, 감소가 초록 */}
         <StatCard
           icon="bug"
           label="전체 이슈 건수"
           value={`${data.totalIssueCount}건`}
-          {...deltaProps(data.comparison.issueChangeRate)}
+          {...deltaProps(data.comparison.issueChangeRate, false)}
         />
+        {/* 품질 점수는 오르면 호재 */}
         <StatCard
           icon="score"
           label="평균 품질 점수"
           value={`${qualityScore}점`}
-          delta={`${qualityChange > 0 ? '+' : ''}${qualityChange}점`}
-          deltaDirection={qualityChange >= 0 ? 'up' : 'down'}
+          {...deltaProps(qualityChange, true, '점')}
         />
       </div>
 

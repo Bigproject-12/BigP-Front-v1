@@ -32,43 +32,37 @@ function rangeEndingAt(to) {
   return { from: toISODate(from), to };
 }
 
-function rateDeltaProps(rate) {
-  const rounded = Math.round(rate * 10) / 10;
-  if (rounded === 0) return { delta: '변화 없음', deltaDirection: 'up' };
-  return {
-    delta: `${rounded > 0 ? '+' : ''}${rounded}%`,
-    deltaDirection: rounded >= 0 ? 'up' : 'down',
-  };
+/**
+ * 증감을 StatCard용 props로 변환한다. (대시보드의 deltaProps와 같은 규칙)
+ *
+ * 색(deltaTone)은 '올랐는지'가 아니라 '좋은 소식인지'를 뜻한다.
+ * 지표마다 증가의 의미가 반대라 방향만으로는 정할 수 없어, 호출부에서 지정한다.
+ *
+ * @param {number}       value          증감 값
+ * @param {boolean|null} higherIsBetter 증가가 호재면 true, 악재면 false, 판단 불가면 null(회색)
+ * @param {string}       unit           표시 단위
+ */
+function buildDeltaProps(value, higherIsBetter, unit) {
+  if (value == null) return {};
+  const rounded = Math.round(Number(value) * 10) / 10;
+  if (rounded === 0) return { delta: '변화 없음', deltaTone: 'neutral' };
+
+  const delta = `${rounded > 0 ? '+' : ''}${rounded}${unit}`;
+  if (higherIsBetter === null) return { delta, deltaTone: 'neutral' };
+
+  const isGoodNews = rounded > 0 ? higherIsBetter : !higherIsBetter;
+  return { delta, deltaTone: isGoodNews ? 'good' : 'bad' };
 }
 
-function scoreDeltaProps(change) {
-  if (change == null) return {};
-  const rounded = Math.round(change * 10) / 10;
-  if (rounded === 0) return { delta: '변화 없음', deltaDirection: 'up' };
-  return {
-    delta: `${rounded > 0 ? '+' : ''}${rounded}점`,
-    deltaDirection: rounded >= 0 ? 'up' : 'down',
-  };
-}
-
-function issueDeltaProps(change) {
-  if (change == null) return {};
-  if (change === 0) return { delta: '변화 없음', deltaDirection: 'up' };
-  return {
-    delta: `${change > 0 ? '+' : ''}${change}건`,
-    deltaDirection: change < 0 ? 'up' : 'down',
-  };
-}
-
-function ratioDeltaProps(change) {
-  if (change == null) return {};
-  const rounded = Math.round(Number(change) * 10) / 10;
-  if (rounded === 0) return { delta: '변화 없음', deltaDirection: 'up' };
-  return {
-    delta: `${rounded > 0 ? '+' : ''}${rounded}%p`,
-    deltaDirection: rounded >= 0 ? 'up' : 'down',
-  };
-}
+// 분석 건수: 많이 돌렸다고 좋은 것도, 적게 돌렸다고 나쁜 것도 아니므로 중립
+const analysisDeltaProps = (rate) => buildDeltaProps(rate, null, '%');
+// 이슈: 늘어나면 악재
+const issueRateDeltaProps = (rate) => buildDeltaProps(rate, false, '%');
+const issueCountDeltaProps = (change) => buildDeltaProps(change, false, '건');
+// 품질 점수: 오르면 호재
+const scoreDeltaProps = (change) => buildDeltaProps(change, true, '점');
+// 개선 가능률: 높을수록 고칠 게 많다는 뜻이라 악재로 본다
+const ratioDeltaProps = (change) => buildDeltaProps(change, false, '%p');
 
 // const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
 const RISK_DONUT_CARD_HEIGHT = 360;
@@ -278,13 +272,13 @@ function MySpaceOverview({ overview, loading, error }) {
               icon="code"
               label="분석 건수"
               value={`${overview.totalAnalysisCount}건`}
-              {...rateDeltaProps(overview.comparison.analysisChangeRate)}
+              {...analysisDeltaProps(overview.comparison.analysisChangeRate)}
             />
             <StatCard
               icon="bug"
               label="이슈 건수"
               value={`${overview.totalIssueCount}건`}
-              {...rateDeltaProps(overview.comparison.issueChangeRate)}
+              {...issueRateDeltaProps(overview.comparison.issueChangeRate)}
             />
             <StatCard
               icon="score"
@@ -484,7 +478,7 @@ function MySpaceRepoView({ repoId, branch }) {
               icon="bug"
               label="이슈 수"
               value={`${summary.totalIssueCount}건`}
-              {...issueDeltaProps(summary.comparison.totalIssueChange)}
+              {...issueCountDeltaProps(summary.comparison.totalIssueChange)}
             />
             <StatCard
               icon="arrowUp"
