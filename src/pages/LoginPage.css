@@ -33,16 +33,16 @@
 
 .login-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 462px;
   margin-left: auto;
-  margin-right: 130px;
+  margin-right: 150px;
   margin-bottom: 100px;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
   background: #ffffff;
   border-radius: var(--radius-lg);
-  padding: 40px;
+  padding: 50px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
 }
 :root[data-theme='dark'] .login-card {
