@@ -8,9 +8,9 @@
 
 :root {
   /* ---- brand & accent (fixed across themes) ---- */
-  --ps-primary: #0070d1;
-  --ps-primary-pressed: #0064b7;
-  --ps-primary-active: #004d8d;
+  --ps-primary: #1B3A8C;
+  --ps-primary-pressed: #16307A;
+  --ps-primary-active: #122868;
   --ps-on-primary: #ffffff;
   --ps-warning: #c81b3a;
   --ps-good: #1baf7a;
