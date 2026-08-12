@@ -40,7 +40,7 @@ function PrivacyPolicyText() {
       <h2>2. 처리하는 개인정보의 항목</h2>
       <p>GuardrAil은(는) 회원 가입 및 서비스 제공을 위해 다음의 개인정보 항목을 정보주체의 동의를 받아 처리하고 있습니다.</p>
       <ul>
-        <li><strong>수집 항목:</strong> 이름, 기업명, Git ID, 이메일, 비밀번호</li>
+        <li><strong>수집 항목:</strong> 이름, 기업명, 이메일, 비밀번호</li>
         <li><strong>법적 근거:</strong> 「개인정보 보호법」 제15조제1항제1호(동의)</li>
       </ul>
       <br />
@@ -286,7 +286,7 @@ function LoginForm({ onSwitchTab }) {
 
 function SignupForm({ onSwitchTab }) {
   const { signup } = useAuth();
-  const [form, setForm] = useState({ name: '', companyName: '', gitId: '', loginId: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', companyName: '', loginId: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -302,7 +302,6 @@ function SignupForm({ onSwitchTab }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) return setError('이름을 입력해주세요.');
-    if (!form.gitId.trim()) return setError('Git ID를 입력해주세요.');
     if (!EMAIL_RE.test(form.loginId)) return setError('올바른 이메일 형식(@)을 입력해주세요.');
     const passwordError = validatePassword(form.password);
     if (passwordError) return setError(passwordError);
@@ -317,6 +316,7 @@ function SignupForm({ onSwitchTab }) {
     if (!policyAgreed) return; // 버튼 disabled 처리로 방어하지만 이중 체크
     
     setShowPolicyModal(false);
+    setPolicyAgreed(false);
     setSubmitting(true);
     try {
       await signup(form);
@@ -347,7 +347,6 @@ function SignupForm({ onSwitchTab }) {
         </button>
         <Input label="이름" value={form.name} onChange={set('name')} placeholder="홍길동" />
         <Input label="기업명" value={form.companyName} onChange={set('companyName')} placeholder="AIVLE" />
-        <Input label="Git ID" value={form.gitId} onChange={set('gitId')} placeholder="github-username" />
         <Input label="이메일" type="email" value={form.loginId} onChange={set('loginId')} placeholder="you@company.com" />
 
         <Input
@@ -377,7 +376,7 @@ function SignupForm({ onSwitchTab }) {
               <span>개인정보 수집 및 이용에 동의합니다. (필수)</span>
             </label>
             <div className="privacy-modal-actions">
-              <Button type="button" variant="ghost" onClick={() => setShowPolicyModal(false)}>취소</Button>
+              <Button type="button" variant="ghost" onClick={() => { setShowPolicyModal(false); setPolicyAgreed(false); }}>취소</Button>
               <Button type="button" variant="primary" onClick={handleFinalSubmit} disabled={!policyAgreed}>
                 동의하고 가입하기
               </Button>

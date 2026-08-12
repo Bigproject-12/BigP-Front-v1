@@ -124,7 +124,6 @@ export default function MyPage() {
   const { alertDialog } = useConfirm();
 
   const [name, setName] = useState(user?.name || '');
-  const [gitId, setGitId] = useState(user?.gitName || '');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
@@ -163,7 +162,6 @@ export default function MyPage() {
 
   useEffect(() => {
     setName(user?.name || '');
-    setGitId(user?.gitName || '');
   }, [user]);
 
   // 깃허브 등록 부분까지 스크롤되는 기능
@@ -178,11 +176,10 @@ export default function MyPage() {
 
   if (!user) return null;
 
-  const isDirty = name !== user.name || gitId !== user.gitName;
+  const isDirty = name !== user.name;
 
   const handleCancel = () => {
     setName(user.name);
-    setGitId(user.gitName);
     setBanner(null);
   };
 
@@ -190,7 +187,7 @@ export default function MyPage() {
     setSaving(true);
     setBanner(null);
     try {
-      await persistUser({ name, gitId });
+      await persistUser({ name });
       setBanner({ type: 'success', text: '회원정보가 저장되었습니다.' });
     } catch (err) {
       setBanner({ type: 'error', text: err.message });
@@ -259,7 +256,7 @@ export default function MyPage() {
             </Button>
           </div>
 
-          <Input label="Git ID" value={gitId} onChange={(e) => setGitId(e.target.value)} placeholder="github-username" />
+          <Input label="Git 계정명" value={user.gitName ?? ''} readOnly disabled hint="GitHub 연동 시 자동으로 채워집니다." />
 
           {banner && <div className={`ui-banner ui-banner--${banner.type}`}>{banner.text}</div>}
 

@@ -81,7 +81,7 @@ export function AuthProvider({ children }) {
     sessionStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     const user = { id: data.userId, name: data.name, role: data.role, loginId };
     setUser(user);
-    // gitId, companyName 등 나머지 프로필 정보는 화면 전환을 막지 않고 백그라운드에서 채운다.
+    // companyName 등 나머지 프로필 정보는 화면 전환을 막지 않고 백그라운드에서 채운다.
     fetch(`${API_BASE}/api/users/me`, {
       headers: { Authorization: `Bearer ${data.accessToken}` },
     })
@@ -93,13 +93,13 @@ export function AuthProvider({ children }) {
     return user;
   }, []);
 
-  const signup = useCallback(async ({ loginId, password, confirm, name, companyName, gitId }) => {
+  const signup = useCallback(async ({ loginId, password, confirm, name, companyName }) => {
     let res;
     try {
       res = await fetch(`${API_BASE}/api/users/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName, gitId }),
+      body: JSON.stringify({ loginId, password, passwordConfirm: confirm, name, companyName }),
     });
     } catch {
       throw new Error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
