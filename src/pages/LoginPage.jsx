@@ -89,8 +89,8 @@ function PrivacyPolicyText() {
         및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.
       </p>
       <ul>
-        <li><strong>개인정보 보호책임자:</strong> [성명/직위 입력]</li>
-        <li><strong>연락처:</strong> [전화번호], [이메일 주소]</li>
+        <li><strong>개인정보 보호책임자:</strong> [조현우/개인정보 보호책임자]</li>
+        <li><strong>연락처:</strong> [010-8304-5350], [robert1215@naver.com]</li>
       </ul>
     </>
   );
