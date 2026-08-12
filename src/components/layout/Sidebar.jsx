@@ -7,7 +7,7 @@ import './layout.css';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'HOME', icon: 'home', to: '?page=dashboard' },
-  { key: 'myspace', label: 'My Space', icon: 'spark', to: '?page=myspace' },
+  { key: 'myspace', label: 'My Space', icon: 'profile', to: '?page=myspace' },
   { key: 'analyze', label: '코드 분석', icon: 'code', to: '/Analyze' },
   { key: 'repolist', label: 'Repository 목록', icon: 'repo', to: '?page=repolist' },
   { key: 'board', label: '게시판', icon: 'board', to: '?page=board' },

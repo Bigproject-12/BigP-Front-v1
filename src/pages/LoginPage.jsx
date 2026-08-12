@@ -6,25 +6,12 @@ import { api } from '../lib/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
+import logoDark from '../assets/icons/logo2-login-dark.png';
+import logoLight from '../assets/icons/logo2-light.png';
 import { validatePassword, PASSWORD_HINT } from '../lib/passwordPolicy';
 import './LoginPage.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-
-function FeatureRow({ icon, title, desc }) {
-  return (
-    <div className="login-intro__feature">
-      <span className="login-intro__feature-icon">
-        <Icon name={icon} size={16} />
-      </span>
-      <div className="login-intro__feature-text">
-        <strong>{title}</strong>
-        <span>{desc}</span>
-      </div>
-    </div>
-  );
-}
 
 function PrivacyPolicyText() {
   return (
@@ -557,6 +544,7 @@ function ResetPasswordForm({ email, onSwitchTab }) {
 export default function LoginPage() {
   const { params, navigate } = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const logoIcon = theme === 'dark' ? logoDark : logoLight;
   const tab = params.get('tab');
   const activeTab = ['login', 'signup', 'find-password', 'reset-password'].includes(tab) ? tab : 'login';
   const [footerModal, setFooterModal] = useState(null); // 'privacy' | 'terms' | null
@@ -574,37 +562,24 @@ export default function LoginPage() {
         aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
         onClick={toggleTheme}
       >
-        <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+        <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={18} />
       </Button>
-      <div className="login-intro">
-        <span className="login-intro__mark">
-          <Icon name="spark" size={24} />
-        </span>
-        <h1>안전한 코드를, 더 빠르게. GuardrAil.</h1>
-        <p>
-          GuardrAil은 저장소에 연결된 코드를 자동으로 분석해 보안 취약점과 비효율을 찾아내고,
-          개선된 코드와 PR까지 자동으로 제안하는 코드 품질 플랫폼입니다.
-        </p>
-        <div className="login-intro__features">
-          <FeatureRow icon="bug" title="정적 분석 기반 취약점 탐지" desc="SQL Injection, 시크릿 노출 등 보안 이슈를 자동 탐지합니다." />
-          <FeatureRow icon="code" title="개선 코드 자동 제안" desc="원본과 개선 코드를 나란히 비교하고 개선 사유를 설명합니다." />
-          <FeatureRow icon="pr" title="자동 PR 생성" desc="분석 결과를 바탕으로 개선 브랜치와 PR을 자동으로 생성합니다." />
-        </div>
-      </div>
 
-      <div className="login-panel">
-        <div className="login-card">
-          {activeTab === 'login' && <LoginForm onSwitchTab={switchTab} />}
-          {activeTab === 'signup' && <SignupForm onSwitchTab={switchTab} />}
-          {activeTab === 'find-password' && <FindPasswordForm onSwitchTab={switchTab} />}
-          {activeTab === 'reset-password' && <ResetPasswordForm email={params.get('email')} onSwitchTab={switchTab} />}
-
-          <footer className="login-shell__footer">
-            <button type="button" onClick={() => setFooterModal('privacy')}>개인정보처리방침</button>
-            <span>|</span>
-            <button type="button" onClick={() => setFooterModal('terms')}>이용약관</button>
-          </footer>
+      <div className="login-card">
+        <div className="login-card__brand">
+          <img src={logoIcon} alt="" className="login-card__brand-mark" />
+          <span className="login-card__brand-text">GuardrAil</span>
         </div>
+        {activeTab === 'login' && <LoginForm onSwitchTab={switchTab} />}
+        {activeTab === 'signup' && <SignupForm onSwitchTab={switchTab} />}
+        {activeTab === 'find-password' && <FindPasswordForm onSwitchTab={switchTab} />}
+        {activeTab === 'reset-password' && <ResetPasswordForm email={params.get('email')} onSwitchTab={switchTab} />}
+
+        <footer className="login-shell__footer">
+          <button type="button" onClick={() => setFooterModal('privacy')}>개인정보처리방침</button>
+          <span>|</span>
+          <button type="button" onClick={() => setFooterModal('terms')}>이용약관</button>
+        </footer>
       </div>
 
       {footerModal === 'privacy' && (

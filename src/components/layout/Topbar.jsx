@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { TOKEN_KEY } from '../../lib/api';
 import Icon from '../icons/Icon';
 import Button from '../ui/Button';
+import logoDark from '../../assets/icons/logo2-dark.png';
+import logoLight from '../../assets/icons/logo2-light.png';
 import './layout.css';
 
 function timeAgo(iso) {
@@ -28,6 +30,7 @@ const NOTIFICATION_API = `${import.meta.env.VITE_API_BASE}/api/notification`;
 export default function Topbar() {
   const { navigate } = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const logoIcon = theme === 'dark' ? logoDark : logoLight;
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen] = useState(false);
@@ -131,8 +134,8 @@ const handleNotificationClick = async (n) => {
   return (
     <header className="gr-topbar">
       <button className="gr-topbar__logo" onClick={() => navigate('?page=dashboard')}>
-        <span className="gr-sidebar__logo-mark"><Icon name="spark" size={18} /></span>
-        <span className="gr-sidebar__logo-text">GuardrAil</span>
+        <span className="gr-sidebar__logo-mark"><img src={logoIcon} alt="" style={{ height: 35, width: 'auto', borderRadius: 6 }} /></span>
+        <span className="gr-sidebar__logo-text text-heading-md">GuardrAil</span>
       </button>
 
       <div className="gr-topbar__bell-wrap" ref={panelRef}>
@@ -196,7 +199,7 @@ const handleNotificationClick = async (n) => {
         aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
         onClick={toggleTheme}
       >
-        <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+        <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={18} />
       </Button>
     
       <div className="toast-stack">
