@@ -33,11 +33,11 @@
 
 /* Topbar 로고에서도 재사용하는 스타일 */
 .gr-sidebar__logo-mark {
-  width: 32px;
+  width: auto;
   height: 32px;
   border-radius: var(--radius-md);
-  background: var(--ps-primary);
-  color: #fff;
+  background: none;
+  color: #1B3A8C;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,7 +123,7 @@
   text-decoration: none;
 }
 .gr-nav-item--active {
-  background: rgba(0, 112, 209, 0.14);
+  background: rgba(27, 58, 140, 0.14);
   color: var(--ps-primary);
   font-weight: 700;
 }
@@ -251,7 +251,7 @@
 .gr-topbar__logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   background: none;
   border: none;
   cursor: pointer;
