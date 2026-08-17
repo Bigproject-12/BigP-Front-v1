@@ -7,6 +7,7 @@ import { RepoProvider } from './context/RepoContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import AboutPage from './pages/AboutPage';
 import DashboardPage from './pages/DashboardPage';
 import MySpacePage from './pages/MySpacePage';
 import AnalyzePage from './pages/AnalyzePage';
@@ -41,7 +42,7 @@ function AppRoutes() {
 
   useEffect(() => {
     if (initializing) return;
-    if (!user && page !== 'login') {
+    if (!user && page !== 'login' && page !== 'about') {
       navigate('?page=login', { replace: true });
       return;
     }
@@ -57,6 +58,7 @@ function AppRoutes() {
   if (initializing) return null;
 
   if (!user) {
+    if (page === 'about') return <AboutPage />;
     return page === 'login' ? <LoginPage /> : null;
   }
 
