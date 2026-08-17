@@ -575,6 +575,8 @@ export default function LoginPage() {
         {activeTab === 'reset-password' && <ResetPasswordForm email={params.get('email')} onSwitchTab={switchTab} />}
 
         <footer className="login-shell__footer">
+          <button type="button" onClick={() => navigate('?page=about')}>About Us</button>
+          <span>|</span>
           <button type="button" onClick={() => setFooterModal('privacy')}>개인정보처리방침</button>
           <span>|</span>
           <button type="button" onClick={() => setFooterModal('terms')}>이용약관</button>
