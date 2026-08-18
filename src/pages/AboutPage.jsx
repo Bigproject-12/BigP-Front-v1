@@ -191,18 +191,18 @@ export default function AboutPage() {
   const { navigate } = useRouter();
   const { theme, toggleTheme } = useTheme();
   const logoIcon = theme === 'dark' ? logoDark : logoLight;
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="about-shell">
       <header className="about-header">
-        <button
-          type="button"
-          className="ui-btn ui-btn--ghost about-header__back"
-          onClick={() => navigate('?page=login')}
-        >
-          <Icon name="chevronLeft" size={16} />
-          로그인으로 돌아가기
-        </button>
+        <span className="about-header__spacer" aria-hidden="true" />
 
         <div className="about-header__brand">
           <img src={logoIcon} alt="" className="about-header__brand-mark" />
@@ -254,6 +254,17 @@ export default function AboutPage() {
       <footer className="about-footer">
         <span className="text-caption-md">© {new Date().getFullYear()} GuardrAil</span>
       </footer>
+
+      {showTop && (
+        <Button
+          variant="icon"
+          className="about-scroll-top"
+          aria-label="맨 위로 이동"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <Icon name="arrowUp" size={18} />
+        </Button>
+      )}
     </div>
   );
 }

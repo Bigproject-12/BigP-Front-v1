@@ -43,7 +43,7 @@ function AppRoutes() {
   useEffect(() => {
     if (initializing) return;
     if (!user && page !== 'login' && page !== 'about') {
-      navigate('?page=login', { replace: true });
+      navigate('?page=about', { replace: true });
       return;
     }
     if (user && (page === 'login' || !page)) {
