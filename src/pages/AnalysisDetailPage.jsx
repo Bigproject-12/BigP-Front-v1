@@ -34,7 +34,7 @@ function getConfidenceLevel(probability) {
 }
 
 export default function AnalysisDetailPage() {
-  const { params } = useRouter();
+  const { params, navigate } = useRouter();
   const { confirm } = useConfirm();
   const analysisId = params.get('analysisId');
   const [data, setData] = useState(null);
@@ -304,14 +304,28 @@ export default function AnalysisDetailPage() {
 
       <Card style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-          <span style={{ color: 'var(--link)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          {/* 레포 이름만 실제로 눌린다 → 해당 레포의 히스토리로 이동.
+              중간 폴더 경로는 이동할 화면이 없으므로 링크색을 쓰지 않는다.
+              (이전에는 폴더도 링크색이라 눌리는 줄 알고 클릭하게 됐다) */}
+          {data.repoId ? (
+            <button
+              type="button"
+              className="analysis-detail__repo-link"
+              onClick={() => navigate(`?page=repo-detail&repoId=${data.repoId}`)}
+              title={`${data.repoName} 히스토리로 이동`}
+            >
+              {data.repoName ?? 'Unknown'}
+            </button>
+          ) : (
+            <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          )}
           <span style={{ color: 'var(--text-muted)' }}>/</span>
 
           {pathParts.length > 0 ? (
             pathParts.map((part, index) => (
               <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{
-                  color: index === pathParts.length - 1 ? 'var(--text-primary)' : 'var(--link)',
+                  color: index === pathParts.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)',
                   fontWeight: index === pathParts.length - 1 ? '600' : 'normal'
                 }}>
                   {part}

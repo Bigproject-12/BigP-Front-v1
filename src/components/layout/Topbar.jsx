@@ -127,7 +127,10 @@ const handleNotificationClick = async (n) => {
       if (n.type === 'ANNOUNCEMENT' && n.boardId) {
         navigate(`?page=board&postId=${n.boardId}`);
       } else if (n.type === 'ANALYSIS_COMPLETE' && n.analysisId) {
-        navigate(`/Analyze?analysisId=${n.analysisId}`); // 👈 이 부분을 수정
+        // Repository 목록 → 히스토리 → 분석 클릭과 같은 화면으로 보낸다.
+        // 코드 분석 페이지(/Analyze)는 '분석을 실행하는' 화면이라
+        // 완료된 결과를 들고 들어가면 Push 버튼이 바로 나오지 않는 경우가 있다.
+        navigate(`?page=analysis-detail&analysisId=${n.analysisId}`);
       }
     };
 

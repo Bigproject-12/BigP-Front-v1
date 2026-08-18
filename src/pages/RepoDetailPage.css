@@ -1,3 +1,18 @@
+/* 분석 결과 화면의 브레드크럼에서 레포 이름만 실제 링크로 동작한다.
+   버튼 기본 스타일을 지워 주변 텍스트와 같은 크기·굵기로 보이게 한다. */
+.analysis-detail__repo-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  color: var(--link);
+  cursor: pointer;
+}
+.analysis-detail__repo-link:hover {
+  text-decoration: underline;
+}
+
 .repo-detail__head {
   display: flex;
   align-items: center;
