@@ -3,6 +3,7 @@ import { useRouter } from '../../router/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { TOKEN_KEY } from '../../lib/api';
+import { parseServerDate } from '../../lib/format';
 import Icon from '../icons/Icon';
 import Button from '../ui/Button';
 import logoDark from '../../assets/icons/logo2-dark.png';
@@ -10,7 +11,7 @@ import logoLight from '../../assets/icons/logo2-light.png';
 import './layout.css';
 
 function timeAgo(iso) {
-  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMs = Date.now() - parseServerDate(iso).getTime();
   const mins = Math.round(diffMs / 60000);
   if (mins < 1) return '방금 전';
   if (mins < 60) return `${mins}분 전`;

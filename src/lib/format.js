@@ -1,10 +1,19 @@
+// 서버가 타임존 오프셋 없이(예: LocalDateTime 직렬화) UTC 시각을 내려주면
+// 브라우저는 이를 로컬(KST) 시각으로 오인해 파싱한다(9시간 오차 원인).
+// 오프셋(Z 또는 +09:00 등)이 없는 문자열만 UTC로 간주해 보정한다.
+export function parseServerDate(iso) {
+  if (!iso) return new Date(NaN);
+  const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(iso);
+  return new Date(hasTz ? iso : `${iso}Z`);
+}
+
 export function formatDate(iso) {
-  const d = new Date(iso);
+  const d = parseServerDate(iso);
   return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export function formatDateTime(iso) {
-  const d = new Date(iso);
+  const d = parseServerDate(iso);
   return d.toLocaleString('ko-KR', {
     year: 'numeric',
     month: '2-digit',
@@ -33,7 +42,7 @@ function startOfDay(date) {
  */
 export function formatDateTimeCompact(iso) {
   if (!iso) return '-';
-  const d = new Date(iso);
+  const d = parseServerDate(iso);
   if (Number.isNaN(d.getTime())) return '-';
 
   const now = new Date();
