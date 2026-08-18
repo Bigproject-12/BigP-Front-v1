@@ -304,9 +304,9 @@ export default function AnalysisDetailPage() {
 
       <Card style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-          {/* 레포 이름만 실제로 눌린다 → 해당 레포의 히스토리로 이동.
-              중간 폴더 경로는 이동할 화면이 없으므로 링크색을 쓰지 않는다.
-              (이전에는 폴더도 링크색이라 눌리는 줄 알고 클릭하게 됐다) */}
+          {/* 브레드크럼 색 규칙: 레포·중간 경로는 링크색, 마지막 파일명만 진한 색.
+              이 중 실제로 눌리는 건 레포 이름뿐이다(→ 해당 레포 히스토리로 이동).
+              중간 폴더는 대응하는 화면이 없어 표시용으로만 둔다. */}
           {data.repoId ? (
             <button
               type="button"
@@ -325,7 +325,7 @@ export default function AnalysisDetailPage() {
             pathParts.map((part, index) => (
               <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{
-                  color: index === pathParts.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)',
+                  color: index === pathParts.length - 1 ? 'var(--text-primary)' : 'var(--link)',
                   fontWeight: index === pathParts.length - 1 ? '600' : 'normal'
                 }}>
                   {part}
