@@ -34,7 +34,7 @@ function getConfidenceLevel(probability) {
 }
 
 export default function AnalysisDetailPage() {
-  const { params } = useRouter();
+  const { params, navigate } = useRouter();
   const { confirm } = useConfirm();
   const analysisId = params.get('analysisId');
   const [data, setData] = useState(null);
@@ -304,7 +304,21 @@ export default function AnalysisDetailPage() {
 
       <Card style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-          <span style={{ color: 'var(--link)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          {/* 브레드크럼 색 규칙: 레포·중간 경로는 링크색, 마지막 파일명만 진한 색.
+              이 중 실제로 눌리는 건 레포 이름뿐이다(→ 해당 레포 히스토리로 이동).
+              중간 폴더는 대응하는 화면이 없어 표시용으로만 둔다. */}
+          {data.repoId ? (
+            <button
+              type="button"
+              className="analysis-detail__repo-link"
+              onClick={() => navigate(`?page=repo-detail&repoId=${data.repoId}`)}
+              title={`${data.repoName} 히스토리로 이동`}
+            >
+              {data.repoName ?? 'Unknown'}
+            </button>
+          ) : (
+            <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{data.repoName ?? 'Unknown'}</span>
+          )}
           <span style={{ color: 'var(--text-muted)' }}>/</span>
 
           {pathParts.length > 0 ? (

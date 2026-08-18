@@ -289,6 +289,15 @@ export default function AnalyzePage() {
         setOriginalCode(data.originCode || '');
         setImprovedCode(data.modifiedCode || '');
         
+        // 브랜치 복구. Push 후 PR 모달이 headBranch로 쓰고,
+        // 아래 Push 버튼 노출 조건에도 필요하다.
+        // filePath는 일부러 설정하지 않는다 — filePath가 채워지면
+        // "파일이 바뀌면 원본을 다시 불러오는" effect가 돌면서
+        // resetAnalysisOutput()으로 방금 불러온 분석 결과를 지워버린다.
+        if (data.branch) {
+          setBranch(data.branch);
+        }
+
         // 파일 경로 설정
         if (data.filePath) {
           setFileNameOverride(data.filePath.split('/').pop());
@@ -847,8 +856,11 @@ export default function AnalyzePage() {
                     <Button variant="primary" onClick={openPrModal} disabled={!!prUrl}>
                       {prUrl ? 'PR 생성 완료 ✓' : `PR 생성 (${branch})`}
                     </Button>
-                  ) : analyzed && pushAnalysisId && branch && filePath ? (
-                    /* 2) 분석 완료 & GitHub 파일 → Push */
+                  ) : analyzed && pushAnalysisId && branch && activeFileName ? (
+                    /* 2) 분석 완료 & GitHub 파일 → Push
+                       filePath 대신 activeFileName을 본다. 알림·히스토리로 들어온 경우
+                       filePath는 비어 있고 파일명만 fileNameOverride에 담기기 때문에,
+                       filePath로 판단하면 Push 버튼이 뜨지 않고 '분석하기'로 떨어진다. */
                     <Button variant="primary" onClick={handlepush} disabled={pushing}>
                       {pushing ? '반영 중 …' : 'GitHub에 Push'}
                     </Button>
