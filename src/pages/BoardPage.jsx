@@ -306,7 +306,9 @@ function BoardEditor({ postId, navigate }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(false);
-  const [files, setFiles] = useState([]); 
+  const [files, setFiles] = useState([]);
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [deleteFileIds, setDeleteFileIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(isEdit);
@@ -318,6 +320,7 @@ function BoardEditor({ postId, navigate }) {
         setTitle(post.title);
         setContent(post.content);
         setIsPinned(post.isPinned);
+        setExistingFiles(post.files || []);
         setLoading(false);
       });
     }
@@ -325,6 +328,11 @@ function BoardEditor({ postId, navigate }) {
 
   const handleFileChange = (e) => {
     setFiles(Array.from(e.target.files));
+  };
+
+  const handleRemoveExistingFile = (fileId) => {
+    setExistingFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+    setDeleteFileIds((prev) => [...prev, fileId]);
   };
 
   const handleSubmit = async (e) => {
@@ -342,7 +350,9 @@ function BoardEditor({ postId, navigate }) {
 
     try {
       const formData = new FormData();
-      const requestDto = { title, content, isPinned };
+      const requestDto = isEdit
+        ? { title, content, isPinned, deleteFileIds }
+        : { title, content, isPinned };
       formData.append(
         'request',
         new Blob([JSON.stringify(requestDto)], { type: 'application/json' })
@@ -353,11 +363,11 @@ function BoardEditor({ postId, navigate }) {
       });
 
       if (isEdit) {
-        await updateNotice(postId, requestDto);
+        await updateNotice(postId, formData);
         navigate(`?page=board&postId=${postId}`);
       } else {
-        const created = await createNotice(formData); 
-        navigate(`?page=board&postId=${created.boardId}`);   
+        const created = await createNotice(formData);
+        navigate(`?page=board&postId=${created.boardId}`);
       }
     } catch (err) {
       setError(err.message || '저장 중 오류가 명확하지 않습니다.');          
@@ -386,22 +396,35 @@ function BoardEditor({ postId, navigate }) {
                 placeholder="내용을 입력해주세요" />
             </div>
 
-            {!isEdit && (
-              <div className="ui-field">
-                <label className="ui-field__label">첨부파일</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  style={{ fontSize: '14px', padding: '4px 0' }}
-                />
-                {files.length > 0 && (
-                  <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
-                    선택된 파일: {files.map(f => f.name).join(', ')}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="ui-field">
+              <label className="ui-field__label">첨부파일</label>
+              {existingFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '4px' }}>
+                  {existingFiles.map((f) => (
+                    <span key={f.fileId} className="text-body-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+                      📎 {f.originalFileName}
+                      <button type="button" onClick={() => handleRemoveExistingFile(f.fileId)}
+                        aria-label="기존 파일 삭제"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}>
+                        <Icon name="close" size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                style={{ fontSize: '14px', padding: '4px 0' }}
+              />
+              {files.length > 0 && (
+                <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                  선택된 파일: {files.map(f => f.name).join(', ')}
+                </span>
+              )}
+            </div>
 
             <label className="ui-field" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <input type="checkbox" checked={isPinned}

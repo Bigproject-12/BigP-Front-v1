@@ -13,8 +13,9 @@ export default function MembersPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const data = await api.get('/api/users');
-        setMembers(data.content); // Page 객체라 실제 목록은 content 안에 있음
+        // Page 객체 기본 size=20이라 전체 인원이 다 안 나옴 → size를 크게 줘서 한 번에 전부 받아옴
+        const data = await api.get('/api/users?size=1000');
+        setMembers(data.content);
       } catch (err) {
         setError(err.message);
       } finally {
