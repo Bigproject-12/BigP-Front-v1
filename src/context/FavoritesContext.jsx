@@ -1,45 +1,45 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
+import { api } from '../lib/api';
 
 const FavoritesContext = createContext(null);
 
-/**
- * Holds the current user's favorited repos so the sidebar dropdown and the
- * repo list page stay in sync without either one re-fetching on the other's
- * toggle — the source of truth is json-server's `favorite` field per repo.
- */
 export function FavoritesProvider({ children }) {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState([]);
 
-  const refresh = useCallback(() => {
-    if (!user) {
+  const loadFavorites = useCallback(async () => {
+    try {
+      const data = await api.get('/api/favorites');
+      setFavorites(data ?? []);
+    } catch {
       setFavorites([]);
-      return;
     }
-    api
-      .get(`/repos?favorite=true&userId=${user.id}&_sort=updatedAt&_order=desc`)
-      .then(setFavorites)
-      .catch(() => setFavorites([]));
-  }, [user]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const toggleFavorite = useCallback(async (repo) => {
-    const updated = await api.patch(`/repos/${repo.id}`, { favorite: !repo.favorite });
-    setFavorites((prev) =>
-      updated.favorite ? [updated, ...prev.filter((r) => r.id !== updated.id)] : prev.filter((r) => r.id !== updated.id),
-    );
-    return updated;
   }, []);
 
-  const isFavorite = useCallback((repoId) => favorites.some((r) => r.id === repoId), [favorites]);
+  useEffect(() => {
+    if (!user) { setFavorites([]); return; }
+    loadFavorites();
+  }, [user?.id, loadFavorites]);
+
+  const isFavorite = useCallback(
+    (repoId) => favorites.some((r) => r.id === repoId),
+    [favorites]
+  );
+
+  const toggleFavorite = useCallback(async (repo) => {
+    const exists = favorites.some((r) => r.id === repo.id);
+    if (exists) {
+      await api.del(`/api/favorites/${repo.id}`);
+      setFavorites((prev) => prev.filter((r) => r.id !== repo.id));
+    } else {
+      await api.post(`/api/favorites/${repo.id}`);
+      setFavorites((prev) => [repo, ...prev]);
+    }
+  }, [favorites]);
 
   return (
-    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite, refresh }}>
+    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite }}>
       {children}
     </FavoritesContext.Provider>
   );

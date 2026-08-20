@@ -1,0 +1,193 @@
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dashboard-date-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 12px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+.dashboard-date-range input[type='date'] {
+  border: none;
+  background: transparent;
+  color: var(--text-body);
+  font: inherit;
+}
+.dashboard-date-range input[type='date']:focus {
+  outline: none;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+@media (max-width: 1100px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.status-chip-row {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--space-lg);
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.recent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  align-items: stretch;
+}
+/* 그리드 아이템은 기본값이 min-width:auto 라서, 안에 든 표의 min-content 너비
+   (예: 'Usermanager.java' 같이 끊을 수 없는 문자열) 아래로 줄어들지 않는다.
+   그 결과 창을 좁히면 카드가 안 줄고 페이지 자체에 가로 스크롤이 생긴다.
+   min-width:0 을 줘야 비로소 카드가 그리드 칸에 맞춰 줄어든다. */
+.recent-grid > * {
+  min-width: 0;
+}
+
+/* 아래 두 규칙은 대시보드의 '최근 분석 / 최근 PR' 카드에만 적용한다.
+   .recent-grid 는 MySpace 페이지도 함께 쓰는 공용 클래스라(MySpacePage.jsx가
+   이 파일을 import 한다) 수식 클래스로 한 번 더 좁혀야 한다. */
+
+/* 두 표 모두 컬럼이 4개라 2열로 나란히 두면 한 칸당 폭이 금방 부족해진다.
+   공용 브레이크포인트(900px)보다 이르게 1열로 접어 각 카드가 전체 폭을 쓰게 한다. */
+@media (max-width: 1200px) {
+  .recent-grid--tables {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 카드 폭을 넘지 않도록 고정 레이아웃으로 두고, 셀 내용은 …로 자른다. */
+.recent-grid--tables .history-table {
+  table-layout: fixed;
+}
+.recent-grid--tables .history-table th,
+.recent-grid--tables .history-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 2. 카드 내부를 flex 구조로 만들어 내용물이 늘어나도 스크롤 영역이 잡히도록 함 */
+.recent-grid .card, 
+.recent-grid .ui-card { /* 프로젝트에서 사용하는 카드 클래스명에 맞춰 조절 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. 테이블(리스트)을 감싸는 영역에 최대 높이와 스크롤 부여 */
+.recent-grid .table-scroll-container {
+  max-height: 380px; /* 원하는 최대 높이 (디자인에 맞게 조절 가능) */
+  overflow-y: auto;  /* 내용이 넘치면 세로 스크롤 생성 */
+  width: 100%;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.chart-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.style-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.style-summary__body {
+  color: var(--text-body);
+  line-height: 1.7;
+}
+
+/* 공통 아이콘 박스 기본 스타일 */
+.ui-stat__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+/* 1. 연동 레포지토리 (repo) - 파란색 계열 */
+.ui-stat__icon--repo {
+  background-color: #D6E8F8;
+  color: #1865B8;
+}
+
+/* 2. 전체 분석 건수 (code) - 초록색 계열 */
+.ui-stat__icon--code {
+  background-color: #DAF2EA;
+  color: #35B69C;
+}
+
+/* 3. 전체 이슈 건수 (bug) - 빨간색 계열 */
+.ui-stat__icon--bug {
+  background-color: #F7DFE3;
+  color: #BF2C53;
+}
+
+/* 4. 평균 품질 점수 (spark) - 보라색 계열 */
+.ui-stat__icon--score {
+  background-color: #EDE7F6;
+  color: #7C3AED;
+}
+
+/*다크모드일 경우 색상*/
+
+[data-theme='dark'] .ui-stat__icon--repo,
+.dark .ui-stat__icon--repo {
+  background-color: rgba(24, 101, 184, 0.25);
+  color: #60A5FA; /* 밝은 파랑 */
+}
+
+[data-theme='dark'] .ui-stat__icon--code,
+.dark .ui-stat__icon--code {
+  background-color: rgba(53, 182, 156, 0.25);
+  color: #4ADE80; /* 밝은 초록 */
+}
+
+[data-theme='dark'] .ui-stat__icon--bug,
+.dark .ui-stat__icon--bug {
+  background-color: rgba(191, 44, 83, 0.25);
+  color: #F87171; /* 밝은 빨강 */
+}
+
+[data-theme='dark'] .ui-stat__icon--score,
+.dark .ui-stat__icon--score {
+  background-color: rgba(124, 58, 237, 0.25);
+  color: #C084FC; /* 밝은 보라 */
+}
+

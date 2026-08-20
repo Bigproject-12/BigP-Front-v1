@@ -7,11 +7,13 @@ import './layout.css';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'HOME', icon: 'home', to: '?page=dashboard' },
-  { key: 'myspace', label: 'My Space', icon: 'spark', to: '?page=myspace' },
+  { key: 'myspace', label: 'My Space', icon: 'profile', to: '?page=myspace' },
   { key: 'analyze', label: '코드 분석', icon: 'code', to: '/Analyze' },
   { key: 'repolist', label: 'Repository 목록', icon: 'repo', to: '?page=repolist' },
   { key: 'board', label: '게시판', icon: 'board', to: '?page=board' },
+  { key: 'members', label: '회원 관리', icon: 'user', to: '?page=members', adminOnly: true },
 ];
+
 const NAV_ITEM_MAP = Object.fromEntries(NAV_ITEMS.map((item) => [item.key, item]));
 const DEFAULT_ORDER = NAV_ITEMS.map((item) => item.key);
 
@@ -36,11 +38,19 @@ export default function Sidebar() {
   const { page, params, navigate } = useRouter();
   const { logout, user } = useAuth();
   const { favorites } = useFavorites();
-  const [favOpen, setFavOpen] = useState(false);
+  const [favOpen, setFavOpen] = useState(true);
   const [order, setOrder] = useState(DEFAULT_ORDER);
   const [draggedKey, setDraggedKey] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const activeRepoId = params.get('repoId');
+
+  const visibleOrder = order.filter((key) => {
+    const item = NAV_ITEM_MAP[key];
+    if (!item) return false;
+    if (item.adminOnly && user?.role !== 'ADMIN') return false;
+    return true;
+  });
 
   useEffect(() => {
     setOrder(readStoredOrder(user?.id ?? 'anon'));
@@ -48,7 +58,7 @@ export default function Sidebar() {
 
   const isActive = (item) => {
     if (item.key === 'analyze') return page === 'analyze';
-    if (item.key === 'repolist') return page === 'repolist' || page === 'repo-detail';
+    if (item.key === 'repolist') return page === 'repolist' || page === 'repo-detail' || page === 'push-tab';
     return page === item.key;
   };
 
@@ -96,16 +106,19 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="gr-sidebar">
-      <div className="gr-sidebar__logo">
-        <span className="gr-sidebar__logo-mark">
-          <Icon name="spark" size={18} />
-        </span>
-        <span className="gr-sidebar__logo-text">GuardrAil</span>
+    <aside className={`gr-sidebar ${!isExpanded ? 'gr-sidebar--collapsed' : ''}`}>
+      <div className="gr-sidebar__header">
+        <button
+          className="gr-sidebar__toggle-btn"
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-label="사이드바 토글"
+        >
+          <Icon name={isExpanded ? 'chevronLeft' : 'chevronRight'} size={16} />
+        </button>
       </div>
 
       <nav className="gr-sidebar__nav">
-        {order.map((key) => {
+        {visibleOrder.map((key) => {
           const item = NAV_ITEM_MAP[key];
           if (!item) return null;
           const isRepoList = item.key === 'repolist';
@@ -132,13 +145,13 @@ export default function Sidebar() {
                   </span>
                   <span>{item.label}</span>
                 </button>
-                {isRepoList && (
+                {isRepoList && isExpanded && (
                   <button
                     type="button"
                     className="gr-nav-row__chevron-btn"
                     onClick={() => setFavOpen((v) => !v)}
                     aria-expanded={favOpen}
-                    aria-label="즐겨찾기 레포 목록"
+                    aria-label="즐겨찾기 Repository 목록"
                   >
                     <Icon
                       name="chevronDown"
@@ -149,7 +162,8 @@ export default function Sidebar() {
                 )}
               </div>
 
-              {isRepoList && favOpen && (
+              {/* 사이드바가 열려있고, Repository 목록이고, 팝업이 열렸을 때만 렌더링 */}
+              {isExpanded && isRepoList && favOpen && (
                 <div className="gr-fav-dropdown">
                   {favorites.length === 0 ? (
                     <div className="gr-fav-dropdown__empty text-caption-md">
@@ -160,7 +174,7 @@ export default function Sidebar() {
                       <button
                         key={repo.id}
                         className={`gr-fav-dropdown__item ${
-                          page === 'repo-detail' && activeRepoId === String(repo.id)
+                          (page === 'repo-detail' || page === 'push-tab') && activeRepoId === String(repo.id)
                             ? 'gr-fav-dropdown__item--active'
                             : ''
                         }`}

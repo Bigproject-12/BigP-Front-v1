@@ -2,17 +2,22 @@
   position: relative;
   width: 100%;
 }
+/* 폭은 컨테이너를 재서 JS가 정하고 높이는 고정한다.
+   width:100% + height:auto 로 두면 폭이 줄 때 세로까지 눌려 선이 납작해지고,
+   무엇보다 축 라벨 글자가 함께 축소돼 읽을 수 없게 된다. */
 .gr-chart__svg {
-  width: 100%;
-  height: auto;
+  display: block;
+  max-width: 100%;
   overflow: visible;
 }
 .gr-chart__grid {
   stroke: var(--chart-grid);
   stroke-width: 1;
 }
+/* 이제 1 유저 단위 = 1 CSS px 이므로 이 값이 실제 화면 크기다.
+   기존 9px은 축소까지 겹쳐 4~5px로 보였다. */
 .gr-chart__axis-label {
-  font-size: 9px;
+  font-size: 11px;
   fill: var(--chart-axis);
   font-family: var(--font-body);
 }
@@ -75,7 +80,7 @@
 .gr-donut__total-value {
   font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 300;
+  font-weight: 700;
   fill: var(--text-primary);
 }
 .gr-donut__total-label {

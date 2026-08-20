@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from '../router/RouterContext';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../lib/api';
+import { useConfirm } from '../context/ConfirmContext';
 import { formatDateTime } from '../lib/format';
+import { API_BASE, TOKEN_KEY } from '../lib/api'; // API_BASE와 TOKEN_KEY 임포트 추가
+// api 직접 호출 대신 noticeApi 사용
+import {
+  fetchNotices, fetchNotice, createNotice, updateNotice, deleteNotice,
+} from '../lib/noticeApi';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -10,75 +15,102 @@ import Button from '../components/ui/Button';
 import Icon from '../components/icons/Icon';
 import './BoardPage.css';
 
+// 서버가 지원하는 정렬 필드만 남김 (댓글순 제거)
 const SORT_OPTIONS = [
-  { value: 'createdAt', label: '최신순' },
-  { value: 'views', label: '조회수순' },
-  { value: 'commentsCount', label: '댓글순' },
+  { value: 'createdAt,desc', label: '최신순' },
+  { value: 'viewCount,desc', label: '조회수순' },
 ];
+
+const PAGE_SIZE = 10;
 
 function BoardList({ isAdmin, navigate }) {
   const [posts, setPosts] = useState([]);
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState('createdAt');
+  const [sort, setSort] = useState('createdAt,desc');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const handleQueryChange = (e) => {
+    setQuery(e.target.value);
+    setPage(0);
+  };
+
+  const handleSortChange = (e) => {
+    setSort(e.target.value);
+    setPage(0);
+  };
 
   useEffect(() => {
-    const q = query.trim() ? `&q=${encodeURIComponent(query.trim())}` : '';
-    api
-      .get(`/posts?_sort=${sort}&_order=desc${q}`)
-      .then(setPosts)
-      .catch(() => setPosts([]));
-  }, [query, sort]);
+    setLoading(true);
+    fetchNotices({ keyword: query.trim(), page, size: PAGE_SIZE, sort })
+      .then((data) => {
+        setPosts(data.content ?? []);
+        setTotalPages(data.totalPages ?? 0);
+      })
+      .catch(() => setPosts([]))
+      .finally(() => setLoading(false));
+  }, [query, sort, page]);
 
   return (
     <>
       <div className="gr-page__header">
         <div className="gr-page__header-text">
-          <h1 className="text-display-md">게시판</h1>
-          <span className="text-body-sm">공지사항과 서비스 소식을 확인하세요.</span>
+          <h1 className="text-display-md">공지사항</h1>
+          <span className="text-body-sm">서비스 소식과 공지를 확인하세요.</span>
         </div>
       </div>
 
       <div className="board-toolbar">
         <div className="board-toolbar__search">
           <Input
-            placeholder="제목, 작성자, 내용 검색"
+            placeholder="제목, 내용 검색"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             leftIcon={<Icon name="search" size={16} />}
           />
         </div>
-        <Select value={sort} onChange={(e) => setSort(e.target.value)}>
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
+        
+        <div className="board-toolbar__right">
+          <Select value={sort} onChange={handleSortChange}>
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+
+          {isAdmin && (
+            <Button variant="primary" icon={<Icon name="plus" size={16} />}
+              onClick={() => navigate('?page=board&mode=write')}
+              style={{ whiteSpace: 'nowrap' }}>
+              게시글 작성
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="board-list">
-        {posts.length === 0 ? (
+        {loading ? (
+          <div className="text-body-sm">불러오는 중…</div>
+        ) : posts.length === 0 ? (
           <div className="ui-empty">게시글이 없습니다.</div>
         ) : (
           posts.map((post) => (
             <Card
-              key={post.id}
+              key={post.boardId}
               className="board-card"
-              onClick={() => navigate(`?page=board&postId=${post.id}`)}
+              onClick={() => navigate(`?page=board&postId=${post.boardId}`)}
             >
               <div className="board-card__main">
-                <span className="board-card__title">{post.title}</span>
+                <span className="board-card__title">
+                  {post.isPinned && '📌 '}{post.title}
+                </span>
                 <div className="board-card__meta">
-                  <span>{post.author}</span>
                   <span>{formatDateTime(post.createdAt)}</span>
                 </div>
               </div>
               <div className="board-card__stats">
                 <span className="board-card__stat">
-                  <Icon name="board" size={14} /> {post.commentsCount}
-                </span>
-                <span className="board-card__stat">
-                  <Icon name="eye" size={14} /> {post.views}
+                  <Icon name="eye" size={14} /> {post.viewCount}
                 </span>
               </div>
             </Card>
@@ -86,11 +118,15 @@ function BoardList({ isAdmin, navigate }) {
         )}
       </div>
 
-      {isAdmin && (
-        <div className="board-write-cta">
-          <Button variant="primary" icon={<Icon name="plus" size={16} />} onClick={() => navigate('?page=board&mode=write')}>
-            게시글 작성
-          </Button>
+      {totalPages > 1 && (
+        <div className="board-write-cta" style={{ gap: 12 }}>
+          <Button variant="secondary" disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}>이전</Button>
+          <span className="text-body-sm" style={{ alignSelf: 'center' }}>
+            {page + 1} / {totalPages}
+          </span>
+          <Button variant="secondary" disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => p + 1)}>다음</Button>
         </div>
       )}
     </>
@@ -99,58 +135,122 @@ function BoardList({ isAdmin, navigate }) {
 
 function BoardDetail({ postId, isAdmin, navigate }) {
   const [post, setPost] = useState(null);
-  const viewedRef = useRef(false);
+  const { confirm, alertDialog } = useConfirm();
 
   useEffect(() => {
-    viewedRef.current = false;
-  }, [postId]);
-
-  useEffect(() => {
-    api.get(`/posts/${postId}`).then((data) => {
-      setPost(data);
-      if (!viewedRef.current) {
-        viewedRef.current = true;
-        api.patch(`/posts/${postId}`, { views: data.views + 1 }).catch(() => {});
-      }
-    });
+    fetchNotice(postId).then(setPost);
   }, [postId]);
 
   const handleDelete = async () => {
-    if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
-    await api.del(`/posts/${postId}`);
+    if (!(await confirm('이 게시글을 삭제하시겠습니까?'))) return;
+    await deleteNotice(postId);
     navigate('?page=board');
+  };
+
+  // 📥 파일 다운로드 핸들러
+  const handleDownload = async (fileId, fileName) => {
+    try {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE}/api/notices/files/${fileId}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) throw new Error('파일 다운로드 실패');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alertDialog(err.message);
+    }
   };
 
   if (!post) return <div className="text-body-sm">불러오는 중…</div>;
 
+  const files = post.files || [];
+
+  // 🖼️ 파일 이름이 이미지 확장자로 끝나는지 판별하는 함수
+  const isImageFile = (fileName) => {
+    if (!fileName) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
+  };
+
+  // 🔑 이미지 미리보기용 URL 생성 함수 (인증 토큰을 포함할 수 없으므로 public 엔드가 아니라면 blob 처리가 필요할 수 있으나, 
+  // 만약 시큐리티에서 /files/** 경로가 인증을 요구한다면 토큰을 동적으로 넣기 위해 ObjectURL 방식을 쓰는 것이 안전합니다.)
+  // 아래는 안전하게 Fetch 후 Blob URL로 변환하여 이미지를 띄우는 컴포넌트 방식입니다.
   return (
     <>
       <div className="gr-page__header">
-        <Button variant="ghost" icon={<Icon name="chevronRight" size={14} style={{ transform: 'rotate(180deg)' }} />} onClick={() => navigate('?page=board')}>
+        <Button variant="ghost"
+          icon={<Icon name="chevronRight" size={14} style={{ transform: 'rotate(180deg)' }} />}
+          onClick={() => navigate('?page=board')}>
           목록으로
         </Button>
       </div>
 
       <Card>
         <div className="board-detail__head">
-          <h1 className="text-heading-xl">{post.title}</h1>
+          <h1 className="text-heading-xl">{post.isPinned && '📌 '}{post.title}</h1>
           <div className="board-detail__meta">
-            <span>{post.author}</span>
             <span>{formatDateTime(post.createdAt)}</span>
-            <span>조회 {post.views}</span>
+            <span>조회 {post.viewCount}</span>
           </div>
         </div>
+        
         <p className="board-detail__body">{post.content}</p>
 
+        {/* 🖼️ 이미지 파일 미리보기 영역 */}
+        {files.filter(file => isImageFile(file.originalFileName)).length > 0 && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {files
+              .filter(file => isImageFile(file.originalFileName))
+              .map(file => (
+                <ImagePreview key={file.fileId} fileId={file.fileId} fileName={file.originalFileName} />
+              ))}
+          </div>
+        )}
+
+        {/* 📁 첨부파일 목록 및 다운로드 영역 */}
+        {files.length > 0 && (
+          <div style={{ marginTop: '24px', padding: '12px', background: 'var(--surface-soft)', borderRadius: '8px' }}>
+            <span className="text-body-sm" style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+              첨부파일 ({files.length})
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {files.map((file) => (
+                <div key={file.fileId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-body-sm" style={{ color: 'var(--text-body)' }}>
+                    📎 {file.originalFileName}
+                  </span>
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => handleDownload(file.fileId, file.originalFileName)}
+                  >
+                    다운로드
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isAdmin && (
-          <div className="board-detail__actions">
-            <Button variant="primary" icon={<Icon name="plus" size={14} />} onClick={() => navigate('?page=board&mode=write')}>
-              새 글 작성
-            </Button>
-            <Button variant="secondary" icon={<Icon name="edit" size={14} />} onClick={() => navigate(`?page=board&postId=${postId}&mode=edit`)}>
+          <div className="board-detail__actions" style={{ marginTop: '24px' }}>
+            <Button variant="secondary" icon={<Icon name="edit" size={14} />}
+              onClick={() => navigate(`?page=board&postId=${postId}&mode=edit`)}>
               수정
             </Button>
-            <Button variant="danger" icon={<Icon name="trash" size={14} />} onClick={handleDelete}>
+            <Button variant="danger" icon={<Icon name="trash" size={14} />}
+              onClick={handleDelete}>
               삭제
             </Button>
           </div>
@@ -160,10 +260,55 @@ function BoardDetail({ postId, isAdmin, navigate }) {
   );
 }
 
-function BoardEditor({ postId, user, navigate }) {
+// 🖼️ 인증 토큰을 동적으로 태워 이미지를 안전하게 불러오기 위한 서브 컴포넌트
+function ImagePreview({ fileId, fileName }) {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    let objectUrl = null;
+    const token = sessionStorage.getItem(TOKEN_KEY);
+
+    fetch(`${API_BASE}/api/notices/files/${fileId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('이미지 로드 실패');
+        return res.blob();
+      })
+      .then((blob) => {
+        objectUrl = window.URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      })
+      .catch(() => setImageUrl(null));
+
+    return () => {
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [fileId]);
+
+  if (!imageUrl) return null;
+
+  return (
+    <div style={{ maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-hairline)' }}>
+      <img 
+        src={imageUrl} 
+        alt={fileName} 
+        style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain', maxHeight: '500px' }} 
+      />
+    </div>
+  );
+}
+
+function BoardEditor({ postId, navigate }) {
   const isEdit = Boolean(postId);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [isPinned, setIsPinned] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [deleteFileIds, setDeleteFileIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(isEdit);
@@ -171,13 +316,24 @@ function BoardEditor({ postId, user, navigate }) {
   useEffect(() => {
     if (isEdit) {
       setLoading(true);
-      api.get(`/posts/${postId}`).then((post) => {
+      fetchNotice(postId).then((post) => {
         setTitle(post.title);
         setContent(post.content);
+        setIsPinned(post.isPinned);
+        setExistingFiles(post.files || []);
         setLoading(false);
       });
     }
   }, [isEdit, postId]);
+
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files));
+  };
+
+  const handleRemoveExistingFile = (fileId) => {
+    setExistingFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+    setDeleteFileIds((prev) => [...prev, fileId]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,23 +341,36 @@ function BoardEditor({ postId, user, navigate }) {
       setError('제목과 내용을 모두 입력해주세요.');
       return;
     }
+    if (title.length > 255) {          
+      setError('제목은 255자를 넘을 수 없습니다.');
+      return;
+    }
     setSaving(true);
+    setError('');
+
     try {
+      const formData = new FormData();
+      const requestDto = isEdit
+        ? { title, content, isPinned, deleteFileIds }
+        : { title, content, isPinned };
+      formData.append(
+        'request',
+        new Blob([JSON.stringify(requestDto)], { type: 'application/json' })
+      );
+
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
       if (isEdit) {
-        await api.patch(`/posts/${postId}`, { title, content });
+        await updateNotice(postId, formData);
         navigate(`?page=board&postId=${postId}`);
       } else {
-        const created = await api.post('/posts', {
-          title,
-          content,
-          author: user.name,
-          authorId: user.id,
-          createdAt: new Date().toISOString(),
-          views: 0,
-          commentsCount: 0,
-        });
-        navigate(`?page=board&postId=${created.id}`);
+        const created = await createNotice(formData);
+        navigate(`?page=board&postId=${created.boardId}`);
       }
+    } catch (err) {
+      setError(err.message || '저장 중 오류가 명확하지 않습니다.');          
     } finally {
       setSaving(false);
     }
@@ -210,37 +379,70 @@ function BoardEditor({ postId, user, navigate }) {
   return (
     <>
       <div className="gr-page__header">
-        <h1 className="text-display-md">{isEdit ? '게시글 수정' : '게시글 작성'}</h1>
+        <h1 className="text-display-md">{isEdit ? '공지 수정' : '공지 작성'}</h1>
       </div>
       <Card>
         {loading ? (
           <div className="text-body-sm">불러오는 중…</div>
         ) : (
-        <form className="board-editor" onSubmit={handleSubmit}>
-          <Input label="제목" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력해주세요" />
-          <div className="ui-field">
-            <label className="ui-field__label">내용</label>
-            <textarea
-              className="board-editor__textarea"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="내용을 입력해주세요"
-            />
-          </div>
-          {error && <div className="ui-banner ui-banner--error">{error}</div>}
-          <div className="board-detail__actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => navigate(isEdit ? `?page=board&postId=${postId}` : '?page=board')}
-            >
-              취소
-            </Button>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? '저장 중…' : '저장'}
-            </Button>
-          </div>
-        </form>
+          <form className="board-editor" onSubmit={handleSubmit}>
+            <Input label="제목" value={title} maxLength={255}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="제목을 입력해주세요" />
+            <div className="ui-field">
+              <label className="ui-field__label">내용</label>
+              <textarea className="board-editor__textarea" value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="내용을 입력해주세요" />
+            </div>
+
+            <div className="ui-field">
+              <label className="ui-field__label">첨부파일</label>
+              {existingFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '4px' }}>
+                  {existingFiles.map((f) => (
+                    <span key={f.fileId} className="text-body-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+                      📎 {f.originalFileName}
+                      <button type="button" onClick={() => handleRemoveExistingFile(f.fileId)}
+                        aria-label="기존 파일 삭제"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}>
+                        <Icon name="close" size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                style={{ fontSize: '14px', padding: '4px 0' }}
+              />
+              {files.length > 0 && (
+                <span className="text-body-sm" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                  선택된 파일: {files.map(f => f.name).join(', ')}
+                </span>
+              )}
+            </div>
+
+            <label className="ui-field" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <input type="checkbox" checked={isPinned}
+                onChange={(e) => setIsPinned(e.target.checked)} />
+              <span className="text-body-sm">상단 고정</span>
+            </label>
+            {error && <div className="ui-banner ui-banner--error">{error}</div>}
+            
+            <div className="board-detail__actions">
+              <Button type="button" variant="secondary"
+                onClick={() => navigate(isEdit ? `?page=board&postId=${postId}` : '?page=board')}>
+                취소
+              </Button>
+              <Button type="submit" variant="primary" disabled={saving}>
+                {saving ? '저장 중…' : '저장'}
+              </Button>
+            </div>
+          </form>
         )}
       </Card>
     </>
@@ -250,18 +452,12 @@ function BoardEditor({ postId, user, navigate }) {
 export default function BoardPage() {
   const { params, navigate } = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
   const postId = params.get('postId');
   const mode = params.get('mode');
 
-  if (mode === 'write' && isAdmin) {
-    return <BoardEditor user={user} navigate={navigate} />;
-  }
-  if (mode === 'edit' && postId && isAdmin) {
-    return <BoardEditor postId={postId} user={user} navigate={navigate} />;
-  }
-  if (postId) {
-    return <BoardDetail postId={postId} isAdmin={isAdmin} navigate={navigate} />;
-  }
+  if (mode === 'write' && isAdmin) return <BoardEditor navigate={navigate} />;
+  if (mode === 'edit' && postId && isAdmin) return <BoardEditor postId={postId} navigate={navigate} />;
+  if (postId) return <BoardDetail postId={postId} isAdmin={isAdmin} navigate={navigate} />;
   return <BoardList isAdmin={isAdmin} navigate={navigate} />;
 }

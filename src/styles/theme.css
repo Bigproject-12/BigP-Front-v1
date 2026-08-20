@@ -8,9 +8,9 @@
 
 :root {
   /* ---- brand & accent (fixed across themes) ---- */
-  --ps-primary: #0070d1;
-  --ps-primary-pressed: #0064b7;
-  --ps-primary-active: #004d8d;
+  --ps-primary: #1B3A8C;
+  --ps-primary-pressed: #16307A;
+  --ps-primary-active: #122868;
   --ps-on-primary: #ffffff;
   --ps-warning: #c81b3a;
   --ps-good: #1baf7a;
@@ -82,11 +82,17 @@
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.16);
 
-  /* ---- data viz ---- */
-  --chart-line: #53b1ff;
-  --chart-line-fill: rgba(83, 177, 255, 0.16);
+  /* ---- data viz ----
+     로그인 화면 브랜드 팔레트(#1B3A8C 계열)에 맞춘 색.
+     다크 모드에서는 어두운 배경 위에 얹히므로 같은 계열의 밝은 쪽 stop을 쓴다.
+     카테고리 색은 색상(hue)만이 아니라 명도까지 달리해서, 색약이 있어도
+     도넛 조각과 범례를 구분할 수 있게 한다. */
+  --chart-line: #5B9BF8;
+  --chart-line-fill: rgba(91, 155, 248, 0.18);
   --chart-grid: #2c2c2a;
   --chart-axis: #6b6b68;
+  /* 카테고리 색은 원래대로 되돌림. 같은 계열로 묶으면 브랜드는 통일되지만
+     도넛 조각과 범례가 서로 구분이 안 돼서, 서로 다른 색상을 유지한다. */
   --chart-cat-1: #3987e5;
   --chart-cat-2: #199e70;
   --chart-cat-3: #c98500;
@@ -118,11 +124,15 @@
 
   --scrollbar-thumb: rgba(0, 0, 0, 0.16);
 
-  /* ---- data viz ---- */
-  --chart-line: #0070d1;
-  --chart-line-fill: rgba(0, 112, 209, 0.1);
+  /* ---- data viz ----
+     로그인 화면 브랜드 팔레트에 맞춘 색.
+     --ps-primary(#1B3A8C)는 선 그래프로 쓰기엔 너무 어두워 대비가 답답하므로,
+     같은 계열에서 한 단계 밝은 #2563EB를 선으로 쓴다. */
+  --chart-line: #2563EB;
+  --chart-line-fill: rgba(37, 99, 235, 0.12);
   --chart-grid: #e1e0d9;
   --chart-axis: #898781;
+  /* 카테고리 색은 원래대로 되돌림. (위 다크 모드 주석 참고) */
   --chart-cat-1: #2a78d6;
   --chart-cat-2: #1baf7a;
   --chart-cat-3: #eda100;

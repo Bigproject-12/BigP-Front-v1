@@ -1,72 +1,744 @@
-import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from '../router/RouterContext';
+import { useRepos } from '../context/RepoContext';
+import { api } from '../lib/api';
+import { fetchRepoBranches, fetchRepoTreeWithIssues } from '../lib/github';
 import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
 import StatCard from '../components/ui/StatCard';
 import LineChart from '../components/charts/LineChart';
 import DonutChart from '../components/charts/DonutChart';
+import DiffViewer from '../components/ui/DiffViewer';
+import ProjectTree from '../components/myspace/ProjectTree';
 import Icon from '../components/icons/Icon';
-import './dashboard.css';
+import FileTypeIcon from '../components/icons/FileTypeIcon';
+import './DashboardPage.css';
+import './RepoDetailPage.css';
+import './MySpacePage.css'; // 👈 전용 CSS 파일 임포트
+
+function toISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function rangeEndingAt(to) {
+  const from = new Date(`${to}T00:00:00`);
+  from.setDate(from.getDate() - 6);
+  return { from: toISODate(from), to };
+}
+
+/**
+ * 증감을 StatCard용 props로 변환한다. (대시보드의 deltaProps와 같은 규칙)
+ *
+ * 색(deltaTone)은 '올랐는지'가 아니라 '좋은 소식인지'를 뜻한다.
+ * 지표마다 증가의 의미가 반대라 방향만으로는 정할 수 없어, 호출부에서 지정한다.
+ *
+ * @param {number}       value          증감 값
+ * @param {boolean|null} higherIsBetter 증가가 호재면 true, 악재면 false, 판단 불가면 null(회색)
+ * @param {string}       unit           표시 단위
+ */
+function buildDeltaProps(value, higherIsBetter, unit) {
+  if (value == null) return {};
+  const rounded = Math.round(Number(value) * 10) / 10;
+  if (rounded === 0) return { delta: '변화 없음', deltaTone: 'neutral' };
+
+  const delta = `${rounded > 0 ? '+' : ''}${rounded}${unit}`;
+  if (higherIsBetter === null) return { delta, deltaTone: 'neutral' };
+
+  const isGoodNews = rounded > 0 ? higherIsBetter : !higherIsBetter;
+  return { delta, deltaTone: isGoodNews ? 'good' : 'bad' };
+}
+
+// 분석 건수: 많이 돌렸다고 좋은 것도, 적게 돌렸다고 나쁜 것도 아니므로 중립
+const analysisDeltaProps = (rate) => buildDeltaProps(rate, null, '%');
+// 이슈: 늘어나면 악재
+const issueRateDeltaProps = (rate) => buildDeltaProps(rate, false, '%');
+const issueCountDeltaProps = (change) => buildDeltaProps(change, false, '건');
+// 품질 점수: 오르면 호재
+const scoreDeltaProps = (change) => buildDeltaProps(change, true, '점');
+// 개선 가능률: 높을수록 고칠 게 많다는 뜻이라 악재로 본다
+const ratioDeltaProps = (change) => buildDeltaProps(change, false, '%p');
+
+// const STRUCTURE_ISSUES_CARD_HEIGHT = 540;
+const RISK_DONUT_CARD_HEIGHT = 360;
+const AI_PR_CARD_HEIGHT = 360;
+
+// 분석 상세(AnalysisResult.jsx CATEGORY_META)와 동일한 색상 기준: 보안=빨강, 비효율=주황, 코드 중복성=회색
+const ISSUE_TYPE_LABEL = { SECURITY: '보안', INEFFICIENCY: '비효율', OTHER: '코드 중복성' };
+const ISSUE_TYPE_COLOR = { SECURITY: '#E11D48', INEFFICIENCY: '#F59E0B', OTHER: '#64748B' };
+const SEVERITY_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+const SEVERITY_VARIANT = { CRITICAL: 'warning', HIGH: 'warning', MEDIUM: 'info', LOW: 'neutral' };
+const PR_STATUS_LABEL = {
+  OPEN: { label: '열림', variant: 'info' },
+  MERGED: { label: '병합됨', variant: 'success' },
+  CLOSED: { label: '닫힘', variant: 'neutral' },
+};
 
 export default function MySpacePage() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  const { repos } = useRepos();
+  const [repoId, setRepoId] = useState('');
+  const [branches, setBranches] = useState([]);
+  const [branch, setBranch] = useState('');
+  // 분석 이력이 있는 브랜치 이름 집합. 드롭다운에서 나머지를 흐리게 처리하는 데 쓴다.
+  const [branchesWithHistory, setBranchesWithHistory] = useState(new Set());
+  const branchSelectRef = useRef(null);
+
+  const [range, setRange] = useState(() => rangeEndingAt(toISODate(new Date())));
+  const [overview, setOverview] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState('');
+
+  const fetchOverview = () => {
+    setOverviewLoading(true);
+    setOverviewError('');
+    api.get(`/api/my-space/overview?from=${range.from}&to=${range.to}`)
+      .then(setOverview)
+      .catch((e) => setOverviewError(e.message || '요약 정보를 불러오지 못했습니다.'))
+      .finally(() => setOverviewLoading(false));
+  };
+
+  useEffect(fetchOverview, [range.from, range.to]);
 
   useEffect(() => {
-    if (!user) return;
-    api
-      .get(`/myspace?userId=${user.id}`)
-      .then((rows) => setData(rows[0] || null))
-      .catch((err) => setError(err.message));
-  }, [user]);
+    setBranch('');
+    setBranches([]);
+    setBranchesWithHistory(new Set());
+    if (!repoId) return;
 
-  if (error) return <div className="ui-banner ui-banner--error">{error}</div>;
-  if (!data) return <div className="text-body-sm">불러오는 중…</div>;
+    // 브랜치 목록과 분석 이력을 함께 받는다.
+    // 이력(/api/repos/{id}/history)은 로그인 사용자 기준으로 스코핑된 데이터이고
+    // 각 분석의 branch를 담고 있어서, 어느 브랜치에 볼 게 있는지 프론트에서 알 수 있다.
+    // 이력 조회가 실패해도 브랜치 선택 자체는 되어야 하므로 개별로 catch 한다.
+    Promise.all([
+      fetchRepoBranches(Number(repoId)),
+      api.get(`/api/repos/${repoId}/history`).catch(() => []),
+    ])
+      .then(([list, history]) => {
+        setBranches(list);
 
-  const { stats, qualityTrend, issueDistribution, styleSummary } = data;
+        // 실패(FAILED)한 분석은 결과가 없어 볼 게 없으므로 '유효한 이력'에서 제외한다.
+        // (히스토리 탭의 '최근' 배지와 같은 기준)
+        const analyzed = (history ?? []).filter(
+          (h) => h.branch && h.status !== 'FAILED'
+        );
+        setBranchesWithHistory(new Set(analyzed.map((h) => h.branch)));
+
+        // 가장 최근에 분석한 브랜치를 우선 선택한다.
+        // 기본 브랜치(main)를 골라놓고 "데이터가 없네" 하는 상황을 피하기 위함.
+        // 해당 브랜치가 이미 삭제됐을 수 있으므로 목록에 실제로 있는지 확인한다.
+        const latest = analyzed
+          .filter((h) => h.analyzedAt)
+          .sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt))[0];
+        const preferred =
+          latest && list.some((b) => b.name === latest.branch) ? latest.branch : null;
+
+        setBranch(preferred || list.find((b) => b.isDefault)?.name || list[0]?.name || '');
+
+        setTimeout(() => {
+          if (branchSelectRef.current) {
+            branchSelectRef.current.focus();
+          }
+        }, 100);
+      })
+      .catch(() => setBranches([]));
+  }, [repoId]);
 
   return (
     <>
       <div className="gr-page__header">
         <div className="gr-page__header-text">
-          <h1 className="text-display-md">My Space</h1>
-          <span className="text-body-sm">{user.name}님의 GitHub PR 기준 코드 품질 현황입니다.</span>
-        </div>
-      </div>
+          {/* GitHub 스타일의 폴더 구조 브레드크럼 레이아웃 적용 */}
+          <div className="myspace-breadcrumb">
+            <h1 className="text-display-md myspace-breadcrumb__title">My Space</h1>
+            <span className="myspace-breadcrumb__slash">  /</span>
 
-      <div className="stat-grid">
-        <StatCard icon="pr" label="이번달 PR 건수" value={`${stats.monthlyPRs}건`} delta="+3건" />
-        <StatCard icon="bug" label="수정한 취약점" value={`${stats.vulnerabilitiesFixed}건`} delta="+6건" />
-        <StatCard icon="spark" label="평균 개선율" value={`${stats.avgImprovementRate}%`} delta="+7%p" />
-        <StatCard icon="code" label="자동 생성 PR" value={`${stats.autoGeneratedPRs}건`} delta="+2건" />
-      </div>
+            {/* 1. Repository 선택 셀렉트 */}
+            <div className="myspace-select-wrapper">
+              <Select
+                className="myspace-ghost-select"
+                value={repoId}
+                onChange={(e) => setRepoId(e.target.value)}
+              >
+                <option value="">전체 Repository</option>
+                {repos.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+            </div>
 
-      <div className="chart-grid">
-        <Card className="chart-card">
-          <div className="chart-card__header">
-            <h2 className="text-heading-md">코드 품질 추이</h2>
-            <span className="text-caption-md">내 PR 기준 · 최근 7개월</span>
+            {/* 2. Repository 선택 시 나타나는 Branch 선택 셀렉트 (사이에 슬래시 추가) */}
+            {repoId && (
+              <>
+                <span className="myspace-breadcrumb__slash">/</span>
+                <div className="myspace-select-wrapper">
+                  <Select
+                    ref={branchSelectRef}
+                    className="myspace-ghost-select"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    disabled={branches.length === 0}
+                  >
+                    {branches.length === 0 && <option value="">로딩 중...</option>}
+                    {branches.map((b) => {
+                      // 분석 이력이 없는 브랜치는 흐리게 표시한다. 선택은 그대로 가능하다.
+                      const hasHistory = branchesWithHistory.has(b.name);
+                      return (
+                        <option
+                          key={b.name}
+                          value={b.name}
+                          className={hasHistory ? undefined : 'myspace-branch-option--empty'}
+                          title={hasHistory ? undefined : '이 브랜치에는 분석 이력이 없습니다.'}
+                        >
+                          {b.name}
+                        </option>
+                      );
+                    })}
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
-          <LineChart data={qualityTrend} valueSuffix="점" />
-        </Card>
+          <span className="text-body-sm">
+            {user ? `${user.name}님의 코드 품질 현황을 확인하세요.` : ''}
+          </span>
+        </div>
 
-        <Card className="chart-card">
-          <div className="chart-card__header">
-            <h2 className="text-heading-md">이슈 유형 분포</h2>
+        {!repoId && (
+          <div className="dashboard-controls">
+            <label className="dashboard-date-range">
+              <span>{range.from} ~</span>
+              <input
+                type="date"
+                value={range.to}
+                max={toISODate(new Date())}
+                onChange={(e) => e.target.value && setRange(rangeEndingAt(e.target.value))}
+              />
+            </label>
+            <Button variant="secondary" onClick={fetchOverview} disabled={overviewLoading}>
+              <Icon name="refresh" size={16} />
+              
+            </Button>
           </div>
-          <DonutChart data={issueDistribution} />
-        </Card>
+        )}
       </div>
 
-      <Card className="style-summary">
-        <div className="chart-card__header">
-          <h2 className="text-heading-md" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="spark" size={16} /> AI 코딩 스타일 요약
-          </h2>
+      {repoId ? (
+        <MySpaceRepoView repoId={Number(repoId)} branch={branch} />
+      ) : (
+        <MySpaceOverview overview={overview} loading={overviewLoading} error={overviewError} />
+      )}
+    </>
+  );
+}
+
+function MySpaceOverview({ overview, loading, error }) {
+  const { navigate } = useRouter();
+
+  const qualityTrend = overview
+    ? overview.qualityScoreTrend
+        .filter((d) => d.averageScore != null)
+        .map((d) => ({ label: d.date.slice(5), value: Math.round(d.averageScore * 10) / 10 }))
+    : [];
+
+  const issueDistribution = overview
+    ? overview.issueDistribution
+        .filter((d) => d.count > 0)
+        .map((d) => ({ type: ISSUE_TYPE_LABEL[d.type] ?? d.type, count: d.count }))
+    : [];
+
+  return (
+    <>
+      {error && (
+        <div className="ui-banner ui-banner--error">
+          <Icon name="close" size={16} /> {error}
         </div>
-        <p className="style-summary__body text-body-md">{styleSummary}</p>
-      </Card>
+      )}
+
+      {loading && !overview ? (
+        <div className="ui-empty">불러오는 중…</div>
+      ) : overview && overview.repositoryCount === 0 ? (
+        <div className="ui-empty">아직 연동된 Repository가 없습니다.</div>
+      ) : overview ? (
+        <>
+          <div className="stat-grid">
+            <StatCard icon="repo" label="연동 Repository" value={`${overview.repositoryCount}개`} />
+            <StatCard
+              icon="code"
+              label="분석 건수"
+              value={`${overview.totalAnalysisCount}건`}
+              {...analysisDeltaProps(overview.comparison.analysisChangeRate)}
+            />
+            <StatCard
+              icon="bug"
+              label="이슈 건수"
+              value={`${overview.totalIssueCount}건`}
+              {...issueRateDeltaProps(overview.comparison.issueChangeRate)}
+            />
+            <StatCard
+              icon="score"
+              label="품질 점수"
+              value={`${Math.round(overview.averageQualityScore * 10) / 10}점`}
+              {...scoreDeltaProps(overview.comparison.qualityScoreChange)}
+            />
+          </div>
+
+          <div className="chart-grid">
+            <Card className="chart-card">
+              <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+                <Icon name="score" size={18} />
+                <h2 className="text-heading-md" style={{ margin: 0 }}>품질 점수 추이</h2>
+              </div>
+              {qualityTrend.length > 0 ? (
+                <LineChart data={qualityTrend} valueSuffix="점" />
+              ) : (
+                <div className="ui-empty">기간 내 분석 이력이 없습니다.</div>
+              )}
+            </Card>
+
+            <Card className="chart-card">
+              <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+                <Icon name="bug" size={18} />
+                <h2 className="text-heading-md" style={{ margin: 0 }}>이슈 유형 분포</h2>
+              </div>
+              {issueDistribution.length > 0 ? (
+                <DonutChart data={issueDistribution} />
+              ) : (
+                <div className="ui-empty">발견된 이슈가 없습니다.</div>
+              )}
+            </Card>
+          </div>
+
+          <Card style={{ padding: 0, marginTop: 'var(--space-lg)' }}>
+            <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px' }}>
+              <Icon name="score" size={18} />
+              <h2 className="text-heading-md" style={{ margin: 0 }}>위험 Repository TOP5</h2>
+            </div>
+            {overview.riskRepositories.length === 0 ? (
+              <div className="ui-empty">기간 내 분석된 Repository가 없습니다.</div>
+            ) : (
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Repository</th>
+                    <th>품질 점수</th>
+                    <th>이슈</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.riskRepositories.map((r) => (
+                    <tr
+                      key={r.repoId}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`?page=repo-detail&repoId=${r.repoId}`)}
+                    >
+                      <td>{r.rank}</td>
+                      <td>
+                        <span className="history-table__file">
+                          <Icon name="repo" size={15} />
+                          {r.repoName}
+                        </span>
+                      </td>
+                      <td>{r.qualityScore}점</td>
+                      <td>{r.totalIssueCount}건</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <div className="ui-empty" style={{ marginTop: 'var(--space-lg)' }}>
+            자세한 내용을 보려면 위에서 Repository를 선택해주세요.
+          </div>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function MySpaceRepoView({ repoId, branch }) {
+  const { navigate } = useRouter();
+  const [summary, setSummary] = useState(null);
+  const [tree, setTree] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [topIssues, setTopIssues] = useState([]);
+  const [autoPrs, setAutoPrs] = useState([]);
+  const [extrasLoading, setExtrasLoading] = useState(false);
+
+  const fetchAll = () => {
+    if (!branch) return;
+    setLoading(true);
+    setError('');
+    Promise.all([
+      api.get(`/api/my-space/repos/${repoId}/summary?branch=${encodeURIComponent(branch)}`),
+      fetchRepoTreeWithIssues(repoId, branch),
+    ])
+      .then(([summaryData, treeData]) => {
+        setSummary(summaryData);
+        setTree(treeData);
+      })
+      .catch((e) => setError(e.message || '정보를 불러오지 못했습니다.'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(fetchAll, [repoId, branch]);
+
+  const files = (tree?.items ?? []).filter((i) => i.type === 'blob');
+
+  useEffect(() => {
+    if (!tree || !branch) return;
+    const targets = files
+      .filter((f) => f.analyzed)
+      .slice()
+      .sort((a, b) => (a.qualityScore ?? 100) - (b.qualityScore ?? 100))
+      .slice(0, 3);
+
+    setExtrasLoading(true);
+    Promise.all(
+      targets.map((f) =>
+        api
+          .get(`/api/my-space/repos/${repoId}/files/analysis?branch=${encodeURIComponent(branch)}&path=${encodeURIComponent(f.path)}`)
+          .catch(() => null),
+      ),
+    )
+      .then((details) => {
+        const valid = details.filter(Boolean);
+        const allIssues = valid.flatMap((d) => [
+          ...d.securityIssues.map((i) => ({ ...i, filePath: d.filePath, analysisId: d.analysisId })),
+          ...d.inefficiencyIssues.map((i) => ({ ...i, filePath: d.filePath, analysisId: d.analysisId })),
+          ...d.otherIssues.map((i) => ({ ...i, filePath: d.filePath, analysisId: d.analysisId })),
+        ]);
+        allIssues.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9));
+        setTopIssues(allIssues.slice(0, 4));
+      })
+      .finally(() => setExtrasLoading(false));
+
+    api
+      .get(`/api/my-space/repos/${repoId}/pull-requests?branch=${encodeURIComponent(branch)}&status=ALL&limit=20`)
+      .then((prs) => setAutoPrs(prs.filter((pr) => pr.platformGenerated).slice(0, 5)))
+      .catch(() => setAutoPrs([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoId, branch, tree]);
+  const riskFiles = files
+    .filter((f) => f.analyzed)
+    .slice()
+    .sort((a, b) => (a.qualityScore ?? 100) - (b.qualityScore ?? 100))
+    .slice(0, 5);
+
+  const repoIssueDistribution = summary
+    ? [
+        { type: '보안', count: summary.securityIssueCount },
+        { type: '비효율', count: summary.inefficiencyIssueCount },
+        { type: '코드 중복성', count: summary.otherIssueCount },
+      ].filter((d) => d.count > 0)
+    : [];
+
+  return (
+    <>
+      <div className="dashboard-controls" style={{ justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
+        <Button variant="secondary" onClick={fetchAll} disabled={loading}>
+          <Icon name="refresh" size={16} />
+          
+        </Button>
+      </div>
+
+      {error && (
+        <div className="ui-banner ui-banner--error">
+          <Icon name="close" size={16} /> {error}
+        </div>
+      )}
+
+      {loading && !summary ? (
+        <div className="ui-empty">불러오는 중…</div>
+      ) : summary && summary.analysisId == null ? (
+        <div className="ui-empty">이 브랜치에는 아직 분석 이력이 없습니다.</div>
+      ) : summary ? (
+        <>
+          <div className="stat-grid">
+            <StatCard
+              icon="score"
+              label="품질 점수"
+              value={`${Math.round(summary.qualityScore * 10) / 10}점`}
+              {...scoreDeltaProps(summary.comparison.qualityScoreChange)}
+            />
+            <StatCard
+              icon="code"
+              label="분석 건수"
+              value={`${summary.totalAnalysisCount}건`}
+            />
+            <StatCard
+              icon="bug"
+              label="이슈 수"
+              value={`${summary.totalIssueCount}건`}
+              {...issueCountDeltaProps(summary.comparison.totalIssueChange)}
+            />
+            <StatCard
+              icon="arrowUp"
+              label="개선 가능률"
+              value={summary.improvableRatio != null ? `${summary.improvableRatio}%` : '-'}
+              {...ratioDeltaProps(summary.comparison.improvableRatioChange)}
+            />
+          </div>
+
+          <div className="recent-grid myspace-responsive-grid" style={{ marginTop: 'var(--space-lg)' }}>
+            {/* 💡 수정 1: height 대신 minHeight를 사용하여, 원 그래프 카드가 늘어날 때 이 카드도 같이 늘어나도록 설정 */}
+            <Card style={{ padding: 0, minHeight: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+              <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                <Icon name="score" size={18} />
+                <h2 className="text-heading-md" style={{ margin: 0 }}>파일 별 위험도 TOP5</h2>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                <table className="history-table myspace-risk-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>파일</th>
+                      <th>품질 점수</th>
+                      <th>이슈</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 5 }, (_, idx) => riskFiles[idx]).map((f, idx) => (
+                      <tr key={f?.path ?? `empty-${idx}`}>
+                        <td>{f ? idx + 1 : ''}</td>
+                        {/* 💡 수정 2: td에 title 속성을 추가하여, 마우스를 올리면 브라우저 기본 툴팁으로 잘리지 않은 전체 경로가 표시되게 함 */}
+                        <td title={f ? f.path : ''}>
+                          {f ? (
+                            <span className="history-table__file">
+                              <FileTypeIcon name={f.path} size={15} />
+                              <span className="myspace-truncate-text">{f.path}</span>
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
+                        </td>
+                        <td>{f ? `${f.qualityScore}점` : '-'}</td>
+                        <td>{f ? `${f.totalIssueCount}건` : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* 💡 수정 3: 원 그래프 카드 역시 height 대신 minHeight 적용. 범례가 아래로 내려가면 카드 높이가 자연스럽게 늘어남 */}
+            <Card className="chart-card" style={{ minHeight: RISK_DONUT_CARD_HEIGHT, display: 'flex', flexDirection: 'column', paddingBottom: '16px' }}>
+              <div className="chart-card__header" style={{ padding: '2px 2px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                <Icon name="bug" size={18} />
+                <h2 className="text-heading-md" style={{ margin: 0 }}>이슈 유형 분포</h2>
+              </div>
+              {/* 내부 콘텐츠가 카드 중앙에 잘 정렬되도록 justifyContent: 'center' 추가 */}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {repoIssueDistribution.length > 0 ? (
+                  <DonutChart data={repoIssueDistribution} />
+                ) : (
+                  <div className="ui-empty">발견된 이슈가 없습니다.</div>
+                )}
+              </div>
+            </Card>
+            
+          </div>
+
+          {/* 부모 그리드 */}
+          <div className="recent-grid myspace-responsive-grid-alt" style={{ marginTop: 'var(--space-lg)', alignItems: 'stretch', minHeight: '450px' }}>
+            
+            {/* 💡 왼쪽 카드 ('프로젝트 구조') */}
+            <Card className="myspace-project-card" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                <Icon name="folder" size={18} />
+                <h2 className="text-heading-md" style={{ margin: 0 }}>프로젝트 구조</h2>
+              </div>
+              
+              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px 8px 16px', overflowY: 'auto' }}>
+                  <ProjectTree files={files} />
+                </div>
+              </div>
+            </Card>
+
+            {/* 💡 오른쪽 카드 ('우선 해결해야 할 이슈') */}
+            <Card style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+                <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                  <Icon name="bug" size={18} />
+                  <h2 className="text-heading-md" style={{ margin: 0 }}>우선 해결해야 할 이슈</h2>
+                </div>
+                
+                {extrasLoading ? (
+                  <div className="ui-empty">불러오는 중…</div>
+                ) : topIssues.length === 0 ? (
+                  <div className="ui-empty">발견된 이슈가 없습니다.</div>
+                ) : (
+                  
+                  <div style={{ padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                    {topIssues.map((issue, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          padding: '10px 12px',
+                          border: '1px solid var(--border-hairline)',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0, flex: 1 }}>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                            <Badge
+                              variant="neutral"
+                              style={{
+                                color: ISSUE_TYPE_COLOR[issue.type] ?? '#64748B',
+                                background: `${ISSUE_TYPE_COLOR[issue.type] ?? '#64748B'}22`,
+                                alignSelf: 'flex-start'
+                              }}
+                            >
+                              {ISSUE_TYPE_LABEL[issue.type] ?? issue.type}
+                            </Badge>
+                            <Badge variant={SEVERITY_VARIANT[issue.severity] ?? 'neutral'} style={{ alignSelf: 'flex-start' }}>
+                              {issue.severity}
+                            </Badge>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                            <span
+                              className="text-body-sm"
+                              style={{
+                                fontWeight: 600,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                marginTop: '2px',
+                              }}
+                            >
+                              {issue.description || issue.suggestion || '이슈'}
+                            </span>
+                            
+                            <span
+                              className="text-caption-md"
+                              style={{
+                                color: 'var(--text-muted)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {issue.filePath}{issue.line ? ` : ${issue.line}줄` : ''}
+                            </span>
+                          </div>
+
+                        </div>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate(`?page=analysis-detail&analysisId=${issue.analysisId}`)}
+                        >
+                          상세보기
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+          </div>
+
+          <div className="recent-grid" style={{ marginTop: 'var(--space-lg)' }}>
+                <Card style={{ padding: 0, height: AI_PR_CARD_HEIGHT, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                    <Icon name="spark" size={18} />
+                    <h2 className="text-heading-md" style={{ margin: 0 }}>Ai 리팩토링 제안</h2>
+                  </div>
+                  {summary && summary.modifiedCode && summary.modifiedCode !== summary.originCode && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      style={{ position: 'absolute', top: 14, right: 16 }}
+                      onClick={() => navigate(`?page=analysis-detail&analysisId=${summary.analysisId}`)}
+                    >
+                      상세보기
+                    </Button>
+                  )}
+                  {loading ? (
+                    <div className="ui-empty">불러오는 중…</div>
+                  ) : !summary || !summary.modifiedCode || summary.modifiedCode === summary.originCode ? (
+                    <div className="ui-empty">제안할 개선 코드가 없습니다.</div>
+                  ) : (
+                    <>
+                      <div style={{ padding: '0 16px 8px' }}>
+                        <span className="text-caption-md" style={{ color: 'var(--text-muted)' }}>{summary.filePath}</span>
+                      </div>
+                      <div style={{ padding: '0 16px 16px' }}>
+                        <div className="diff-card" style={{ border: '1px solid var(--border-hairline)', borderRadius: 'var(--radius-sm)', maxHeight: 270, overflowY: 'auto' }}>
+                          <DiffViewer original={summary.originCode} improved={summary.modifiedCode} />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </Card>
+
+                <Card style={{ padding: 0, height: AI_PR_CARD_HEIGHT, display: 'flex', flexDirection: 'column' }}>
+                  <div className="chart-card__header" style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'left', gap: '8px', flex: 'none' }}>
+                    <Icon name="pullrequest" size={18} />
+                    <h2 className="text-heading-md" style={{ margin: 0 }}>최근 생성 PR TOP5</h2>
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    <table className="history-table">
+                      <thead>
+                        <tr>
+                          <th style={{ paddingLeft: 28 }}>제목</th>
+                          <th>브랜치</th>
+                          <th>상태</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: 5 }, (_, idx) => autoPrs[idx]).map((pr, idx) => {
+                          const st = pr ? (PR_STATUS_LABEL[pr.status] ?? { label: pr.status, variant: 'neutral' }) : null;
+                          return (
+                            <tr
+                              key={pr?.githubPrNumber ?? `empty-${idx}`}
+                              style={pr ? { cursor: 'pointer' } : undefined}
+                              onClick={pr ? () => window.open(pr.prUrl, '_blank', 'noopener,noreferrer') : undefined}
+                            >
+                              <td>
+                                {pr ? (
+                                  <span className="history-table__file">
+                                    <Icon name="pr" size={15} />
+                                    {pr.title.replace(/^GuardrAil:\s*/, '')}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                )}
+                              </td>
+                              <td>
+                                {pr ? (
+                                  <span style={{ fontSize: 'var(--fs-caption-md)', color: 'var(--text-muted)' }}>
+                                    {pr.baseBranch} ← {pr.headBranch}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td>{st ? <Badge variant={st.variant}>{st.label}</Badge> : '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+        </>
+      ) : null}
     </>
   );
 }
